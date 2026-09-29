@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Code Agent · Repository Graph</title>
+<style>
+:root{color-scheme:light;--paper:#f5f4ef;--ink:#243433;--muted:#727b77;--line:#dcded5;--accent:#bb4a2e}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:14px 'Segoe UI','Microsoft YaHei',sans-serif}button,input,select{font:inherit;color:inherit}button,select{cursor:pointer;background:transparent;border:1px solid var(--line);border-radius:4px;padding:7px 10px}button:hover{background:#e7e9df}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header{height:94px;display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--line);gap:24px}.eyebrow{font:11px Consolas,monospace;letter-spacing:2px;color:var(--muted)}h1{font:30px Georgia,'Microsoft YaHei',serif;margin:5px 0 0;max-width:40vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.stats{display:flex;gap:27px}.stat strong{display:block;font:24px Consolas,monospace}.stat span{font-size:11px;color:var(--muted)}main{height:calc(100dvh - 94px);display:grid;grid-template-columns:290px 1fr}aside{border-right:1px solid var(--line);padding:20px;overflow-y:auto}input{width:100%;border:1px solid var(--line);background:#fffdf7;padding:10px;border-radius:4px}select{width:100%;margin:10px 0}label,.hint{color:var(--muted);font-size:12px;line-height:1.7}label{display:flex;align-items:center;gap:8px}input[type=checkbox]{width:auto;accent-color:var(--ink)}h2{font:18px Consolas,'Microsoft YaHei',monospace;overflow-wrap:anywhere;margin:22px 0 8px}.divider{border-top:1px solid var(--line);margin-top:20px;padding-top:16px}.list button{border:0;display:block;width:100%;text-align:left;padding:9px 3px;overflow-wrap:anywhere;font-size:12px}.list small{display:block;color:var(--muted);margin-top:3px;font:10px Consolas,monospace}.list button.active{color:var(--accent)}#location{white-space:pre-wrap;overflow-wrap:anywhere}.stage{position:relative;min-width:0;overflow:hidden;background-image:radial-gradient(#cbd0c3 0.6px,transparent 0.6px);background-size:22px 22px}canvas{width:100%;height:100%;display:block;touch-action:none;cursor:grab}canvas:active{cursor:grabbing}.toolbar{position:absolute;top:18px;right:20px;display:flex;gap:6px}.toolbar button{background:var(--paper)}.caption{position:absolute;left:24px;top:20px;pointer-events:none;font:11px Consolas,monospace;color:var(--muted)}footer{position:absolute;bottom:16px;left:24px;right:24px;display:flex;justify-content:space-between;gap:12px;pointer-events:none;font-size:11px;color:var(--muted)}.legend{display:flex;gap:14px}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}#empty{position:absolute;inset:40% 10%;text-align:center;pointer-events:none;color:var(--muted)}[hidden]{display:none!important}
+@media(max-width:760px){header{padding:12px 16px;height:85px}.stats{gap:12px}.stat strong{font-size:18px}.stat:nth-child(3){display:none}h1{font-size:24px}main{height:calc(100dvh - 85px);grid-template-columns:220px 1fr}aside{padding:12px}.caption,.legend{display:none}footer{left:12px;right:12px}.toolbar{right:10px;top:10px}}@media(max-width:480px){main{grid-template-columns:165px 1fr}.stats{gap:8px}.stat strong{font-size:16px}.toolbar{flex-wrap:wrap;max-width:110px;justify-content:flex-end}header{gap:10px}.stat span{font-size:10px}}
+</style>
+<header><div><div class="eyebrow">CODE AGENT / REPOSITORY GRAPH</div><h1 id="title">代码库图谱</h1></div><div class="stats" id="stats"></div><button id="export">导出 JSON</button></header>
+<main><aside>
+<input id="search" aria-label="搜索文件或符号" placeholder="搜索文件、类、函数…" autocomplete="off">
+<select id="kind" aria-label="节点类型"><option value="">全部类型</option><option value="file">文件</option><option value="class">类 / 类型</option><option value="function">函数 / 方法</option><option value="unresolved">未解析调用</option><option value="external">外部依赖</option></select>
+<label><input type="checkbox" id="unknown">显示外部依赖与未解析调用</label>
+<p class="hint" id="coverage"></p>
+<div id="detail" hidden><h2 id="name"></h2><p class="hint" id="location"></p><button id="focus">只看邻接</button><div class="list divider" id="relations"></div></div>
+<div class="divider"><span class="hint" id="result-count"></span><div class="list" id="results"></div><button id="more" hidden>显示更多</button></div>
+</aside><section class="stage"><canvas id="canvas" aria-label="代码图：拖动平移，滚轮缩放；也可通过左侧列表选择节点"></canvas>
+<div class="caption">LOCAL AST · FILES / SYMBOLS / RELATIONSHIPS</div><div class="toolbar"><button id="zoom-in" aria-label="放大">＋</button><button id="zoom-out" aria-label="缩小">−</button><button id="reset">全图</button></div>
+<div id="empty" hidden></div><footer><div class="legend"><span><i class="dot" style="background:#526b92"></i>文件</span><span><i class="dot" style="background:#b17c2e"></i>类</span><span><i class="dot" style="background:#428072"></i>函数</span><span><i class="dot" style="background:#a19b92"></i>未解析</span></div><span id="view-count"></span><span>拖动平移 · 滚轮缩放</span></footer>
+</section></main>
+<script type="application/json" id="graph-data">__GRAPH_DATA__</script>
+<script>
+const $=id=>document.getElementById(id);
+let graph;try{graph=JSON.parse($('graph-data').textContent)}catch{graph={name:'运行 code_agent.py --graph 生成图谱',nodes:[],edges:[],stats:{},errors:[]}}
+const nodes=graph.nodes,byId=new Map(nodes.map(n=>[n.id,n])),adj=new Map(nodes.map(n=>[n.id,[]]));
+const colors={directory:'#8e9787',file:'#526b92',class:'#b17c2e',function:'#428072',external:'#a19b92',unresolved:'#a19b92'};
+for(const e of graph.edges){adj.get(e.source)?.push(e);if(e.target!==e.source)adj.get(e.target)?.push(e)}
+$('title').textContent=graph.name;document.title=graph.name+' · Code Agent';
+for(const [key,label] of [['files','文件'],['nodes','节点'],['edges','关系']]){const box=document.createElement('div');box.className='stat';const value=document.createElement('strong'),caption=document.createElement('span');value.textContent=(graph.stats[key]||0).toLocaleString();caption.textContent=label;box.append(value,caption);$('stats').append(box)}
+$('coverage').textContent=`AST ${graph.stats.parsed_files||0} 个文件 · 未解析 ${graph.stats.unresolved||0} · 警告 ${graph.stats.errors||0} · ${graph.stats.seconds||0}s`;
+$('coverage').title=(graph.errors||[]).map(e=>e.file+': '+e.reason).join('\n');
+const canvas=$('canvas'),ctx=canvas.getContext('2d');let visible=[],links=[],selected=null,focus=false,scale=1,tx=0,ty=0,width=0,height=0,limit=30,drag=null;
+function refresh(){
+ const query=$('search').value.toLowerCase(),kind=$('kind').value,unknown=$('unknown').checked||['unresolved','external'].includes(kind),near=new Set([selected?.id]);
+ if(focus&&selected)for(const e of adj.get(selected.id)||[]){near.add(e.source);near.add(e.target)}
+ visible=nodes.filter(n=>(unknown||!['unresolved','external'].includes(n.kind))&&(!kind||n.kind===kind)&&(!focus||!selected||near.has(n.id)));
+ const ids=new Set(visible.map(n=>n.id));links=graph.edges.filter(e=>ids.has(e.source)&&ids.has(e.target));
+ const matches=visible.filter(n=>(n.name+' '+n.file).toLowerCase().includes(query));$('results').replaceChildren();
+ matches.slice(0,limit).forEach(n=>{const b=document.createElement('button');b.textContent=n.name;b.className=n===selected?'active':'';const small=document.createElement('small');small.textContent=n.file+(n.line?':'+n.line:'');b.append(small);b.onclick=()=>select(n,true);$('results').append(b)});
+ $('result-count').textContent=`${matches.length.toLocaleString()} 个匹配 · ${Math.min(limit,matches.length)} 个已列出`;$('more').hidden=matches.length<=limit;
+ $('view-count').textContent=`显示 ${visible.length.toLocaleString()} / ${nodes.length.toLocaleString()} 节点`;
+ $('empty').hidden=visible.length>0;$('empty').textContent=nodes.length?'没有符合条件的节点':'暂无文件；运行 python code_agent.py <代码库> --graph';draw();
+}
+function layout(){
+ const groups=new Map();for(const n of nodes){const key=n.file||'@external';if(!groups.has(key))groups.set(key,[]);groups.get(key).push(n)}
+ const entries=[...groups.entries()].sort((a,b)=>a[0].localeCompare(b[0])),cols=Math.max(1,Math.ceil(Math.sqrt(entries.length)));let y=0;
+ for(let i=0;i<entries.length;i+=cols){const row=entries.slice(i,i+cols),radii=row.map(([,group])=>Math.max(65,Math.sqrt(group.length)*15)),rowHeight=Math.max(...radii)*2+100;let x=0;
+  row.forEach(([,group],j)=>{const r=radii[j],cx=x+r,cy=y+rowHeight/2;group.sort((a,b)=>(a.kind!=='file')-(b.kind!=='file'));group.forEach((n,k)=>{const angle=k*2.3999632297,d=k?14*Math.sqrt(k):0;n.x=cx+Math.cos(angle)*d;n.y=cy+Math.sin(angle)*d});x+=r*2+100});y+=rowHeight;
+ }
+}
+function fit(){if(!visible.length)return;let left=Infinity,right=-Infinity,top=Infinity,bottom=-Infinity;for(const n of visible){left=Math.min(left,n.x);right=Math.max(right,n.x);top=Math.min(top,n.y);bottom=Math.max(bottom,n.y)}scale=Math.min(2,(width-90)/Math.max(100,right-left),(height-100)/Math.max(100,bottom-top));scale=Math.max(.001,scale);tx=width/2-(left+right)/2*scale;ty=height/2-(top+bottom)/2*scale;draw()}
+function draw(){
+ if(!width)return;const ratio=Math.min(devicePixelRatio||1,2);ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,width,height);ctx.translate(tx,ty);ctx.scale(scale,scale);
+ const near=new Set([selected?.id]);if(selected)for(const e of adj.get(selected.id)||[]){near.add(e.source);near.add(e.target)}
+ for(const e of links){const a=byId.get(e.source),b=byId.get(e.target);if(!a||!b)continue;if((a.x*scale+tx<0&&b.x*scale+tx<0)||(a.x*scale+tx>width&&b.x*scale+tx>width)||(a.y*scale+ty<0&&b.y*scale+ty<0)||(a.y*scale+ty>height&&b.y*scale+ty>height))continue;
+  const active=selected&&(e.source===selected.id||e.target===selected.id);ctx.strokeStyle=active?'#bb4a2e':e.kind==='contains'?'#c9cec1':'#829a94';ctx.globalAlpha=selected?(active?.9:.12):e.kind==='contains'?.45:.55;ctx.lineWidth=(active?1.8:.8)/scale;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+  if(active){const angle=Math.atan2(b.y-a.y,b.x-a.x),size=6/scale,x=b.x-Math.cos(angle)*8/scale,y=b.y-Math.sin(angle)*8/scale;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-size*Math.cos(angle-.4),y-size*Math.sin(angle-.4));ctx.moveTo(x,y);ctx.lineTo(x-size*Math.cos(angle+.4),y-size*Math.sin(angle+.4));ctx.stroke()}
+ }
+ const query=$('search').value.toLowerCase();for(const n of visible){const sx=n.x*scale+tx,sy=n.y*scale+ty;if(sx< -100||sx>width+100||sy< -30||sy>height+30)continue;const match=!query||(n.name+' '+n.file).toLowerCase().includes(query);ctx.globalAlpha=match&&(!selected||near.has(n.id))?1:.18;ctx.fillStyle=n===selected?'#bb4a2e':colors[n.kind]||'#727b77';ctx.beginPath();ctx.arc(n.x,n.y,(n===selected?6:n.kind==='file'?4.5:3)/Math.max(.7,scale),0,Math.PI*2);ctx.fill();
+  if(n===selected||((scale>.7||visible.length<30)&&['file','class'].includes(n.kind))||(scale>1.5&&match)){ctx.font=`${11/scale}px Consolas,monospace`;ctx.fillStyle='#34423b';ctx.fillText(n.name.slice(0,48),n.x+9/scale,n.y+4/scale)}
+ }ctx.globalAlpha=1;
+}
+function select(node,center=false){selected=node;$('detail').hidden=false;$('name').textContent=node.name;$('location').textContent=`${node.kind}\n${node.file||'外部依赖'}${node.line?':'+node.line:''}${node.status?'\n'+node.status:''}`;$('relations').replaceChildren();
+ const edges=adj.get(node.id)||[],title=document.createElement('span');title.className='hint';title.textContent=`${edges.length} 条关联（列出前 40 条）`;$('relations').append(title);
+ edges.slice(0,40).forEach(e=>{const next=byId.get(e.source===node.id?e.target:e.source),b=document.createElement('button');b.textContent=`${e.source===node.id?'→':'←'} ${e.kind} · ${next.name}${e.resolved?'':' · 未解析'}`;b.onclick=()=>{if(['unresolved','external'].includes(next.kind))$('unknown').checked=true;$('kind').value='';select(next,true)};$('relations').append(b)});
+ refresh();if(center){scale=Math.max(scale,1.3);tx=width/2-node.x*scale;ty=height/2-node.y*scale;draw()}}
+function zoom(factor,x=width/2,y=height/2){const next=Math.max(.001,Math.min(8,scale*factor));tx=x-(x-tx)*next/scale;ty=y-(y-ty)*next/scale;scale=next;draw()}
+canvas.onwheel=e=>{e.preventDefault();const r=canvas.getBoundingClientRect();zoom(Math.exp(-e.deltaY*.001),e.clientX-r.left,e.clientY-r.top)};
+canvas.onpointerdown=e=>{drag={x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY};canvas.setPointerCapture(e.pointerId)};
+canvas.onpointermove=e=>{if(!drag)return;tx+=e.clientX-drag.x;ty+=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;draw()};
+canvas.onpointerup=e=>{if(!drag)return;const clicked=Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)<5;drag=null;if(clicked){const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;let hit=null,distance=12;for(const n of visible){const d=Math.hypot(n.x*scale+tx-x,n.y*scale+ty-y);if(d<distance){distance=d;hit=n}}if(hit)select(hit)}};canvas.onpointercancel=()=>drag=null;
+$('search').oninput=()=>{limit=30;refresh()};$('kind').onchange=$('unknown').onchange=()=>{limit=30;refresh();fit()};$('more').onclick=()=>{limit+=30;refresh()};$('focus').onclick=()=>{focus=!focus;$('focus').textContent=focus?'显示全图':'只看邻接';refresh();fit()};
+function reset(){selected=null;focus=false;$('detail').hidden=true;$('focus').textContent='只看邻接';$('search').value='';$('kind').value='';refresh();fit()}
+$('reset').onclick=reset;$('zoom-in').onclick=()=>zoom(1.3);$('zoom-out').onclick=()=>zoom(1/1.3);document.onkeydown=e=>{if(e.key==='Escape')reset()};
+$('export').onclick=()=>{const clean={...graph,nodes:nodes.map(({x,y,...n})=>n)},url=URL.createObjectURL(new Blob([JSON.stringify(clean,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='graph.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+new ResizeObserver(()=>{const r=canvas.getBoundingClientRect(),ratio=Math.min(devicePixelRatio||1,2),first=!width;width=r.width;height=r.height;canvas.width=width*ratio;canvas.height=height*ratio;if(first)fit();else draw()}).observe(canvas);
+layout();refresh();
+</script>
+</html>

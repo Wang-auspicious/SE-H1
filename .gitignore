@@ -1,0 +1,8 @@
+__pycache__/
+.venv/
+.code-graph/
+.env
+.env.*
+*.key
+*.pem
+auth.json

@@ -1,0 +1,4 @@
+openai>=2.24,<3
+tree-sitter-language-pack==0.13.0
+tree-sitter==0.25.2
+pathspec>=0.12,<2
