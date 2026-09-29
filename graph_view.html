@@ -1,82 +1,134 @@
 <!doctype html>
 <html lang="zh-CN">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Code Agent · Repository Graph</title>
+<meta name="description" content="A local, function-level map of your codebase.">
+<title>Code Agent · Code atlas</title>
 <style>
-:root{color-scheme:light;--paper:#f5f4ef;--ink:#243433;--muted:#727b77;--line:#dcded5;--accent:#bb4a2e}
-*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:14px 'Segoe UI','Microsoft YaHei',sans-serif}button,input,select{font:inherit;color:inherit}button,select{cursor:pointer;background:transparent;border:1px solid var(--line);border-radius:4px;padding:7px 10px}button:hover{background:#e7e9df}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-header{height:94px;display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--line);gap:24px}.eyebrow{font:11px Consolas,monospace;letter-spacing:2px;color:var(--muted)}h1{font:30px Georgia,'Microsoft YaHei',serif;margin:5px 0 0;max-width:40vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.stats{display:flex;gap:27px}.stat strong{display:block;font:24px Consolas,monospace}.stat span{font-size:11px;color:var(--muted)}main{height:calc(100dvh - 94px);display:grid;grid-template-columns:290px 1fr}aside{border-right:1px solid var(--line);padding:20px;overflow-y:auto}input{width:100%;border:1px solid var(--line);background:#fffdf7;padding:10px;border-radius:4px}select{width:100%;margin:10px 0}label,.hint{color:var(--muted);font-size:12px;line-height:1.7}label{display:flex;align-items:center;gap:8px}input[type=checkbox]{width:auto;accent-color:var(--ink)}h2{font:18px Consolas,'Microsoft YaHei',monospace;overflow-wrap:anywhere;margin:22px 0 8px}.divider{border-top:1px solid var(--line);margin-top:20px;padding-top:16px}.list button{border:0;display:block;width:100%;text-align:left;padding:9px 3px;overflow-wrap:anywhere;font-size:12px}.list small{display:block;color:var(--muted);margin-top:3px;font:10px Consolas,monospace}.list button.active{color:var(--accent)}#location{white-space:pre-wrap;overflow-wrap:anywhere}.stage{position:relative;min-width:0;overflow:hidden;background-image:radial-gradient(#cbd0c3 0.6px,transparent 0.6px);background-size:22px 22px}canvas{width:100%;height:100%;display:block;touch-action:none;cursor:grab}canvas:active{cursor:grabbing}.toolbar{position:absolute;top:18px;right:20px;display:flex;gap:6px}.toolbar button{background:var(--paper)}.caption{position:absolute;left:24px;top:20px;pointer-events:none;font:11px Consolas,monospace;color:var(--muted)}footer{position:absolute;bottom:16px;left:24px;right:24px;display:flex;justify-content:space-between;gap:12px;pointer-events:none;font-size:11px;color:var(--muted)}.legend{display:flex;gap:14px}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}#empty{position:absolute;inset:40% 10%;text-align:center;pointer-events:none;color:var(--muted)}[hidden]{display:none!important}
-@media(max-width:760px){header{padding:12px 16px;height:85px}.stats{gap:12px}.stat strong{font-size:18px}.stat:nth-child(3){display:none}h1{font-size:24px}main{height:calc(100dvh - 85px);grid-template-columns:220px 1fr}aside{padding:12px}.caption,.legend{display:none}footer{left:12px;right:12px}.toolbar{right:10px;top:10px}}@media(max-width:480px){main{grid-template-columns:165px 1fr}.stats{gap:8px}.stat strong{font-size:16px}.toolbar{flex-wrap:wrap;max-width:110px;justify-content:flex-end}header{gap:10px}.stat span{font-size:10px}}
+@font-face{font-family:"Anthropic Serif";src:local("Anthropic Serif"),url("https://cdn.prod.website-files.com/67ce28cfec624e2b733f8a52/69971a1551eb6cda0d656e8a_AnthropicSerif-Roman-Web.woff2") format("woff2");font-weight:300 800;font-style:normal;font-display:swap}
+@font-face{font-family:"Anthropic Serif";src:url("https://cdn.prod.website-files.com/67ce28cfec624e2b733f8a52/69971a15a9fb8c1107a3570e_AnthropicSerif-Italic-Web.woff2") format("woff2");font-weight:300 800;font-style:italic;font-display:swap}
+:root{color-scheme:light;--paper:#f7f5ef;--ink:#353d35;--muted:#898b80;--line:#e2e2d8;--accent:#aa573f;--font:"Anthropic Serif","Noto Serif SC","Songti SC",SimSun,serif}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 var(--font);overflow:hidden}
+button,input,select,option{font:inherit;color:inherit}button{cursor:pointer;border:0;background:transparent;padding:8px 12px;border-radius:6px;transition:background .18s,color .18s}button:hover{background:#eae9e0}button:active{transform:translateY(1px)}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+header{height:88px;margin:0 30px;display:flex;align-items:center;gap:18px;border-bottom:1px solid var(--line)}.brand{display:flex;align-items:center;gap:13px;min-width:0}.mark{width:29px;height:29px;color:var(--accent)}.brand small{color:var(--muted);font-size:12px;letter-spacing:.05em}h1{font-size:26px;letter-spacing:-.035em;font-weight:500;line-height:1.1;margin:3px 0;max-width:42vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.metrics{margin-left:auto;display:flex;gap:28px;color:var(--muted);font-size:13px}.metrics b{font-weight:500;color:var(--ink);font-size:22px;margin-right:7px;font-variant-numeric:tabular-nums}#export{border:1px solid var(--line);margin-left:16px;white-space:nowrap}
+main{height:calc(100dvh - 88px);display:grid;grid-template-columns:260px minmax(0,1fr)}aside{padding:26px 20px 20px 30px;border-right:1px solid var(--line);overflow:auto;scrollbar-width:thin;scrollbar-color:#d5d7cb transparent}.search{position:relative}.search svg{position:absolute;left:10px;top:13px;width:15px;height:15px;color:var(--muted)}input{width:100%;padding:10px 10px 10px 32px;border:1px solid var(--line);background:transparent;border-radius:6px;outline:0}input::placeholder{color:var(--muted)}select{width:100%;background:transparent;border:0;border-bottom:1px solid var(--line);padding:12px 0;margin:8px 0 22px;outline:0}.section-title{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;margin:0 0 10px}.list button{display:block;width:100%;padding:9px 8px;text-align:left;overflow-wrap:anywhere;line-height:1.25;margin-left:-8px}.list small{display:block;font-size:11px;color:var(--muted);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.list .active{color:var(--accent)}#more{font-size:12px;color:var(--muted);padding-left:0}#detail h2{font-size:25px;font-weight:500;letter-spacing:-.03em;line-height:1.15;overflow-wrap:anywhere;margin:22px 0 10px}#back{padding-left:0;color:var(--muted);font-size:13px}#location{font-size:12px;color:var(--muted);overflow-wrap:anywhere}#focus{margin:10px 0 18px;border:1px solid var(--line);width:100%;font-size:13px}.relation-group{border-top:1px solid var(--line);padding-top:16px;margin-top:8px}#details-more{font-size:12px;color:var(--muted)}
+.stage{position:relative;overflow:hidden;min-width:0}.stage-top{position:absolute;inset:23px 26px auto;display:flex;align-items:center;justify-content:space-between;gap:20px;z-index:1;pointer-events:none}.stage-title{color:var(--muted);font-size:14px;font-style:italic}.switch{display:flex;gap:2px;background:#edece4;padding:3px;border-radius:7px;pointer-events:auto}.switch button{font-size:12px;padding:5px 13px}.switch button[aria-pressed=true]{background:var(--paper);box-shadow:0 1px 3px #363c3010}canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none}canvas:active{cursor:grabbing}.tools{position:absolute;right:24px;bottom:24px;display:flex;align-items:center;gap:3px;border:1px solid var(--line);border-radius:8px;background:var(--paper)}.tools button{padding:6px 12px;font-size:14px}.tools button:nth-child(2){border-left:1px solid var(--line);border-right:1px solid var(--line);border-radius:0}.bottom{position:absolute;left:28px;bottom:28px;color:var(--muted);font-size:12px;pointer-events:none;max-width:65%}#legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px}.legend-item{display:flex;align-items:center;gap:5px}.legend-item i{width:6px;height:6px;border-radius:50%}.legend-item span{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#hint{color:#9fa095;font-size:11px}#empty{position:absolute;inset:42% 20%;text-align:center;color:var(--muted);pointer-events:none}.tip{position:absolute;padding:6px 11px;background:#fffef9eF;border:1px solid var(--line);border-radius:5px;font-size:13px;pointer-events:none;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}[hidden]{display:none!important}
+@media(max-width:760px){header{margin:0 20px;height:80px}.metrics{gap:10px}.metrics b{font-size:18px;margin-right:4px}.metrics span:last-child{display:none}main{height:calc(100dvh - 80px);grid-template-columns:220px 1fr}aside{padding:20px}.stage-top{inset:18px 20px auto}.stage-title{display:none}.stage-top{justify-content:flex-end}.bottom{left:20px;max-width:55%}#legend{display:none}h1{font-size:23px}#export{margin-left:0}}
+@media(max-width:520px){header{gap:10px;margin:0 14px}.mark{display:none}.metrics{gap:8px}.metrics span:nth-child(2){display:none}main{grid-template-columns:160px 1fr}aside{padding:16px 12px}h1{font-size:21px;max-width:32vw}.brand small{font-size:10px}.switch button{padding:5px 8px}.tools{right:12px;bottom:18px}.bottom{bottom:67px;left:15px;max-width:80%}#detail h2{font-size:21px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
-<header><div><div class="eyebrow">CODE AGENT / REPOSITORY GRAPH</div><h1 id="title">代码库图谱</h1></div><div class="stats" id="stats"></div><button id="export">导出 JSON</button></header>
-<main><aside>
-<input id="search" aria-label="搜索文件或符号" placeholder="搜索文件、类、函数…" autocomplete="off">
-<select id="kind" aria-label="节点类型"><option value="">全部类型</option><option value="file">文件</option><option value="class">类 / 类型</option><option value="function">函数 / 方法</option><option value="unresolved">未解析调用</option><option value="external">外部依赖</option></select>
-<label><input type="checkbox" id="unknown">显示外部依赖与未解析调用</label>
-<p class="hint" id="coverage"></p>
-<div id="detail" hidden><h2 id="name"></h2><p class="hint" id="location"></p><button id="focus">只看邻接</button><div class="list divider" id="relations"></div></div>
-<div class="divider"><span class="hint" id="result-count"></span><div class="list" id="results"></div><button id="more" hidden>显示更多</button></div>
-</aside><section class="stage"><canvas id="canvas" aria-label="代码图：拖动平移，滚轮缩放；也可通过左侧列表选择节点"></canvas>
-<div class="caption">LOCAL AST · FILES / SYMBOLS / RELATIONSHIPS</div><div class="toolbar"><button id="zoom-in" aria-label="放大">＋</button><button id="zoom-out" aria-label="缩小">−</button><button id="reset">全图</button></div>
-<div id="empty" hidden></div><footer><div class="legend"><span><i class="dot" style="background:#526b92"></i>文件</span><span><i class="dot" style="background:#b17c2e"></i>类</span><span><i class="dot" style="background:#428072"></i>函数</span><span><i class="dot" style="background:#a19b92"></i>未解析</span></div><span id="view-count"></span><span>拖动平移 · 滚轮缩放</span></footer>
-</section></main>
+</head>
+<body>
+<header>
+<div class="brand"><svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="12.5" stroke="currentColor" stroke-width=".7"/><path d="M6 10 24 8 19 27 6 10 28 19 24 8M6 10 4 22 19 27M4 22 28 19" stroke="currentColor" stroke-width=".7"/><g fill="currentColor"><circle cx="6" cy="10" r="2"/><circle cx="24" cy="8" r="2"/><circle cx="19" cy="27" r="2"/><circle cx="28" cy="19" r="2"/><circle cx="4" cy="22" r="2"/></g></svg><div><small>Code Agent · Code atlas</small><h1 id="title">代码图谱</h1></div></div>
+<div class="metrics" id="stats"></div><button id="export" title="导出完整图数据">导出 JSON ↗</button>
+</header>
+<main>
+<aside>
+<div class="search"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="5.4" stroke="currentColor" stroke-width="1.2"/><path d="m12 12 5 5" stroke="currentColor" stroke-width="1.2"/></svg><input id="search" aria-label="搜索函数" placeholder="搜索函数…" autocomplete="off"></div>
+<select id="file" aria-label="选择文件"><option value="">全部文件</option></select>
+<section id="browse"><div class="section-title"><span id="list-title">Functions</span><span id="result-count"></span></div><div class="list" id="results"></div><button id="more" hidden>显示更多</button></section>
+<section id="detail" hidden><button id="back">← 返回列表</button><h2 id="name"></h2><p id="location"></p><button id="focus">只看关联</button><div class="list" id="relations"></div><button id="details-more" hidden>更多关联</button></section>
+</aside>
+<section class="stage"><div class="stage-top"><span class="stage-title">A constellation of your code.</span><div class="switch" aria-label="图谱粒度"><button id="functions" aria-pressed="true">函数</button><button id="structure" aria-pressed="false">结构</button></div></div>
+<canvas id="canvas" tabindex="0" aria-label="球形代码图。拖动旋转，滚轮缩放；也可通过左侧列表查看函数和调用关系。"></canvas>
+<div class="tip" id="tooltip" hidden></div><div id="empty" hidden></div>
+<div class="bottom"><div id="legend"></div><div id="view-count"></div><div id="hint">拖动旋转 · 滚轮缩放 · 点击查看关联</div></div>
+<div class="tools"><button id="zoom-out" aria-label="缩小">−</button><button id="reset">全图</button><button id="zoom-in" aria-label="放大">＋</button></div>
+</section>
+</main>
 <script type="application/json" id="graph-data">__GRAPH_DATA__</script>
 <script>
-const $=id=>document.getElementById(id);
-let graph;try{graph=JSON.parse($('graph-data').textContent)}catch{graph={name:'运行 code_agent.py --graph 生成图谱',nodes:[],edges:[],stats:{},errors:[]}}
+const $=id=>document.getElementById(id),FONT='"Anthropic Serif","Songti SC",SimSun,serif';
+let graph;try{graph=JSON.parse($('graph-data').textContent)}catch{graph={name:'Code atlas',nodes:[],edges:[],stats:{}}}
 const nodes=graph.nodes,byId=new Map(nodes.map(n=>[n.id,n])),adj=new Map(nodes.map(n=>[n.id,[]]));
-const colors={directory:'#8e9787',file:'#526b92',class:'#b17c2e',function:'#428072',external:'#a19b92',unresolved:'#a19b92'};
-for(const e of graph.edges){adj.get(e.source)?.push(e);if(e.target!==e.source)adj.get(e.target)?.push(e)}
+const relations=[...new Map(graph.edges.map(e=>[e.source+':'+e.target+':'+e.kind,e])).values()];
+for(const e of relations){adj.get(e.source)?.push(e);if(e.target!==e.source)adj.get(e.target)?.push(e)}
+const files=[...new Set(nodes.filter(n=>n.kind==='function').map(n=>n.file))].sort(),palette=['#6e8273','#bd8464','#718a97','#978664','#908699','#8b9b78','#ad837c','#79958f'];
+const colorByFile=new Map(files.map((f,i)=>[f,palette[i%palette.length]]));
 $('title').textContent=graph.name;document.title=graph.name+' · Code Agent';
-for(const [key,label] of [['files','文件'],['nodes','节点'],['edges','关系']]){const box=document.createElement('div');box.className='stat';const value=document.createElement('strong'),caption=document.createElement('span');value.textContent=(graph.stats[key]||0).toLocaleString();caption.textContent=label;box.append(value,caption);$('stats').append(box)}
-$('coverage').textContent=`AST ${graph.stats.parsed_files||0} 个文件 · 未解析 ${graph.stats.unresolved||0} · 警告 ${graph.stats.errors||0} · ${graph.stats.seconds||0}s`;
-$('coverage').title=(graph.errors||[]).map(e=>e.file+': '+e.reason).join('\n');
-const canvas=$('canvas'),ctx=canvas.getContext('2d');let visible=[],links=[],selected=null,focus=false,scale=1,tx=0,ty=0,width=0,height=0,limit=30,drag=null;
-function refresh(){
- const query=$('search').value.toLowerCase(),kind=$('kind').value,unknown=$('unknown').checked||['unresolved','external'].includes(kind),near=new Set([selected?.id]);
- if(focus&&selected)for(const e of adj.get(selected.id)||[]){near.add(e.source);near.add(e.target)}
- visible=nodes.filter(n=>(unknown||!['unresolved','external'].includes(n.kind))&&(!kind||n.kind===kind)&&(!focus||!selected||near.has(n.id)));
- const ids=new Set(visible.map(n=>n.id));links=graph.edges.filter(e=>ids.has(e.source)&&ids.has(e.target));
- const matches=visible.filter(n=>(n.name+' '+n.file).toLowerCase().includes(query));$('results').replaceChildren();
- matches.slice(0,limit).forEach(n=>{const b=document.createElement('button');b.textContent=n.name;b.className=n===selected?'active':'';const small=document.createElement('small');small.textContent=n.file+(n.line?':'+n.line:'');b.append(small);b.onclick=()=>select(n,true);$('results').append(b)});
- $('result-count').textContent=`${matches.length.toLocaleString()} 个匹配 · ${Math.min(limit,matches.length)} 个已列出`;$('more').hidden=matches.length<=limit;
- $('view-count').textContent=`显示 ${visible.length.toLocaleString()} / ${nodes.length.toLocaleString()} 节点`;
- $('empty').hidden=visible.length>0;$('empty').textContent=nodes.length?'没有符合条件的节点':'暂无文件；运行 python code_agent.py <代码库> --graph';draw();
+for(const [value,label] of [[nodes.filter(n=>n.kind==='function').length,'函数'],[files.length,'源码文件'],[relations.filter(e=>e.kind==='calls').length,'调用关系']]){
+ const span=document.createElement('span'),b=document.createElement('b');b.textContent=value.toLocaleString();span.append(b,label);$('stats').append(span);
 }
+for(const file of files){const option=document.createElement('option');option.value=file;option.textContent=file;$('file').append(option)}
+const canvas=$('canvas'),ctx=canvas.getContext('2d');let visible=[],links=[],positions=new Map(),points=[],labelOrder=[],mode='function',selected=null,hovered=null,local=false;
+let width=0,height=0,yaw=.35,pitch=-.18,zoom=1,frame=0,drag=null,limit=40,relationLimit=30;
+const near=id=>new Set([id,...(adj.get(id)||[]).flatMap(e=>[e.source,e.target])]);
+function schedule(){if(!frame)frame=requestAnimationFrame(()=>{frame=0;draw()})}
 function layout(){
- const groups=new Map();for(const n of nodes){const key=n.file||'@external';if(!groups.has(key))groups.set(key,[]);groups.get(key).push(n)}
- const entries=[...groups.entries()].sort((a,b)=>a[0].localeCompare(b[0])),cols=Math.max(1,Math.ceil(Math.sqrt(entries.length)));let y=0;
- for(let i=0;i<entries.length;i+=cols){const row=entries.slice(i,i+cols),radii=row.map(([,group])=>Math.max(65,Math.sqrt(group.length)*15)),rowHeight=Math.max(...radii)*2+100;let x=0;
-  row.forEach(([,group],j)=>{const r=radii[j],cx=x+r,cy=y+rowHeight/2;group.sort((a,b)=>(a.kind!=='file')-(b.kind!=='file'));group.forEach((n,k)=>{const angle=k*2.3999632297,d=k?14*Math.sqrt(k):0;n.x=cx+Math.cos(angle)*d;n.y=cy+Math.sin(angle)*d});x+=r*2+100});y+=rowHeight;
- }
+ const ordered=[...visible].sort((a,b)=>a.file.localeCompare(b.file)||a.line-b.line),count=ordered.length;
+ positions=new Map(ordered.map((n,i)=>{const y=1-2*(i+.5)/Math.max(1,count),r=Math.sqrt(1-y*y),angle=i*2.3999632297;return[n.id,{x:Math.cos(angle)*r,y,z:Math.sin(angle)*r}]}));
 }
-function fit(){if(!visible.length)return;let left=Infinity,right=-Infinity,top=Infinity,bottom=-Infinity;for(const n of visible){left=Math.min(left,n.x);right=Math.max(right,n.x);top=Math.min(top,n.y);bottom=Math.max(bottom,n.y)}scale=Math.min(2,(width-90)/Math.max(100,right-left),(height-100)/Math.max(100,bottom-top));scale=Math.max(.001,scale);tx=width/2-(left+right)/2*scale;ty=height/2-(top+bottom)/2*scale;draw()}
+function list(){
+ const query=$('search').value.toLowerCase(),matches=visible.filter(n=>(n.name+' '+n.file).toLowerCase().includes(query));
+ $('results').replaceChildren();$('result-count').textContent=matches.length.toLocaleString();$('list-title').textContent=mode==='function'?'Functions':'Structure';
+ for(const node of matches.slice(0,limit)){const button=document.createElement('button'),small=document.createElement('small');button.textContent=node.name;small.textContent=node.file+':'+node.line;button.append(small);button.onclick=()=>select(node);$('results').append(button)}
+ $('more').hidden=matches.length<=limit;schedule();
+}
+function refresh(){
+ const file=$('file').value,neighbors=local&&selected?near(selected.id):null;
+ visible=nodes.filter(n=>(mode==='all'||n.kind==='function')&&(!file||n.file===file)&&(!neighbors||neighbors.has(n.id)));
+ const ids=new Set(visible.map(n=>n.id));links=relations.filter(e=>ids.has(e.source)&&ids.has(e.target));
+ labelOrder=[...visible].sort((a,b)=>(adj.get(b.id)?.length||0)-(adj.get(a.id)?.length||0)).map(n=>n.id);
+ $('functions').setAttribute('aria-pressed',mode==='function');$('structure').setAttribute('aria-pressed',mode==='all');
+ $('empty').hidden=!!visible.length;$('empty').textContent=nodes.length?'当前范围没有函数，切换「结构」查看文件。':'运行 code_agent.py --graph 生成图谱。';
+ $('view-count').textContent=visible.length.toLocaleString()+' 个'+(mode==='function'?'函数':'节点')+' · '+links.length.toLocaleString()+' 条关系';
+ const groups=[...new Set(visible.map(n=>n.file))];$('legend').replaceChildren();
+ for(const file of groups.slice(0,4)){const item=document.createElement('span'),dot=document.createElement('i'),label=document.createElement('span');item.className='legend-item';dot.style.background=colorByFile.get(file)||'#a1a391';label.textContent=file.split('/').pop();item.title=file;item.append(dot,label);$('legend').append(item)}
+ layout();list();
+}
 function draw(){
- if(!width)return;const ratio=Math.min(devicePixelRatio||1,2);ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,width,height);ctx.translate(tx,ty);ctx.scale(scale,scale);
- const near=new Set([selected?.id]);if(selected)for(const e of adj.get(selected.id)||[]){near.add(e.source);near.add(e.target)}
- for(const e of links){const a=byId.get(e.source),b=byId.get(e.target);if(!a||!b)continue;if((a.x*scale+tx<0&&b.x*scale+tx<0)||(a.x*scale+tx>width&&b.x*scale+tx>width)||(a.y*scale+ty<0&&b.y*scale+ty<0)||(a.y*scale+ty>height&&b.y*scale+ty>height))continue;
-  const active=selected&&(e.source===selected.id||e.target===selected.id);ctx.strokeStyle=active?'#bb4a2e':e.kind==='contains'?'#c9cec1':'#829a94';ctx.globalAlpha=selected?(active?.9:.12):e.kind==='contains'?.45:.55;ctx.lineWidth=(active?1.8:.8)/scale;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
-  if(active){const angle=Math.atan2(b.y-a.y,b.x-a.x),size=6/scale,x=b.x-Math.cos(angle)*8/scale,y=b.y-Math.sin(angle)*8/scale;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-size*Math.cos(angle-.4),y-size*Math.sin(angle-.4));ctx.moveTo(x,y);ctx.lineTo(x-size*Math.cos(angle+.4),y-size*Math.sin(angle+.4));ctx.stroke()}
+ if(!width||!height)return;
+ const start=performance.now(),dpr=Math.min(devicePixelRatio||1,2),radius=Math.min(width,height)*.34*zoom,cx=width/2,cy=height*.47,cyaw=Math.cos(yaw),syaw=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+ ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
+ const active=hovered||selected,neighbors=active?near(active.id):null,query=selected?'':$('search').value.toLowerCase(),projected=new Map(),batches=new Map();
+ points=visible.map(n=>{const p=positions.get(n.id),x=p.x*cyaw+p.z*syaw,z=-p.x*syaw+p.z*cyaw,y=p.y*cp-z*sp,depth=p.y*sp+z*cp,perspective=3.4/(3.4-depth*.4);
+  const point={node:n,x:cx+x*radius*perspective,y:cy+y*radius*perspective,z:depth,r:(1.8+Math.min(2.2,Math.log2(1+(adj.get(n.id)?.length||0))*.42))*(.78+(depth+1)*.18)*Math.sqrt(zoom)*(visible.length>3000?.55:1)};
+  projected.set(n.id,point);return point;
+ });
+ ctx.strokeStyle='#939f94';ctx.lineWidth=.8;ctx.globalAlpha=active?.055:visible.length>3000?.055:.3;ctx.beginPath();
+ for(const e of links){const a=projected.get(e.source),b=projected.get(e.target);if((a.x<0&&b.x<0)||(a.x>width&&b.x>width)||(a.y<0&&b.y<0)||(a.y>height&&b.y>height))continue;ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y)}ctx.stroke();
+ if(active){ctx.strokeStyle='#a75b43';ctx.lineWidth=1.25;ctx.globalAlpha=.75;ctx.beginPath();for(const e of adj.get(active.id)||[]){const a=projected.get(e.source),b=projected.get(e.target);if(a&&b){ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y)}}ctx.stroke()}
+ for(const point of points){if(point.x< -10||point.x>width+10||point.y< -10||point.y>height+10)continue;const n=point.node,match=!query||(n.name+' '+n.file).toLowerCase().includes(query),bucket=Math.min(7,Math.floor((point.z+1)*3.999)),dim=!match||(active&&!neighbors.has(n.id)),color=active===n?'#a75b43':colorByFile.get(n.file)||'#a1a391',key=bucket+'|'+color+'|'+dim;
+  if(!batches.has(key))batches.set(key,{bucket,color,alpha:dim?.1:.45+bucket*.075,points:[]});batches.get(key).points.push(point);
  }
- const query=$('search').value.toLowerCase();for(const n of visible){const sx=n.x*scale+tx,sy=n.y*scale+ty;if(sx< -100||sx>width+100||sy< -30||sy>height+30)continue;const match=!query||(n.name+' '+n.file).toLowerCase().includes(query);ctx.globalAlpha=match&&(!selected||near.has(n.id))?1:.18;ctx.fillStyle=n===selected?'#bb4a2e':colors[n.kind]||'#727b77';ctx.beginPath();ctx.arc(n.x,n.y,(n===selected?6:n.kind==='file'?4.5:3)/Math.max(.7,scale),0,Math.PI*2);ctx.fill();
-  if(n===selected||((scale>.7||visible.length<30)&&['file','class'].includes(n.kind))||(scale>1.5&&match)){ctx.font=`${11/scale}px Consolas,monospace`;ctx.fillStyle='#34423b';ctx.fillText(n.name.slice(0,48),n.x+9/scale,n.y+4/scale)}
- }ctx.globalAlpha=1;
+ for(const batch of [...batches.values()].sort((a,b)=>a.bucket-b.bucket)){ctx.fillStyle=batch.color;ctx.globalAlpha=batch.alpha;ctx.beginPath();for(const p of batch.points){const r=p.node===active?p.r+2:p.r;if(visible.length>3000&&zoom<1.8){ctx.rect(p.x-r,p.y-r,r*2,r*2)}else{ctx.moveTo(p.x+r,p.y);ctx.arc(p.x,p.y,r,0,Math.PI*2)}}ctx.fill()}
+ const labels=[],occupied=[];for(const id of neighbors||labelOrder){const p=projected.get(id);if(p&&(active||p.z>.1)&&p.x>=0&&p.x<width-20&&p.y>70&&p.y<height-95)labels.push(p);if(labels.length>=(active?22:visible.length>150?10:16))break}
+ ctx.font='14px '+FONT;ctx.textBaseline='middle';
+ for(const p of labels){if(p.x<0||p.x>width-20||p.y<70||p.y>height-95)continue;const name=p.node.name.slice(0,42),w=ctx.measureText(name).width,x=p.x+p.r+7,y=p.y;if(p.node!==active&&occupied.some(b=>x<b.x+b.w&&x+w>b.x&&Math.abs(y-b.y)<17))continue;occupied.push({x,y,w});ctx.globalAlpha=p.node===active?1:.72;ctx.lineWidth=4;ctx.strokeStyle='#f7f5ef';ctx.strokeText(name,x,y);ctx.fillStyle=p.node===active?'#a75b43':'#566456';ctx.fillText(name,x,y)}
+ ctx.globalAlpha=1;canvas.dataset.frameMs=(performance.now()-start).toFixed(1);
 }
-function select(node,center=false){selected=node;$('detail').hidden=false;$('name').textContent=node.name;$('location').textContent=`${node.kind}\n${node.file||'外部依赖'}${node.line?':'+node.line:''}${node.status?'\n'+node.status:''}`;$('relations').replaceChildren();
- const edges=adj.get(node.id)||[],title=document.createElement('span');title.className='hint';title.textContent=`${edges.length} 条关联（列出前 40 条）`;$('relations').append(title);
- edges.slice(0,40).forEach(e=>{const next=byId.get(e.source===node.id?e.target:e.source),b=document.createElement('button');b.textContent=`${e.source===node.id?'→':'←'} ${e.kind} · ${next.name}${e.resolved?'':' · 未解析'}`;b.onclick=()=>{if(['unresolved','external'].includes(next.kind))$('unknown').checked=true;$('kind').value='';select(next,true)};$('relations').append(b)});
- refresh();if(center){scale=Math.max(scale,1.3);tx=width/2-node.x*scale;ty=height/2-node.y*scale;draw()}}
-function zoom(factor,x=width/2,y=height/2){const next=Math.max(.001,Math.min(8,scale*factor));tx=x-(x-tx)*next/scale;ty=y-(y-ty)*next/scale;scale=next;draw()}
-canvas.onwheel=e=>{e.preventDefault();const r=canvas.getBoundingClientRect();zoom(Math.exp(-e.deltaY*.001),e.clientX-r.left,e.clientY-r.top)};
-canvas.onpointerdown=e=>{drag={x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY};canvas.setPointerCapture(e.pointerId)};
-canvas.onpointermove=e=>{if(!drag)return;tx+=e.clientX-drag.x;ty+=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;draw()};
-canvas.onpointerup=e=>{if(!drag)return;const clicked=Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)<5;drag=null;if(clicked){const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;let hit=null,distance=12;for(const n of visible){const d=Math.hypot(n.x*scale+tx-x,n.y*scale+ty-y);if(d<distance){distance=d;hit=n}}if(hit)select(hit)}};canvas.onpointercancel=()=>drag=null;
-$('search').oninput=()=>{limit=30;refresh()};$('kind').onchange=$('unknown').onchange=()=>{limit=30;refresh();fit()};$('more').onclick=()=>{limit+=30;refresh()};$('focus').onclick=()=>{focus=!focus;$('focus').textContent=focus?'显示全图':'只看邻接';refresh();fit()};
-function reset(){selected=null;focus=false;$('detail').hidden=true;$('focus').textContent='只看邻接';$('search').value='';$('kind').value='';refresh();fit()}
-$('reset').onclick=reset;$('zoom-in').onclick=()=>zoom(1.3);$('zoom-out').onclick=()=>zoom(1/1.3);document.onkeydown=e=>{if(e.key==='Escape')reset()};
-$('export').onclick=()=>{const clean={...graph,nodes:nodes.map(({x,y,...n})=>n)},url=URL.createObjectURL(new Blob([JSON.stringify(clean,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='graph.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
-new ResizeObserver(()=>{const r=canvas.getBoundingClientRect(),ratio=Math.min(devicePixelRatio||1,2),first=!width;width=r.width;height=r.height;canvas.width=width*ratio;canvas.height=height*ratio;if(first)fit();else draw()}).observe(canvas);
-layout();refresh();
+function details(){
+ const node=selected,edges=adj.get(node.id)||[];relationLimit=Math.max(30,relationLimit);$('name').textContent=node.name;$('location').textContent=node.file+' · '+node.line+(node.end&&node.end!==node.line?'–'+node.end:'')+' 行';$('relations').replaceChildren();
+ const groups=[['调用',e=>e.source===node.id&&e.kind==='calls'],['被调用',e=>e.target===node.id&&e.kind==='calls'],['结构关系',e=>e.kind!=='calls']];
+ let rendered=0;for(const [title,test] of groups){const members=edges.filter(test);if(!members.length)continue;const section=document.createElement('div'),caption=document.createElement('div');section.className='relation-group';caption.className='section-title';caption.textContent=title+' · '+members.length;section.append(caption);
+  for(const e of members){if(rendered++>=relationLimit)continue;const neighbor=byId.get(e.source===node.id?e.target:e.source),button=document.createElement('button');button.textContent=neighbor.name;button.onclick=()=>{if(neighbor.kind!=='function')mode='all';$('file').value='';refresh();select(neighbor)};section.append(button)}$('relations').append(section);
+ }$('details-more').hidden=edges.length<=relationLimit;
+}
+function select(node){
+ selected=node;hovered=null;$('tooltip').hidden=true;$('browse').hidden=true;$('detail').hidden=false;relationLimit=30;details();
+ if(local)refresh();face(node);
+}
+function face(node){const p=positions.get(node.id);if(p){yaw=-Math.atan2(p.x,p.z);pitch=Math.atan2(p.y,Math.hypot(p.x,p.z))}schedule()}
+function reset(){selected=hovered=null;local=false;zoom=1;yaw=.35;pitch=-.18;$('detail').hidden=true;$('browse').hidden=false;$('tooltip').hidden=true;$('focus').textContent='只看关联';refresh()}
+function hit(x,y){let best=null,distance=12;for(const p of points){const d=Math.hypot(p.x-x,p.y-y);if(d<distance){best=p;distance=d}}return best}
+canvas.onpointerdown=e=>{drag={x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY};hovered=null;$('tooltip').hidden=true;canvas.setPointerCapture(e.pointerId)};
+canvas.onpointermove=e=>{const rect=canvas.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top;if(drag){yaw+=(e.clientX-drag.x)*.007;pitch=Math.max(-1.5,Math.min(1.5,pitch+(e.clientY-drag.y)*.007));drag.x=e.clientX;drag.y=e.clientY;schedule();return}
+ const point=hit(x,y),next=point?.node||null;if(next!==hovered){hovered=next;schedule()}$('tooltip').hidden=!next;if(next){$('tooltip').textContent=next.name;$('tooltip').style.left=Math.min(width-200,x+14)+'px';$('tooltip').style.top=(y+16)+'px'}};
+canvas.onpointerup=e=>{if(!drag)return;const clicked=Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)<5;drag=null;if(clicked){const r=canvas.getBoundingClientRect(),point=hit(e.clientX-r.left,e.clientY-r.top);if(point)select(point.node)}};
+canvas.onpointercancel=()=>drag=null;canvas.onpointerleave=()=>{if(!drag){hovered=null;$('tooltip').hidden=true;schedule()}};
+canvas.onwheel=e=>{e.preventDefault();zoom=Math.max(.35,Math.min(8,zoom*Math.exp(-e.deltaY*.001)));schedule()};
+$('search').oninput=()=>{limit=40;$('browse').hidden=false;$('detail').hidden=true;selected=null;list()};$('file').onchange=reset;
+$('functions').onclick=()=>{mode='function';reset()};$('structure').onclick=()=>{mode='all';reset()};$('more').onclick=()=>{limit+=40;list()};
+$('back').onclick=reset;$('focus').onclick=()=>{local=!local;$('focus').textContent=local?'返回全图':'只看关联';zoom=1;refresh();face(selected)};
+$('details-more').onclick=()=>{relationLimit+=30;details()};$('reset').onclick=()=>{$('search').value='';$('file').value='';reset()};
+$('zoom-in').onclick=()=>{zoom=Math.min(8,zoom*1.3);schedule()};$('zoom-out').onclick=()=>{zoom=Math.max(.35,zoom/1.3);schedule()};
+canvas.onkeydown=e=>{if(e.key==='Escape')reset();else if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();yaw+=(e.key==='ArrowLeft'?-.1:e.key==='ArrowRight'?.1:0);pitch+=(e.key==='ArrowUp'?-.1:e.key==='ArrowDown'?.1:0);schedule()}};
+$('export').onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(graph,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='graph.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000)};
+new ResizeObserver(()=>{const rect=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);width=rect.width;height=rect.height;canvas.width=width*dpr;canvas.height=height*dpr;schedule()}).observe(canvas);
+document.fonts.ready.then(()=>{document.body.dataset.serifLoaded=[...document.fonts].some(f=>f.family==='Anthropic Serif'&&f.status==='loaded');schedule()});refresh();
 </script>
+</body>
 </html>
+
