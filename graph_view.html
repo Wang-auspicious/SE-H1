@@ -212,6 +212,9 @@ html, body {
 }
 
 .actions {
+  position: fixed;
+  right: 20px;
+  bottom: 16px;
   display: flex;
   gap: 6px;
   pointer-events: auto;
@@ -477,10 +480,24 @@ html, body {
   bottom: 14px;
   left: 18px;
   font-size: 11.5px;
-  color: var(--ink-muted);
+  color: var(--ink-secondary);
   pointer-events: none;
   letter-spacing: 0.02em;
 }
+.module-panel{position:absolute;top:86px;left:20px;width:190px;max-height:calc(100vh - 148px);overflow:auto;padding:15px;background:rgba(255,255,255,.87);border:1px solid var(--border);border-radius:10px;z-index:4;scrollbar-width:thin}
+.module-heading{display:flex;justify-content:space-between;gap:8px;font-size:14px;margin-bottom:12px}.module-heading span{font-size:12px;color:var(--ink-secondary)}
+.module-item{font:13px var(--font);display:flex;align-items:center;gap:8px;width:100%;padding:8px 5px;border:0;border-radius:5px;background:transparent;text-align:left;color:var(--ink);cursor:pointer}
+.module-item:hover,.module-item[aria-pressed=true]{background:var(--accent-light)}.module-item i{width:8px;height:8px;border-radius:50%;flex-shrink:0}.module-item span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.module-item small{margin-left:auto;color:var(--ink-secondary);font-variant-numeric:tabular-nums}
+.module-note{font-size:11px;line-height:1.7;color:var(--ink-secondary);padding-top:12px;border-top:1px solid var(--border);margin-top:10px}
+.layout-status{position:absolute;top:80px;left:50%;transform:translateX(-50%);color:var(--ink-secondary);font-size:13px;pointer-events:none}
+.search-results{position:absolute;left:0;top:calc(100% + 9px);width:310px;max-height:320px;overflow:auto;padding:6px;background:var(--card-bg);border:1px solid var(--border);border-radius:8px;box-shadow:0 5px 18px #30291a12;z-index:30}
+.search-results button{display:block;font:14px var(--font);text-align:left;width:100%;border:0;padding:9px;background:none;cursor:pointer;color:var(--ink)}.search-results button:hover{background:var(--accent-light)}.search-results small{display:block;color:var(--ink-secondary);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:290px}
+.brand{font-size:16px}.stats{font-size:13px}.repo-input,.search-input,.btn-build,.btn-icon,.filter-btn{font-size:13px}.repo-input,.search-input{min-height:30px}.filter-btn{padding:5px 9px}.btn-icon{height:36px}.inspector-meta,.chip,.btn-action{font-size:13px}.inspector-title{font-size:20px}.relation-title{font-size:12px;color:var(--ink-secondary)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+[hidden]{display:none!important}
+@media(max-width:1100px){.module-panel{width:162px;padding:12px;top:106px}.brand{font-size:14px}.repo-input{width:125px}.search-input{width:120px}}
+@media(max-width:700px){.module-panel{display:none}.inspector-card{width:min(320px,calc(100vw - 32px))}.search-results{width:260px}.bottom-hint{font-size:11px;max-width:85%;bottom:65px}.top-bar{right:12px;left:12px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 @media (max-width: 900px) {
   .top-bar { gap: 6px; }
@@ -491,7 +508,7 @@ html, body {
 </style>
 </head>
 <body>
-<canvas id="canvas"></canvas>
+<canvas id="canvas" tabindex="0" aria-label="紧凑圆形代码图。拖拽平移，滚轮缩放，使用搜索或模块列表定位节点。"></canvas>
 
 <!-- Top Floating Bar -->
 <div class="top-bar">
@@ -522,13 +539,14 @@ html, body {
       <svg class="search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
         <circle cx="8" cy="8" r="5.5"/><line x1="12" y1="12" x2="16.5" y2="16.5"/>
       </svg>
-      <input class="search-input" id="search-input" placeholder="搜索符号..." autocomplete="off">
+      <input class="search-input" id="search-input" aria-label="搜索符号" placeholder="搜索函数或文件…" autocomplete="off">
       <button class="search-clear" id="search-clear">×</button>
+      <div class="search-results" id="search-results" hidden></div>
     </div>
     <div class="filter-group">
-      <button class="filter-btn active" data-filter="function">仅函数</button>
-      <button class="filter-btn" data-filter="all">全部节点</button>
-      <button class="filter-btn" data-filter="connected">仅连通</button>
+      <button class="filter-btn active" data-filter="function" aria-pressed="true">仅函数</button>
+      <button class="filter-btn" data-filter="all" aria-pressed="false">全部节点</button>
+      <button class="filter-btn" data-filter="connected" aria-pressed="false">仅连通</button>
     </div>
   </div>
 
@@ -540,6 +558,9 @@ html, body {
     <button class="btn-icon" id="btn-export" title="导出 JSON">导出 ↗</button>
   </div>
 </div>
+
+<aside class="module-panel" id="module-panel" hidden><div class="module-heading">模块<span id="visible-count"></span></div><div id="module-list"></div><div class="module-note">颜色区分模块，节点越大关联越多。<br>悬停看名称，点击查看调用关系。</div></aside>
+<div class="layout-status" id="layout-status" role="status" hidden>正在聚合布局…</div>
 
 <!-- Empty Hero State (When no repo is loaded) -->
 <div class="hero-state" id="hero-state" style="display: none;">
@@ -603,9 +624,10 @@ html, body {
   let currentGraph = { name: "Code Atlas", nodes: [], edges: [], stats: {} };
   let nodes = [], edges = [], totalNodes = 0;
   let adj = new Map(), callers = new Map(), callees = new Map();
-  let degrees = new Uint16Array(0);
+  let degrees = new Uint32Array(0);
   let posX = new Float32Array(0), posY = new Float32Array(0), radii = new Float32Array(0);
   let cleanEdges = [];
+  let groupNames=[],groupByNode=[],groupColors=[],moduleFocus=-1,layoutWorker=null,layoutVersion=0,layoutRadius=300,layoutNodeCount=0,fitZoom=1,labelOrder=[],pointerDownX=0,pointerDownY=0;
 
   function showToast(msg, duration = 3000) {
     const t = document.getElementById('toast');
@@ -634,31 +656,19 @@ html, body {
     return true;
   }
 
-  function fitView(padding = 90) {
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    let visibleCount = 0;
-    for (let i = 0; i < totalNodes; i++) {
-      if (!isNodeVisible(i)) continue;
-      visibleCount++;
-      if (posX[i] < minX) minX = posX[i];
-      if (posX[i] > maxX) maxX = posX[i];
-      if (posY[i] < minY) minY = posY[i];
-      if (posY[i] > maxY) maxY = posY[i];
-    }
-    if (!visibleCount) {
-      minX = -200; maxX = 200; minY = -200; maxY = 200;
-    }
-    const graphW = (maxX - minX) || 100;
-    const graphH = (maxY - minY) || 100;
-    const scaleX = (width - padding * 2) / graphW;
-    const scaleY = (height - padding * 2 - 40) / graphH;
-    zoom = Math.min(1.6, Math.max(0.08, Math.min(scaleX, scaleY)));
-    const midX = (minX + maxX) / 2;
-    const midY = (minY + maxY) / 2;
-    panX = width / 2 - midX * zoom;
-    panY = (height + 40) / 2 - midY * zoom;
+  function fitView(padding=48) {
+    let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity,count=0;
+    for(let i=0;i<totalNodes;i++)if(isNodeVisible(i)){minX=Math.min(minX,posX[i]);maxX=Math.max(maxX,posX[i]);minY=Math.min(minY,posY[i]);maxY=Math.max(maxY,posY[i]);count++;}
+    if(!count){requestDraw();return;}
+    const top=document.querySelector('.top-bar').getBoundingClientRect().bottom+28;
+    const legend=document.getElementById('module-panel').getBoundingClientRect();
+    const left=legend.width?legend.right+32:padding,right=width-padding,bottom=height-60;
+    zoom=Math.max(.005,Math.min(5,(right-left)/Math.max(90,maxX-minX+35),(bottom-top)/Math.max(90,maxY-minY+35)));
+    fitZoom=zoom;panX=(left+right)/2-(minX+maxX)/2*zoom;panY=(top+bottom)/2-(minY+maxY)/2*zoom;
     requestDraw();
   }
+
+
 
   function loadGraph(graph) {
     currentGraph = graph;
@@ -677,7 +687,7 @@ html, body {
       `<b>${fnCount.toLocaleString()}</b> 函数 · <b>${fileCount.toLocaleString()}</b> 文件 · <b>${callCount.toLocaleString()}</b> 关联`;
 
     adj.clear(); callers.clear(); callees.clear();
-    degrees = new Uint16Array(totalNodes);
+    degrees = new Uint32Array(totalNodes);
     for (let i = 0; i < totalNodes; i++) {
       adj.set(i, []); callers.set(i, []); callees.set(i, []);
     }
@@ -705,81 +715,131 @@ html, body {
     posY = new Float32Array(totalNodes);
     radii = new Float32Array(totalNodes);
 
-    const files = [...new Set(nodes.map(n => n.file))];
-    const fileNodes = new Map();
-    for (let i = 0; i < totalNodes; i++) {
-      const f = nodes[i].file;
-      if (!fileNodes.has(f)) fileNodes.set(f, []);
-      fileNodes.get(f).push(i);
-      const d = degrees[i];
-      radii[i] = Math.max(3.2, Math.min(14, 3.5 + Math.sqrt(d) * 1.8));
-    }
-
-    const clusterDist = Math.max(220, Math.min(650, Math.sqrt(totalNodes) * 36));
-    const fileClusters = new Map();
-    files.forEach((f, idx) => {
-      const r = Math.sqrt(idx + 0.5) * clusterDist;
-      const theta = idx * 2.3999632297;
-      fileClusters.set(f, { x: Math.cos(theta) * r, y: Math.sin(theta) * r });
-    });
-
-    for (const [f, nIndices] of fileNodes.entries()) {
-      const center = fileClusters.get(f);
-      nIndices.sort((a, b) => degrees[b] - degrees[a]);
-      for (let k = 0; k < nIndices.length; k++) {
-        const idx = nIndices[k];
-        if (k === 0) {
-          posX[idx] = center.x;
-          posY[idx] = center.y;
-        } else {
-          const angle = k * 2.3999632 + (idx % 7) * 0.4;
-          const dist = 40 + Math.sqrt(k) * 45;
-          posX[idx] = center.x + Math.cos(angle) * dist;
-          posY[idx] = center.y + Math.sin(angle) * dist;
-        }
-      }
-    }
-
-    // Force relaxation
-    const iterCount = totalNodes > 4000 ? 18 : 45;
-    for (let iter = 0; iter < iterCount; iter++) {
-      for (let i = 0; i < cleanEdges.length; i++) {
-        const e = cleanEdges[i];
-        const s = e.source, t = e.target;
-        let dx = posX[t] - posX[s];
-        let dy = posY[t] - posY[s];
-        let d = Math.hypot(dx, dy) || 1;
-        const targetDist = 65 + (radii[s] + radii[t]) * 2.2;
-        const f = (d - targetDist) * 0.03;
-        const fx = (dx / d) * f, fy = (dy / d) * f;
-        posX[s] += fx; posY[s] += fy;
-        posX[t] -= fx; posY[t] -= fy;
-      }
-      if (totalNodes < 1500) {
-        for (let i = 0; i < totalNodes; i++) {
-          for (let j = i + 1; j < totalNodes; j++) {
-            let dx = posX[j] - posX[i];
-            let dy = posY[j] - posY[i];
-            let d = Math.hypot(dx, dy) || 1;
-            const minD = radii[i] + radii[j] + 50;
-            if (d < minD) {
-              const rep = (minD - d) / minD * 1.5;
-              const rx = (dx / d) * rep, ry = (dy / d) * rep;
-              posX[i] -= rx; posY[i] -= ry;
-              posX[j] += rx; posY[j] += ry;
-            }
-          }
-        }
-      }
-      for (let i = 0; i < totalNodes; i++) {
-        posX[i] *= 0.995;
-        posY[i] *= 0.995;
-      }
-    }
-
+    for(let i=0;i<totalNodes;i++)radii[i]=2.8+Math.min(6.5,Math.sqrt(degrees[i])*.95);
+    assignGroups();
     deselectNode();
-    fitView();
+    requestLayout();
   }
+
+  function groupLabel(file, dominant) {
+    const parts = (file || '').replace(/\\/g, '/').split('/');
+    return parts.length < 2 ? '根目录' : parts[0] === dominant && parts.length > 2 ? parts.slice(0, 2).join('/') : parts[0];
+  }
+
+  function assignGroups() {
+    const roots = new Map(), palette = ['#b59b3d','#4c92ad','#69976b','#a47a9b','#c27d51','#7683b2','#4d9c90','#ab715e','#909447','#6b90a4','#b48b98','#83795d','#be9660','#7799b0','#9b9271','#ab9cb0','#879d85','#ae8774'];
+    const functions = nodes.filter(n => n.kind === 'function');
+    for (const n of functions) { const root = n.file.split('/')[0]; roots.set(root, (roots.get(root) || 0) + 1); }
+    const largest = [...roots].sort((a,b) => b[1]-a[1])[0];
+    const dominant = largest && largest[1] > functions.length * .55 ? largest[0] : '';
+    groupNames = [...new Set(nodes.map(n => groupLabel(n.file, dominant)))].sort();
+    const groupIds=new Map(groupNames.map((name,i)=>[name,i]));groupByNode=nodes.map(n=>groupIds.get(groupLabel(n.file,dominant)));
+    const counts=new Uint32Array(groupNames.length);nodes.forEach((n,i)=>{if(n.kind==='function')counts[groupByNode[i]]++;});
+    groupColors=[];groupNames.map((_,i)=>i).sort((a,b)=>counts[b]-counts[a]).forEach((g,i)=>groupColors[g]=palette[i%palette.length]);
+    moduleFocus = -1;
+  }
+
+  function updateLegend() {
+    const counts = new Map();
+    for (let i=0;i<totalNodes;i++) if (isNodeVisible(i)) counts.set(groupByNode[i], (counts.get(groupByNode[i]) || 0) + 1);
+    document.getElementById('module-panel').hidden = totalNodes === 0;
+    document.getElementById('visible-count').textContent = [...counts.values()].reduce((a,b)=>a+b,0) + ' 节点';
+    const list = document.getElementById('module-list'); list.replaceChildren();
+    for (const [group,count] of [...counts].sort((a,b)=>b[1]-a[1])) {
+      const button=document.createElement('button'),dot=document.createElement('i'),name=document.createElement('span'),number=document.createElement('small');
+      button.className='module-item'; button.setAttribute('aria-pressed',moduleFocus===group); button.title=groupNames[group];
+      dot.style.background=groupColors[group]; name.textContent=groupNames[group]; number.textContent=count;
+      button.append(dot,name,number); button.onclick=()=>{deselectNode();hoveredNode=-1;moduleFocus=moduleFocus===group?-1:group;updateLegend();fitView();};
+      list.append(button);
+    }
+  }
+
+  function computeCompactLayout(data) {
+    const items=data.items, byId=new Map(items.map((p,i)=>[p.id,i])), groups=[], fileMap=new Map(), groupIndex=[];
+    const x=new Float32Array(data.count), y=new Float32Array(data.count);
+    if (!items.length) return {x,y,radius:1};
+    for (let i=0;i<items.length;i++) {
+      const p=items[i];
+      if (!fileMap.has(p.file)) {fileMap.set(p.file,groups.length);groups.push({members:[],area:0,degree:0,module:p.module});}
+      const g=fileMap.get(p.file);groupIndex[i]=g;groups[g].members.push(i);
+      groups[g].area+=(p.r+4)*(p.r+4);groups[g].degree+=p.degree;
+    }
+    for (const g of groups) g.r=Math.sqrt(g.area)*1.14+7;
+    const radius=Math.sqrt(groups.reduce((s,g)=>s+g.r*g.r,0))*1.15+12;
+    const moduleAreas=new Map();
+    for (const g of groups) moduleAreas.set(g.module,(moduleAreas.get(g.module)||0)+g.r*g.r);
+    const totalArea=[...moduleAreas.values()].reduce((a,b)=>a+b,0), anchors=new Map();let angle=0;
+    for (const [module,area] of moduleAreas) {const span=area/totalArea*Math.PI*2;anchors.set(module,{x:Math.cos(angle+span/2)*radius*.38,y:Math.sin(angle+span/2)*radius*.38});angle+=span;}
+    const order=groups.map((_,i)=>i).sort((a,b)=>groups[b].degree-groups[a].degree);
+    order.forEach((id,i)=>{const g=groups[id],a=anchors.get(g.module),d=radius*.76*Math.sqrt(i/Math.max(1,groups.length-1)),theta=i*2.39996323;g.x=Math.cos(theta)*d*.65+a.x*.35;g.y=Math.sin(theta)*d*.65+a.y*.35;g.target=d;});
+    const links=data.links.filter(([a,b])=>byId.has(a)&&byId.has(b)).map(([a,b])=>[byId.get(a),byId.get(b)]);
+    const coarse=new Map();
+    for (const [a,b] of links) {const s=groupIndex[a],t=groupIndex[b];if(s!==t){const key=Math.min(s,t)+':'+Math.max(s,t);const e=coarse.get(key)||[s,t,0];e[2]++;coarse.set(key,e);}}
+
+    function collide(points,fx,fy,gap) {
+      const levels=[],own=[];
+      for(let i=0;i<points.length;i++){const p=points[i],level=Math.max(0,Math.ceil(Math.log2((p.r+gap)*2/16))),size=16*2**level;own[i]=level;if(!levels[level])levels[level]={size,max:0,cells:new Map()};const grid=levels[level];grid.max=Math.max(grid.max,p.r);const key=Math.floor(p.x/size)+','+Math.floor(p.y/size);if(!grid.cells.has(key))grid.cells.set(key,[]);grid.cells.get(key).push(i);}
+      for(let i=0;i<points.length;i++){const p=points[i];for(let level=own[i];level<levels.length;level++){const grid=levels[level];if(!grid)continue;const reach=p.r+grid.max+gap,size=grid.size;
+        for(let cx=Math.floor((p.x-reach)/size);cx<=Math.floor((p.x+reach)/size);cx++)for(let cy=Math.floor((p.y-reach)/size);cy<=Math.floor((p.y+reach)/size);cy++)for(const j of grid.cells.get(cx+','+cy)||[]){
+          if(level===own[i]&&j<=i)continue;const q=points[j];let dx=q.x-p.x,dy=q.y-p.y,d=Math.hypot(dx,dy),minimum=p.r+q.r+gap;if(d>=minimum)continue;
+          if(d<.001){dx=Math.cos((i+j)*2.39996)*.01;dy=Math.sin((i+j)*2.39996)*.01;d=.01;}
+          const force=(minimum-d)*.62,total=p.r+q.r;
+          fx[i]-=dx/d*force*q.r/total;fy[i]-=dy/d*force*q.r/total;fx[j]+=dx/d*force*p.r/total;fy[j]+=dy/d*force*p.r/total;
+        }
+      }}
+    }
+
+    for(let step=0;step<(groups.length>1200?100:180);step++){
+      const fx=new Float32Array(groups.length),fy=new Float32Array(groups.length);
+      groups.forEach((g,i)=>{const a=anchors.get(g.module),d=Math.hypot(g.x,g.y)||1,pull=(g.target-d)*.012;fx[i]=-g.x*.003+(a.x-g.x)*.008+g.x/d*pull;fy[i]=-g.y*.003+(a.y-g.y)*.008+g.y/d*pull;});
+      for(const [s,t,weight] of coarse.values()){const a=groups[s],b=groups[t],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1,force=(d-a.r-b.r-10)*.012*Math.min(2,Math.log2(weight+1));fx[s]+=dx/d*force;fy[s]+=dy/d*force;fx[t]-=dx/d*force;fy[t]-=dy/d*force;}
+      collide(groups,fx,fy,5);
+      groups.forEach((g,i)=>{g.x+=Math.max(-24,Math.min(24,fx[i]));g.y+=Math.max(-24,Math.min(24,fy[i]));const d=Math.hypot(g.x,g.y),limit=Math.max(0,radius-g.r);if(d>limit){g.x*=limit/d;g.y*=limit/d;}});
+    }
+    const points=items.map(p=>({r:p.r,x:0,y:0}));
+    for(const g of groups){g.members.sort((a,b)=>items[b].degree-items[a].degree);g.members.forEach((id,k)=>{const d=k?Math.sqrt((k+.25)/g.members.length)*Math.max(0,g.r-items[id].r-5):0,a=k*2.39996323;points[id].x=g.x+Math.cos(a)*d;points[id].y=g.y+Math.sin(a)*d;});}
+    for(let step=0;step<(items.length>4000?28:55);step++){
+      const fx=new Float32Array(items.length),fy=new Float32Array(items.length);
+      for(let i=0;i<items.length;i++){const g=groups[groupIndex[i]],p=points[i];fx[i]=(g.x-p.x)*.018;fy[i]=(g.y-p.y)*.018;}
+      for(const [s,t] of links){const a=points[s],b=points[t],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1,force=(d-a.r-b.r-12)*(groupIndex[s]===groupIndex[t]?.06:.0015);fx[s]+=dx/d*force;fy[s]+=dy/d*force;fx[t]-=dx/d*force;fy[t]-=dy/d*force;}
+      collide(points,fx,fy,5);
+      for(let i=0;i<points.length;i++){const p=points[i],g=groups[groupIndex[i]];p.x+=Math.max(-8,Math.min(8,fx[i]));p.y+=Math.max(-8,Math.min(8,fy[i]));const dx=p.x-g.x,dy=p.y-g.y,d=Math.hypot(dx,dy),limit=Math.max(0,g.r-p.r-3);if(d>limit){p.x=g.x+dx/d*limit;p.y=g.y+dy/d*limit;}}
+    }
+    points.forEach((p,i)=>{x[items[i].id]=p.x;y[items[i].id]=p.y;});
+    return {x,y,radius};
+  }
+
+  function requestLayout() {
+    const version=++layoutVersion, started=performance.now();
+    if(layoutWorker)layoutWorker.terminate();
+    const items=[];
+    for(let i=0;i<totalNodes;i++)if(isNodeVisible(i))items.push({id:i,file:nodes[i].file,module:groupByNode[i],r:radii[i],degree:degrees[i]});
+    const data={items,count:totalNodes,links:cleanEdges.map(e=>[e.source,e.target])};
+    layoutNodeCount=items.length;
+    const status=document.getElementById('layout-status');status.textContent='正在聚合布局…';status.hidden=!items.length;canvas.dataset.layout='running';
+    updateLegend();
+    const apply=result=>{if(version!==layoutVersion)return;posX=result.x;posY=result.y;layoutRadius=result.radius;labelOrder=items.map(p=>p.id).sort((a,b)=>degrees[b]-degrees[a]);canvas.dataset.layout='ready';canvas.dataset.layoutMs=(performance.now()-started).toFixed(1);status.hidden=true;fitView();if(selectedNode!==-1&&isNodeVisible(selectedNode))centerOnNode(selectedNode);};
+    if(!items.length){apply({x:new Float32Array(totalNodes),y:new Float32Array(totalNodes),radius:1});return;}
+    const source='onmessage=e=>{const r=('+computeCompactLayout.toString()+')(e.data);postMessage(r,[r.x.buffer,r.y.buffer])}';
+    const url=URL.createObjectURL(new Blob([source],{type:'application/javascript'}));
+    try {
+      layoutWorker=new Worker(url);URL.revokeObjectURL(url);
+      layoutWorker.onmessage=e=>{if(version!==layoutVersion)return;layoutWorker?.terminate();layoutWorker=null;apply(e.data);};
+      layoutWorker.onerror=()=>{if(version!==layoutVersion)return;layoutWorker?.terminate();layoutWorker=null;status.textContent='布局失败，请重新构建';canvas.dataset.layout='error';};
+      layoutWorker.postMessage(data);
+    } catch(error) {URL.revokeObjectURL(url);apply(computeCompactLayout(data));}
+  }
+
+  function nodeLabel(i) {
+    const n=nodes[i],parent=nodes[n.parent];
+    return n.kind==='function'&&parent?.kind==='class'?parent.name+'.'+n.name:n.name;
+  }
+
+  function screenRadius(i) {
+    const minimum=layoutNodeCount>5000?.8:layoutNodeCount>1500?1.4:2.2;
+    return Math.max(minimum,Math.min(11,radii[i]*Math.sqrt(zoom*fitZoom)));
+  }
+
 
   // Trigger build API
   async function triggerBuild(repoPath) {
@@ -832,10 +892,12 @@ html, body {
     canvas.width = Math.floor(width * dpr);
     canvas.height = Math.floor(height * dpr);
     ctx.scale(dpr, dpr);
-    requestDraw();
+    if(totalNodes)fitView();else requestDraw();
   }
   window.addEventListener('resize', resize);
   resize();
+
+  document.fonts.ready.then(requestDraw);
 
   // Load initial graph
   try {
@@ -847,212 +909,64 @@ html, body {
 
   // Canvas Render
   function render() {
-    ctx.clearRect(0, 0, width, height);
-    if (!totalNodes) return;
-
-    const pad = 80 / zoom;
-    const vLeft = -panX / zoom - pad;
-    const vRight = (width - panX) / zoom + pad;
-    const vTop = -panY / zoom - pad;
-    const vBottom = (height - panY) / zoom + pad;
-
-    ctx.save();
-    ctx.translate(panX, panY);
-    ctx.scale(zoom, zoom);
-
-    const active = selectedNode !== -1 ? selectedNode : hoveredNode;
-    let activeNeighbors = null;
-    if (active !== -1) {
-      activeNeighbors = new Set(adj.get(active));
-      activeNeighbors.add(active);
-    }
-
-    // 1. Draw Links
-    ctx.beginPath();
-    const linkAlpha = totalNodes > 4000 ? (zoom < 0.3 ? 0.025 : 0.05) : 0.09;
-    ctx.strokeStyle = active !== -1 ? 'rgba(45, 48, 45, 0.025)' : `rgba(45, 48, 45, ${linkAlpha})`;
-    ctx.lineWidth = Math.max(0.65, 0.95 / Math.sqrt(zoom));
-
-    for (let i = 0; i < cleanEdges.length; i++) {
-      const e = cleanEdges[i];
-      const s = e.source, t = e.target;
-      if (!isNodeVisible(s) || !isNodeVisible(t)) continue;
-      const x1 = posX[s], y1 = posY[s], x2 = posX[t], y2 = posY[t];
-      if ((x1 < vLeft && x2 < vLeft) || (x1 > vRight && x2 > vRight) ||
-          (y1 < vTop && y2 < vTop) || (y1 > vBottom && y2 > vBottom)) continue;
-
-      if (active !== -1 && (s === active || t === active)) continue;
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-    }
+    const started=performance.now();
+    ctx.clearRect(0,0,width,height);
+    if(!totalNodes||canvas.dataset.layout==='running')return;
+    const active=selectedNode!==-1?selectedNode:hoveredNode,neighbors=active!==-1?new Set([active,...(adj.get(active)||[])]):null;
+    const sx=new Float32Array(totalNodes),sy=new Float32Array(totalNodes),visible=new Uint8Array(totalNodes),matches=new Uint8Array(totalNodes);
+    let count=0;
+    for(let i=0;i<totalNodes;i++){if(!isNodeVisible(i))continue;sx[i]=panX+posX[i]*zoom;sy[i]=panY+posY[i]*zoom;visible[i]=1;count++;matches[i]=!searchQuery||(nodes[i].name+' '+nodes[i].file).toLowerCase().includes(searchQuery);}
+    const strong=active!==-1||moduleFocus!==-1||!!searchQuery;
+    ctx.strokeStyle=strong?'rgba(83,98,91,.055)':count>4000?'rgba(83,98,91,.08)':'rgba(83,98,91,.22)';
+    ctx.lineWidth=.8;ctx.beginPath();
+    for(const e of cleanEdges){const s=e.source,t=e.target;if(!visible[s]||!visible[t])continue;if((sx[s]<0&&sx[t]<0)||(sx[s]>width&&sx[t]>width)||(sy[s]<0&&sy[t]<0)||(sy[s]>height&&sy[t]>height))continue;ctx.moveTo(sx[s],sy[s]);ctx.lineTo(sx[t],sy[t]);}
     ctx.stroke();
-
-    // Active links
-    if (active !== -1) {
-      ctx.beginPath();
-      ctx.strokeStyle = '#c85a32';
-      ctx.lineWidth = 1.7 / Math.sqrt(zoom);
-      const activeEdges = adj.get(active) || [];
-      for (const target of activeEdges) {
-        if (!isNodeVisible(target)) continue;
-        ctx.moveTo(posX[active], posY[active]);
-        ctx.lineTo(posX[target], posY[target]);
-      }
-      ctx.stroke();
+    if(active!==-1){ctx.strokeStyle='#b85d3c';ctx.lineWidth=1.6;ctx.beginPath();for(const t of adj.get(active)||[]){if(!visible[t])continue;ctx.moveTo(sx[active],sy[active]);ctx.lineTo(sx[t],sy[t]);}ctx.stroke();}
+    const batches=new Map();
+    for(let i=0;i<totalNodes;i++){
+      if(!visible[i]||sx[i]<-20||sx[i]>width+20||sy[i]<-20||sy[i]>height+20)continue;
+      const bright=neighbors?neighbors.has(i):moduleFocus!==-1?groupByNode[i]===moduleFocus:matches[i];
+      const key=groupByNode[i]+':'+bright;
+      if(!batches.has(key))batches.set(key,{color:groupColors[groupByNode[i]],alpha:bright?.94:.16,items:[]});
+      batches.get(key).items.push(i);
     }
-
-    // 2. Draw Nodes
-    ctx.fillStyle = active !== -1 ? 'rgba(43, 46, 43, 0.22)' : '#262926';
-    ctx.beginPath();
-    for (let i = 0; i < totalNodes; i++) {
-      if (!isNodeVisible(i)) continue;
-      const x = posX[i], y = posY[i];
-      if (x < vLeft || x > vRight || y < vTop || y > vBottom) continue;
-      if (activeNeighbors && activeNeighbors.has(i)) continue;
-
-      const r = radii[i];
-      ctx.moveTo(x + r, y);
-      ctx.arc(x, y, r, 0, Math.PI * 2);
+    for(const batch of batches.values()){ctx.globalAlpha=batch.alpha;ctx.fillStyle=batch.color;ctx.beginPath();for(const i of batch.items){const r=screenRadius(i);ctx.moveTo(sx[i]+r,sy[i]);ctx.arc(sx[i],sy[i],r,0,Math.PI*2);}ctx.fill();if(count<2500){ctx.strokeStyle='#fcfaf7';ctx.lineWidth=.7;ctx.stroke();}}
+    ctx.globalAlpha=1;
+    if(active!==-1&&visible[active]){const r=screenRadius(active)+2;ctx.fillStyle='#b85d3c';ctx.strokeStyle='#fffdf9';ctx.lineWidth=2;ctx.beginPath();ctx.arc(sx[active],sy[active],r,0,Math.PI*2);ctx.fill();ctx.stroke();}
+    const candidates=active!==-1?[active,...(adj.get(active)||[])]:searchQuery?labelOrder.filter(i=>matches[i]):moduleFocus!==-1?labelOrder.filter(i=>groupByNode[i]===moduleFocus):labelOrder;
+    const occupied=[],bar=document.querySelector('.top-bar').getBoundingClientRect(),legend=document.getElementById('module-panel').getBoundingClientRect(),card=document.getElementById('inspector');
+    const obstacles=[bar];if(legend.width)obstacles.push(legend);if(card.style.display!=='none')obstacles.push(card.getBoundingClientRect());
+    const overlap=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+    for(const b of obstacles)occupied.push({x:b.left-5,y:b.top-4,w:b.width+10,h:b.height+8});
+    const maxLabels=active!==-1?28:Math.min(50,zoom/Math.max(.001,fitZoom)>1.8?45:count<80?20:13);
+    let drawn=0;ctx.textBaseline='middle';ctx.lineJoin='round';
+    for(const i of candidates){
+      if(!visible[i]||sx[i]<0||sx[i]>width||sy[i]<0||sy[i]>height)continue;
+      let label=nodeLabel(i);const size=i===active?15:13.5;ctx.font=(i===active?'600 ':'400 ')+size+'px '+FONT_SERIF;
+      const limit=Math.min(270,width*.45);while(label.length>4&&ctx.measureText(label).width>limit)label=label.slice(0,-2)+'…';
+      const tw=ctx.measureText(label).width,r=screenRadius(i)+6;
+      const placements=[{x:sx[i]+r,y:sy[i]-size/2,w:tw,h:size},{x:sx[i]-r-tw,y:sy[i]-size/2,w:tw,h:size},{x:sx[i]-tw/2,y:sy[i]-r-size,w:tw,h:size}];
+      const box=placements.find(b=>b.x>=10&&b.x+b.w<width-10&&b.y>bar.bottom+8&&b.y+b.h<height-36&&!occupied.some(a=>overlap({...b,x:b.x-4,y:b.y-3,w:b.w+8,h:b.h+6},a)));
+      if(!box)continue;occupied.push(box);
+      ctx.strokeStyle='#fcfaf7';ctx.lineWidth=4;ctx.strokeText(label,box.x,box.y+size/2);ctx.fillStyle=i===active?'#9d462e':'#38483e';ctx.fillText(label,box.x,box.y+size/2);
+      if(++drawn>=maxLabels)break;
     }
-    ctx.fill();
-
-    // Highlighted nodes
-    if (activeNeighbors) {
-      ctx.fillStyle = '#262926';
-      ctx.beginPath();
-      for (const nIdx of activeNeighbors) {
-        if (nIdx === active || !isNodeVisible(nIdx)) continue;
-        const x = posX[nIdx], y = posY[nIdx], r = radii[nIdx] + 1;
-        ctx.moveTo(x + r, y);
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-      }
-      ctx.fill();
-
-      // Neighbor rings
-      ctx.strokeStyle = '#c85a32';
-      ctx.lineWidth = 1.3 / Math.sqrt(zoom);
-      ctx.beginPath();
-      for (const nIdx of activeNeighbors) {
-        if (nIdx === active || !isNodeVisible(nIdx)) continue;
-        const x = posX[nIdx], y = posY[nIdx], r = radii[nIdx] + 1;
-        ctx.moveTo(x + r, y);
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-      }
-      ctx.stroke();
-
-      // Active node
-      if (isNodeVisible(active)) {
-        const ax = posX[active], ay = posY[active], ar = radii[active] + 3;
-        ctx.fillStyle = '#c85a32';
-        ctx.beginPath();
-        ctx.arc(ax, ay, ar, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2.2 / Math.sqrt(zoom);
-        ctx.stroke();
-      }
-    }
-
-    // 3. Search query highlight
-    if (searchQuery) {
-      ctx.strokeStyle = '#c85a32';
-      ctx.lineWidth = 2.5 / Math.sqrt(zoom);
-      for (let i = 0; i < totalNodes; i++) {
-        if (!isNodeVisible(i)) continue;
-        const n = nodes[i];
-        if ((n.name + ' ' + n.file).toLowerCase().includes(searchQuery)) {
-          const x = posX[i], y = posY[i], r = radii[i] + 4;
-          ctx.beginPath();
-          ctx.arc(x, y, r, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-      }
-    }
-
-    // 4. Labels
-    const shouldShowLabels = zoom > 0.65 || active !== -1 || totalNodes < 40;
-    if (shouldShowLabels) {
-      const fontSize = Math.max(10, Math.min(13, 11.5 / Math.sqrt(zoom)));
-      ctx.font = `${fontSize}px ${FONT_SERIF}`;
-      ctx.textBaseline = 'middle';
-      ctx.lineJoin = 'round';
-
-      const labelsToDraw = [];
-      if (active !== -1) {
-        labelsToDraw.push(active);
-        for (const nIdx of (adj.get(active) || [])) {
-          if (labelsToDraw.length < 35) labelsToDraw.push(nIdx);
-        }
-      } else {
-        for (let i = 0; i < totalNodes; i++) {
-          if (!isNodeVisible(i)) continue;
-          const x = posX[i], y = posY[i];
-          if (x < vLeft || x > vRight || y < vTop || y > vBottom) continue;
-          if (zoom < 0.9 && degrees[i] < 2) continue;
-          labelsToDraw.push(i);
-          if (labelsToDraw.length >= 80) break;
-        }
-      }
-
-      const occupied = [];
-      for (const idx of labelsToDraw) {
-        if (!isNodeVisible(idx)) continue;
-        const x = posX[idx], y = posY[idx], r = radii[idx];
-        const name = nodes[idx].name;
-        const textW = ctx.measureText(name).width;
-        const lx = x + r + 6 / Math.sqrt(zoom);
-        const ly = y;
-
-        const padX = 4 / Math.sqrt(zoom);
-        const padY = 7 / Math.sqrt(zoom);
-        if (idx !== active) {
-          const collides = occupied.some(b => 
-            lx < b.x + b.w + padX && lx + textW + padX > b.x &&
-            Math.abs(ly - b.y) < padY * 2
-          );
-          if (collides) continue;
-        }
-        occupied.push({ x: lx, y: ly, w: textW });
-
-        // Background Halo
-        ctx.strokeStyle = '#fcfaf7';
-        ctx.lineWidth = 3.6 / Math.sqrt(zoom);
-        ctx.strokeText(name, lx, ly);
-
-        // Text fill
-        ctx.fillStyle = (idx === active) ? '#c85a32' : (idx === hoveredNode ? '#111111' : '#2b2e2b');
-        ctx.fillText(name, lx, ly);
-      }
-    }
-
-    ctx.restore();
+    canvas.dataset.frameMs=(performance.now()-started).toFixed(1);
+    canvas.dataset.visible=count;canvas.dataset.labels=drawn;
   }
 
   function hitTest(screenX, screenY) {
-    const worldX = (screenX - panX) / zoom;
-    const worldY = (screenY - panY) / zoom;
-    const hitRadius = Math.max(9, 15 / zoom);
-
-    let closest = -1;
-    let closestDist = hitRadius;
-
-    for (let i = 0; i < totalNodes; i++) {
-      if (!isNodeVisible(i)) continue;
-      const dx = posX[i] - worldX;
-      const dy = posY[i] - worldY;
-      const dist = Math.hypot(dx, dy);
-      if (dist < closestDist + radii[i]) {
-        closest = i;
-        closestDist = dist;
-      }
-    }
+    let closest=-1,best=Infinity;
+    for(let i=0;i<totalNodes;i++){if(!isNodeVisible(i))continue;const distance=Math.hypot(posX[i]*zoom+panX-screenX,posY[i]*zoom+panY-screenY);if(distance<Math.max(8,screenRadius(i)+3)&&distance<best){closest=i;best=distance;}}
     return closest;
   }
+
 
   canvas.addEventListener('pointerdown', e => {
     isDragging = true;
     dragStartX = e.clientX;
     dragStartY = e.clientY;
+    pointerDownX=e.clientX;pointerDownY=e.clientY;
     panStartX = panX;
     panStartY = panY;
 
@@ -1069,6 +983,7 @@ html, body {
       if (draggedNodeIdx !== -1) {
         posX[draggedNodeIdx] += dx / zoom;
         posY[draggedNodeIdx] += dy / zoom;
+        const d=Math.hypot(posX[draggedNodeIdx],posY[draggedNodeIdx]);if(d>layoutRadius){posX[draggedNodeIdx]*=layoutRadius/d;posY[draggedNodeIdx]*=layoutRadius/d;}
         dragStartX = e.clientX;
         dragStartY = e.clientY;
       } else {
@@ -1091,7 +1006,7 @@ html, body {
 
   canvas.addEventListener('pointerup', e => {
     if (!isDragging) return;
-    const moved = Math.hypot(e.clientX - dragStartX, e.clientY - dragStartY);
+    const moved = Math.hypot(e.clientX - pointerDownX, e.clientY - pointerDownY);
     isDragging = false;
 
     if (moved < 5) {
@@ -1110,13 +1025,14 @@ html, body {
     isDragging = false;
     draggedNodeIdx = -1;
   });
+  canvas.addEventListener('pointerleave',()=>{if(!isDragging){hoveredNode=-1;document.getElementById('tooltip').style.display='none';requestDraw();}});
 
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
     const mouseX = e.clientX;
     const mouseY = e.clientY;
     const factor = e.deltaY < 0 ? 1.15 : 0.87;
-    const newZoom = Math.min(8, Math.max(0.04, zoom * factor));
+    const newZoom = Math.min(Math.max(8,fitZoom*8), Math.max(fitZoom*.3, zoom * factor));
 
     panX = mouseX - (mouseX - panX) * (newZoom / zoom);
     panY = mouseY - (mouseY - panY) * (newZoom / zoom);
@@ -1141,8 +1057,8 @@ html, body {
     }
     const n = nodes[hoveredNode];
     const deg = degrees[hoveredNode];
-    tooltip.innerHTML = `<b>${n.name}</b> <span style="opacity:0.75; font-size:11px;">(${n.kind}) · ${deg} 关联</span>`;
-    tooltip.style.left = `${x}px`;
+    tooltip.textContent = `${nodeLabel(hoveredNode)} · ${deg} 关联`;
+    tooltip.style.left = `${Math.max(110,Math.min(width-110,x))}px`;
     tooltip.style.top = `${y}px`;
     tooltip.style.display = 'block';
   }
@@ -1169,13 +1085,12 @@ html, body {
     focusedSubGraph = false;
     updateTooltip(0, 0);
     const n = nodes[idx];
+    if(!isNodeVisible(idx)){activeFilter='all';document.querySelectorAll('.filter-btn').forEach(b=>{const active=b.dataset.filter==='all';b.classList.toggle('active',active);b.setAttribute('aria-pressed',active);});requestLayout();}
     const card = document.getElementById('inspector');
     document.getElementById('insp-badge').textContent = n.kind.toUpperCase();
     document.getElementById('insp-title').textContent = n.name;
-    document.getElementById('insp-meta').innerHTML = 
-      `<div><b>文件:</b> ${n.file}</div>` +
-      `<div><b>位置:</b> 第 ${n.line}${n.end && n.end !== n.line ? ' – ' + n.end : ''} 行</div>` +
-      `<div><b>连通度:</b> ${degrees[idx]} (入度: ${callers.get(idx).length}, 出度: ${callees.get(idx).length})</div>`;
+    const meta=document.getElementById('insp-meta');meta.replaceChildren();
+    for(const text of [`文件：${n.file}`,`位置：${n.line}${n.end&&n.end!==n.line?'–'+n.end:''} 行`,`${degrees[idx]} 个关联节点 · ${callers.get(idx).length} 次入向调用 · ${callees.get(idx).length} 次出向调用`]){const line=document.createElement('div');line.textContent=text;meta.append(line);}
 
     const relationsDiv = document.getElementById('insp-relations');
     relationsDiv.innerHTML = '';
@@ -1215,20 +1130,24 @@ html, body {
     }
 
     document.getElementById('insp-btn-focus').textContent = '聚焦关联';
+    document.getElementById('search-results').hidden=true;
     card.style.display = 'flex';
+    updateLegend();
     requestDraw();
   }
 
   function deselectNode() {
+    const wasFocused = focusedSubGraph;
     selectedNode = -1;
     focusedSubGraph = false;
     document.getElementById('inspector').style.display = 'none';
-    requestDraw();
+    updateLegend();
+    if (wasFocused) fitView(); else requestDraw();
   }
 
   function centerOnNode(idx) {
     if (idx === -1) return;
-    zoom = Math.max(1.3, zoom);
+    zoom = Math.max(fitZoom*2.2, zoom);
     panX = width / 2 - posX[idx] * zoom;
     panY = (height + 40) / 2 - posY[idx] * zoom;
     requestDraw();
@@ -1239,24 +1158,24 @@ html, body {
   document.getElementById('insp-btn-focus').onclick = () => {
     focusedSubGraph = !focusedSubGraph;
     document.getElementById('insp-btn-focus').textContent = focusedSubGraph ? '恢复全景' : '聚焦关联';
-    requestDraw();
+    updateLegend();fitView();
   };
 
   document.getElementById('btn-zoom-in').onclick = () => {
-    const newZoom = Math.min(8, zoom * 1.3);
+    const newZoom = Math.min(Math.max(8,fitZoom*8), zoom * 1.3);
     panX = width / 2 - (width / 2 - panX) * (newZoom / zoom);
     panY = height / 2 - (height / 2 - panY) * (newZoom / zoom);
     zoom = newZoom;
     requestDraw();
   };
   document.getElementById('btn-zoom-out').onclick = () => {
-    const newZoom = Math.max(0.04, zoom / 1.3);
+    const newZoom = Math.max(fitZoom*.3, zoom / 1.3);
     panX = width / 2 - (width / 2 - panX) * (newZoom / zoom);
     panY = height / 2 - (height / 2 - panY) * (newZoom / zoom);
     zoom = newZoom;
     requestDraw();
   };
-  document.getElementById('btn-fit').onclick = () => fitView();
+  document.getElementById('btn-fit').onclick = () => {deselectNode();moduleFocus=-1;updateLegend();fitView();};
 
   document.getElementById('btn-export').onclick = () => {
     const blob = new Blob([JSON.stringify(currentGraph, null, 2)], { type: 'application/json' });
@@ -1270,19 +1189,28 @@ html, body {
 
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.onclick = () => {
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.filter-btn').forEach(b => {b.classList.remove('active');b.setAttribute('aria-pressed','false');});
       btn.classList.add('active');
+      btn.setAttribute('aria-pressed','true');
       activeFilter = btn.dataset.filter;
-      fitView();
+      deselectNode();
+      requestLayout();
     };
   });
 
   const searchInput = document.getElementById('search-input');
   const searchClear = document.getElementById('search-clear');
+  function updateSearchResults(){
+    const panel=document.getElementById('search-results');panel.replaceChildren();panel.hidden=!searchQuery;if(!searchQuery)return;
+    const found=labelOrder.filter(i=>isNodeVisible(i)&&(nodes[i].name+' '+nodes[i].file).toLowerCase().includes(searchQuery)).slice(0,7);
+    for(const i of found){const button=document.createElement('button'),path=document.createElement('small');button.textContent=nodeLabel(i);path.textContent=nodes[i].file+':'+nodes[i].line;button.append(path);button.onclick=()=>{selectNode(i);centerOnNode(i);};panel.append(button);}
+    if(!found.length)panel.textContent='没有匹配的符号';
+  }
 
   searchInput.addEventListener('input', e => {
     searchQuery = e.target.value.trim().toLowerCase();
     searchClear.style.display = searchQuery ? 'block' : 'none';
+    updateSearchResults();
     requestDraw();
   });
 
@@ -1290,6 +1218,7 @@ html, body {
     searchInput.value = '';
     searchQuery = '';
     searchClear.style.display = 'none';
+    document.getElementById('search-results').hidden=true;
     requestDraw();
   };
 
