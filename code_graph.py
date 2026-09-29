@@ -190,4 +190,3 @@ class CodeGraph:
         neighbors = {e[k] for e in edges[:120] for k in ("source", "target")} - selected
         return dict(matches=chosen, total_matches=len(matches), edges=edges[:120], total_edges=len(edges),
                     neighbors=[n for n in self.graph["nodes"] if n["id"] in neighbors], truncated=len(chosen) < len(matches) or len(edges) > 120)
-
