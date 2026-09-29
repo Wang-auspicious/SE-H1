@@ -5,6 +5,7 @@ import subprocess
 import sys
 import uuid
 import webbrowser
+from http.server import SimpleHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 from openai import OpenAI, APIError, APIStatusError
@@ -129,26 +130,102 @@ class CodeAgent:
         raise RuntimeError(f"Reached {self.max_steps} steps; task may be incomplete.")
 
 
+def serve(repo=".", port=8766):
+    root = Path(repo).resolve() if repo else Path(".").resolve()
+    current_graph = None
+    try:
+        g = CodeGraph(root)
+        g.build()
+        current_graph = g.graph
+    except Exception:
+        pass
+
+    class Handler(SimpleHTTPRequestHandler):
+        def do_POST(self):
+            if self.path == "/api/build":
+                length = int(self.headers.get("Content-Length", 0))
+                data = json.loads(self.rfile.read(length))
+                target = data.get("repo", ".").strip()
+                try:
+                    if target.startswith(("http://", "https://", "git@")):
+                        name = target.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git")
+                        dest = (Path(".repos") / name).resolve()
+                        dest.parent.mkdir(parents=True, exist_ok=True)
+                        if not dest.exists():
+                            subprocess.run(["git", "clone", "--depth", "1", target, str(dest)], check=True, timeout=180)
+                        target = dest
+                    g = CodeGraph(target)
+                    g.build()
+                    nonlocal current_graph
+                    current_graph = g.graph
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(json.dumps(g.graph, ensure_ascii=False).encode("utf-8"))
+                except Exception as e:
+                    self.send_response(400)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+                return
+            self.send_error(404)
+
+        def do_GET(self):
+            if self.path in ("/", "/graph.html"):
+                template = (Path(__file__).parent / "graph_view.html").read_text("utf-8")
+                payload = json.dumps(current_graph or {"name": "Code Atlas", "nodes": [], "edges": [], "stats": {}}, ensure_ascii=False).replace("<", "\\u003c")
+                body = template.replace("__GRAPH_DATA__", payload).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            super().do_GET()
+
+        def log_message(self, *a): pass
+
+    httpd = None
+    for p in range(port, port + 20):
+        try:
+            httpd = HTTPServer(("127.0.0.1", p), Handler)
+            port = p
+            break
+        except OSError:
+            continue
+    if not httpd:
+        raise RuntimeError("No free port available for server.")
+    url = f"http://127.0.0.1:{port}"
+    print(f"Code Atlas visualizer running at {url}")
+    webbrowser.open(url)
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        pass
+
+
 def main():
     parser = argparse.ArgumentParser(description="A minimal coding agent for repository graphs.")
-    parser.add_argument("repo", nargs="?", default=".")
-    parser.add_argument("task", nargs="?", default="生成这个代码库的图，简要说明覆盖情况和输出位置。")
+    parser.add_argument("repo", nargs="?", default=None)
+    parser.add_argument("task", nargs="?", default=None)
     parser.add_argument("--graph", action="store_true", help="Build locally without an LLM or API key")
     parser.add_argument("--open", action="store_true", help="Open the generated HTML")
+    parser.add_argument("--serve", action="store_true", help="Start local visualizer server (default)")
+    parser.add_argument("--port", type=int, default=8766, help="Server port (default: 8766)")
     parser.add_argument("--output", help="Output directory (default: <repo>/.code-graph)")
     parser.add_argument("--model", help="OpenCode Go model ID")
     args = parser.parse_args()
     try:
-        if args.graph:
-            graph = CodeGraph(args.repo, args.output)
-            print(json.dumps(graph.build(), ensure_ascii=False, indent=2))
-        else:
-            agent = CodeAgent(repo=args.repo, output=args.output, model=args.model)
+        if args.task:
+            agent = CodeAgent(repo=args.repo or ".", output=args.output, model=args.model)
             print(agent.run(args.task))
             print(f"Steps: {agent.step_count} | Tokens: {agent.token_usage['total_tokens']}")
-            graph = agent.graph
-        if args.open and (graph.output / "graph.html").is_file():
-            webbrowser.open((graph.output / "graph.html").as_uri())
+        elif args.graph:
+            graph = CodeGraph(args.repo or ".", args.output)
+            print(json.dumps(graph.build(), ensure_ascii=False, indent=2))
+            if args.open and (graph.output / "graph.html").is_file():
+                webbrowser.open((graph.output / "graph.html").as_uri())
+        else:
+            serve(args.repo or ".", port=args.port)
     except APIStatusError as error:
         print(f"OpenCode Go HTTP {error.status_code}; check your key, subscription and model.", file=sys.stderr)
         return 1

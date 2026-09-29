@@ -6,23 +6,17 @@
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-python code_agent.py . --open
+python code_agent.py
 ```
 
-将 `.` 换成任意本地代码库路径。macOS / Linux 用 `source .venv/bin/activate` 激活环境。
+默认启动本地可视化服务并打开浏览器。在页面顶部输入框中填入任意 GitHub 仓库的 `.git` 链接或本地文件夹路径，点击「构建」即可自动在本地拉取、解析并渲染星系图谱。
 
-默认通过 [OpenCode Go](https://opencode.ai/docs/go/) 调用 `deepseek-v4.1-flash`，自动读取本机 OpenCode 的 `opencode-go` 登录配置；也可设置 `OPENCODE_API_KEY` 或 `DEEPSEEK_API_KEY`。密钥不写进代码、图或日志。模型可用 `--model` 修改。
-
-只建图，无需模型或 key：
+也可指定本地代码库或结合 Agent 使用：
 
 ```powershell
-python code_agent.py . --graph --open
-```
-
-让 Agent 查代码：
-
-```powershell
-python code_agent.py . "建图，找出 CodeAgent 的调用关系"
+python code_agent.py D:\my-repo           # 打开指定目录
+python code_agent.py . --graph --open     # 仅本地静态建图，不启服务
+python code_agent.py . "找出 CodeAgent 的调用关系"  # 调用 Agent 查代码
 ```
 
 输出在目标代码库的 `.code-graph/`：`graph.html` 是轻量至极的 Obsidian 风格 2D 代码关系图谱，去除了冗余侧边栏，全屏沉浸；支持函数/节点筛选、实时搜索定位、缩放平移、调用链邻域聚焦与 JSON 导出。`graph.json` 保存全部节点及关系。`--output` 可改输出目录；新增、修改、删除文件都会更新缓存，仅改 HTML 不重新解析源码。

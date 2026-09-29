@@ -44,7 +44,7 @@ html, body {
 }
 #canvas:active { cursor: grabbing; }
 
-/* Top Floating Header Bar (Responsive & Non-intrusive) */
+/* Top Floating Header Bar */
 .top-bar {
   position: absolute;
   top: 14px;
@@ -53,9 +53,10 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   pointer-events: none;
   z-index: 10;
+  flex-wrap: wrap;
 }
 .panel {
   background: var(--card-bg);
@@ -67,7 +68,7 @@ html, body {
   padding: 5px 10px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   pointer-events: auto;
   white-space: nowrap;
 }
@@ -90,13 +91,55 @@ html, body {
   font-size: 11.5px;
   color: var(--ink-secondary);
   border-left: 1px solid var(--border-light);
-  padding-left: 10px;
+  padding-left: 8px;
 }
 .stats b {
   color: var(--ink);
   font-weight: 600;
 }
 
+/* Repo Builder Input */
+.build-box {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.repo-input {
+  font-family: var(--font);
+  font-size: 12px;
+  width: 180px;
+  transition: width 0.2s ease, border-color 0.2s;
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--ink);
+  outline: none;
+}
+.repo-input:focus {
+  width: 250px;
+  border-color: var(--accent);
+  background: #ffffff;
+}
+.repo-input::placeholder { color: var(--ink-muted); font-size: 11.5px; }
+
+.btn-build {
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.btn-build:hover { background: #b04e2a; border-color: #b04e2a; }
+.btn-build:disabled { opacity: 0.6; cursor: wait; }
+
+/* Symbol Search Box */
 .search-box {
   position: relative;
   display: flex;
@@ -112,10 +155,10 @@ html, body {
 }
 .search-input {
   font-family: var(--font);
-  font-size: 12.5px;
-  width: 140px;
+  font-size: 12px;
+  width: 120px;
   transition: width 0.2s ease, border-color 0.2s;
-  padding: 4px 22px 4px 26px;
+  padding: 4px 20px 4px 25px;
   background: transparent;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -123,11 +166,11 @@ html, body {
   outline: none;
 }
 .search-input:focus {
-  width: 220px;
+  width: 170px;
   border-color: var(--accent);
   background: #ffffff;
 }
-.search-input::placeholder { color: var(--ink-muted); font-size: 12px; }
+.search-input::placeholder { color: var(--ink-muted); font-size: 11.5px; }
 .search-clear {
   position: absolute;
   right: 6px;
@@ -332,6 +375,86 @@ html, body {
   color: var(--accent);
 }
 
+/* Empty Hero State */
+.hero-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 5;
+}
+.hero-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(40, 30, 20, 0.08);
+  padding: 36px 40px;
+  text-align: center;
+  max-width: 480px;
+  pointer-events: auto;
+  animation: cardIn 0.2s ease-out;
+}
+.hero-card h2 {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
+}
+.hero-card p {
+  font-size: 13px;
+  color: var(--ink-secondary);
+  margin-bottom: 22px;
+  line-height: 1.6;
+}
+.hero-input-row {
+  display: flex;
+  gap: 8px;
+}
+.hero-input-row input {
+  font-family: var(--font);
+  flex: 1;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 13px;
+  outline: none;
+}
+.hero-input-row input:focus { border-color: var(--accent); }
+.hero-input-row button {
+  font-family: var(--font);
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 9px 16px;
+  border-radius: 7px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.hero-input-row button:hover { background: #b04e2a; }
+
+/* Toast Notification */
+.toast {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(35, 38, 35, 0.94);
+  color: #fcfaf7;
+  padding: 7px 16px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  z-index: 50;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  animation: cardIn 0.15s ease-out;
+  pointer-events: none;
+}
+
 /* Tooltip */
 .tooltip {
   position: absolute;
@@ -359,9 +482,11 @@ html, body {
   letter-spacing: 0.02em;
 }
 
-@media (max-width: 820px) {
-  .top-bar { flex-wrap: wrap; }
+@media (max-width: 900px) {
+  .top-bar { gap: 6px; }
   .stats { display: none; }
+  .repo-input { width: 130px; }
+  .repo-input:focus { width: 170px; }
 }
 </style>
 </head>
@@ -383,12 +508,21 @@ html, body {
     <div class="stats" id="stats-badge"></div>
   </div>
 
+  <!-- Build Panel -->
+  <div class="panel">
+    <div class="build-box">
+      <input class="repo-input" id="repo-input" placeholder="GitHub .git 或本地目录..." autocomplete="off">
+      <button class="btn-build" id="btn-build">构建</button>
+    </div>
+  </div>
+
+  <!-- Search & Filter Panel -->
   <div class="panel">
     <div class="search-box">
       <svg class="search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
         <circle cx="8" cy="8" r="5.5"/><line x1="12" y1="12" x2="16.5" y2="16.5"/>
       </svg>
-      <input class="search-input" id="search-input" placeholder="搜索符号、文件..." autocomplete="off">
+      <input class="search-input" id="search-input" placeholder="搜索符号..." autocomplete="off">
       <button class="search-clear" id="search-clear">×</button>
     </div>
     <div class="filter-group">
@@ -398,11 +532,24 @@ html, body {
     </div>
   </div>
 
+  <!-- View Actions -->
   <div class="actions">
     <button class="btn-icon" id="btn-zoom-in" title="放大">＋</button>
     <button class="btn-icon" id="btn-zoom-out" title="缩小">−</button>
     <button class="btn-icon" id="btn-fit" title="居中全景">⛶ 全图</button>
     <button class="btn-icon" id="btn-export" title="导出 JSON">导出 ↗</button>
+  </div>
+</div>
+
+<!-- Empty Hero State (When no repo is loaded) -->
+<div class="hero-state" id="hero-state" style="display: none;">
+  <div class="hero-card">
+    <h2>构建代码关系图谱</h2>
+    <p>输入任意 GitHub 仓库链接（如 <code>.git</code>）或本地文件夹路径，在本地自动克隆、解析 AST 并渲染 Obsidian 风格星系关系图。</p>
+    <div class="hero-input-row">
+      <input id="hero-repo-input" placeholder="https://github.com/... 或 本地路径">
+      <button id="hero-btn-build">开始构建</button>
+    </div>
   </div>
 </div>
 
@@ -423,8 +570,9 @@ html, body {
   </div>
 </div>
 
-<!-- Tooltip -->
+<!-- Tooltip & Toast -->
 <div class="tooltip" id="tooltip" style="display: none;"></div>
+<div class="toast" id="toast" style="display: none;"></div>
 
 <!-- Bottom Hint -->
 <div class="bottom-hint">
@@ -435,147 +583,12 @@ html, body {
 <script>
 (function() {
   const FONT_SERIF = '"Anthropic Serif", "Noto Serif SC", "Songti SC", SimSun, Georgia, serif';
-  let rawGraph = { name: "Code Atlas", nodes: [], edges: [], stats: {} };
-  try {
-    rawGraph = JSON.parse(document.getElementById('graph-data').textContent);
-  } catch (e) {
-    console.error("Failed to parse graph data", e);
-  }
-
-  const nodes = rawGraph.nodes || [];
-  const edges = rawGraph.edges || [];
-  const totalNodes = nodes.length;
-
-  document.getElementById('repo-title').textContent = (rawGraph.name || '代码图谱') + ' · 关系图谱';
-  document.title = (rawGraph.name || '代码图谱') + ' · 关系图谱';
-
-  const fnCount = nodes.filter(n => n.kind === 'function').length;
-  const fileCount = new Set(nodes.map(n => n.file)).size;
-  const callCount = edges.filter(e => e.kind === 'calls').length;
-  document.getElementById('stats-badge').innerHTML = 
-    `<b>${fnCount.toLocaleString()}</b> 函数 · <b>${fileCount.toLocaleString()}</b> 文件 · <b>${callCount.toLocaleString()}</b> 关联`;
-
-  const adj = new Map();
-  const callers = new Map();
-  const callees = new Map();
-  const degrees = new Uint16Array(totalNodes);
-
-  for (let i = 0; i < totalNodes; i++) {
-    adj.set(i, []);
-    callers.set(i, []);
-    callees.set(i, []);
-  }
-
-  const edgeSet = new Set();
-  const cleanEdges = [];
-  for (const e of edges) {
-    if (e.source === undefined || e.target === undefined || e.source >= totalNodes || e.target >= totalNodes) continue;
-    const key = e.source < e.target ? `${e.source}_${e.target}` : `${e.target}_${e.source}`;
-    if (!edgeSet.has(key)) {
-      edgeSet.add(key);
-      cleanEdges.push(e);
-      adj.get(e.source).push(e.target);
-      adj.get(e.target).push(e.source);
-      degrees[e.source]++;
-      degrees[e.target]++;
-    }
-    if (e.kind === 'calls') {
-      callees.get(e.source).push(e.target);
-      callers.get(e.target).push(e.source);
-    }
-  }
-
-  // Node positions and radii
-  const posX = new Float32Array(totalNodes);
-  const posY = new Float32Array(totalNodes);
-  const radii = new Float32Array(totalNodes);
-
-  // Group by file
-  const files = [...new Set(nodes.map(n => n.file))];
-  const fileNodes = new Map();
-  for (let i = 0; i < totalNodes; i++) {
-    const f = nodes[i].file;
-    if (!fileNodes.has(f)) fileNodes.set(f, []);
-    fileNodes.get(f).push(i);
-    const d = degrees[i];
-    radii[i] = Math.max(3.2, Math.min(14, 3.5 + Math.sqrt(d) * 1.8));
-  }
-
-  // Position file clusters in an expansive celestial sunflower layout
-  const clusterDist = Math.max(220, Math.min(650, Math.sqrt(totalNodes) * 36));
-  const fileClusters = new Map();
-  files.forEach((f, idx) => {
-    const r = Math.sqrt(idx + 0.5) * clusterDist;
-    const theta = idx * 2.3999632297;
-    fileClusters.set(f, { x: Math.cos(theta) * r, y: Math.sin(theta) * r });
-  });
-
-  // Distribute nodes around cluster center
-  for (const [f, nIndices] of fileNodes.entries()) {
-    const center = fileClusters.get(f);
-    nIndices.sort((a, b) => degrees[b] - degrees[a]);
-    for (let k = 0; k < nIndices.length; k++) {
-      const idx = nIndices[k];
-      if (k === 0) {
-        posX[idx] = center.x;
-        posY[idx] = center.y;
-      } else {
-        const angle = k * 2.3999632 + (idx % 7) * 0.4;
-        const dist = 40 + Math.sqrt(k) * 45;
-        posX[idx] = center.x + Math.cos(angle) * dist;
-        posY[idx] = center.y + Math.sin(angle) * dist;
-      }
-    }
-  }
-
-  // Organic Force Relaxation (Springs + Coulomb Repulsion)
-  const iterCount = totalNodes > 4000 ? 18 : 45;
-  for (let iter = 0; iter < iterCount; iter++) {
-    // 1. Spring force along edges
-    for (let i = 0; i < cleanEdges.length; i++) {
-      const e = cleanEdges[i];
-      const s = e.source, t = e.target;
-      let dx = posX[t] - posX[s];
-      let dy = posY[t] - posY[s];
-      let d = Math.hypot(dx, dy) || 1;
-      const targetDist = 65 + (radii[s] + radii[t]) * 2.2;
-      const f = (d - targetDist) * 0.03;
-      const fx = (dx / d) * f, fy = (dy / d) * f;
-      posX[s] += fx; posY[s] += fy;
-      posX[t] -= fx; posY[t] -= fy;
-    }
-
-    // 2. Node-node repulsion (All-pairs for < 1500 nodes)
-    if (totalNodes < 1500) {
-      for (let i = 0; i < totalNodes; i++) {
-        for (let j = i + 1; j < totalNodes; j++) {
-          let dx = posX[j] - posX[i];
-          let dy = posY[j] - posY[i];
-          let d = Math.hypot(dx, dy) || 1;
-          const minD = radii[i] + radii[j] + 50;
-          if (d < minD) {
-            const rep = (minD - d) / minD * 1.5;
-            const rx = (dx / d) * rep, ry = (dy / d) * rep;
-            posX[i] -= rx; posY[i] -= ry;
-            posX[j] += rx; posY[j] += ry;
-          }
-        }
-      }
-    }
-
-    // 3. Gentle center pull
-    for (let i = 0; i < totalNodes; i++) {
-      posX[i] *= 0.995;
-      posY[i] *= 0.995;
-    }
-  }
-
-  // Canvas setup
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
+
   let width = 0, height = 0;
   let panX = 0, panY = 0, zoom = 1;
-  let activeFilter = 'function'; // Default to function-level
+  let activeFilter = 'function';
   let searchQuery = '';
   let selectedNode = -1;
   let hoveredNode = -1;
@@ -585,6 +598,21 @@ html, body {
   let panStartX = 0, panStartY = 0;
   let draggedNodeIdx = -1;
   let animFrame = 0;
+
+  // Graph state
+  let currentGraph = { name: "Code Atlas", nodes: [], edges: [], stats: {} };
+  let nodes = [], edges = [], totalNodes = 0;
+  let adj = new Map(), callers = new Map(), callees = new Map();
+  let degrees = new Uint16Array(0);
+  let posX = new Float32Array(0), posY = new Float32Array(0), radii = new Float32Array(0);
+  let cleanEdges = [];
+
+  function showToast(msg, duration = 3000) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, duration);
+  }
 
   function requestDraw() {
     if (!animFrame) {
@@ -632,6 +660,171 @@ html, body {
     requestDraw();
   }
 
+  function loadGraph(graph) {
+    currentGraph = graph;
+    nodes = graph.nodes || [];
+    edges = graph.edges || [];
+    totalNodes = nodes.length;
+
+    document.getElementById('hero-state').style.display = totalNodes === 0 ? 'flex' : 'none';
+    document.getElementById('repo-title').textContent = (graph.name || '代码图谱') + ' · 关系图谱';
+    document.title = (graph.name || '代码图谱') + ' · 关系图谱';
+
+    const fnCount = nodes.filter(n => n.kind === 'function').length;
+    const fileCount = new Set(nodes.map(n => n.file)).size;
+    const callCount = edges.filter(e => e.kind === 'calls').length;
+    document.getElementById('stats-badge').innerHTML = 
+      `<b>${fnCount.toLocaleString()}</b> 函数 · <b>${fileCount.toLocaleString()}</b> 文件 · <b>${callCount.toLocaleString()}</b> 关联`;
+
+    adj.clear(); callers.clear(); callees.clear();
+    degrees = new Uint16Array(totalNodes);
+    for (let i = 0; i < totalNodes; i++) {
+      adj.set(i, []); callers.set(i, []); callees.set(i, []);
+    }
+
+    const edgeSet = new Set();
+    cleanEdges = [];
+    for (const e of edges) {
+      if (e.source === undefined || e.target === undefined || e.source >= totalNodes || e.target >= totalNodes) continue;
+      const key = e.source < e.target ? `${e.source}_${e.target}` : `${e.target}_${e.source}`;
+      if (!edgeSet.has(key)) {
+        edgeSet.add(key);
+        cleanEdges.push(e);
+        adj.get(e.source).push(e.target);
+        adj.get(e.target).push(e.source);
+        degrees[e.source]++;
+        degrees[e.target]++;
+      }
+      if (e.kind === 'calls') {
+        callees.get(e.source).push(e.target);
+        callers.get(e.target).push(e.source);
+      }
+    }
+
+    posX = new Float32Array(totalNodes);
+    posY = new Float32Array(totalNodes);
+    radii = new Float32Array(totalNodes);
+
+    const files = [...new Set(nodes.map(n => n.file))];
+    const fileNodes = new Map();
+    for (let i = 0; i < totalNodes; i++) {
+      const f = nodes[i].file;
+      if (!fileNodes.has(f)) fileNodes.set(f, []);
+      fileNodes.get(f).push(i);
+      const d = degrees[i];
+      radii[i] = Math.max(3.2, Math.min(14, 3.5 + Math.sqrt(d) * 1.8));
+    }
+
+    const clusterDist = Math.max(220, Math.min(650, Math.sqrt(totalNodes) * 36));
+    const fileClusters = new Map();
+    files.forEach((f, idx) => {
+      const r = Math.sqrt(idx + 0.5) * clusterDist;
+      const theta = idx * 2.3999632297;
+      fileClusters.set(f, { x: Math.cos(theta) * r, y: Math.sin(theta) * r });
+    });
+
+    for (const [f, nIndices] of fileNodes.entries()) {
+      const center = fileClusters.get(f);
+      nIndices.sort((a, b) => degrees[b] - degrees[a]);
+      for (let k = 0; k < nIndices.length; k++) {
+        const idx = nIndices[k];
+        if (k === 0) {
+          posX[idx] = center.x;
+          posY[idx] = center.y;
+        } else {
+          const angle = k * 2.3999632 + (idx % 7) * 0.4;
+          const dist = 40 + Math.sqrt(k) * 45;
+          posX[idx] = center.x + Math.cos(angle) * dist;
+          posY[idx] = center.y + Math.sin(angle) * dist;
+        }
+      }
+    }
+
+    // Force relaxation
+    const iterCount = totalNodes > 4000 ? 18 : 45;
+    for (let iter = 0; iter < iterCount; iter++) {
+      for (let i = 0; i < cleanEdges.length; i++) {
+        const e = cleanEdges[i];
+        const s = e.source, t = e.target;
+        let dx = posX[t] - posX[s];
+        let dy = posY[t] - posY[s];
+        let d = Math.hypot(dx, dy) || 1;
+        const targetDist = 65 + (radii[s] + radii[t]) * 2.2;
+        const f = (d - targetDist) * 0.03;
+        const fx = (dx / d) * f, fy = (dy / d) * f;
+        posX[s] += fx; posY[s] += fy;
+        posX[t] -= fx; posY[t] -= fy;
+      }
+      if (totalNodes < 1500) {
+        for (let i = 0; i < totalNodes; i++) {
+          for (let j = i + 1; j < totalNodes; j++) {
+            let dx = posX[j] - posX[i];
+            let dy = posY[j] - posY[i];
+            let d = Math.hypot(dx, dy) || 1;
+            const minD = radii[i] + radii[j] + 50;
+            if (d < minD) {
+              const rep = (minD - d) / minD * 1.5;
+              const rx = (dx / d) * rep, ry = (dy / d) * rep;
+              posX[i] -= rx; posY[i] -= ry;
+              posX[j] += rx; posY[j] += ry;
+            }
+          }
+        }
+      }
+      for (let i = 0; i < totalNodes; i++) {
+        posX[i] *= 0.995;
+        posY[i] *= 0.995;
+      }
+    }
+
+    deselectNode();
+    fitView();
+  }
+
+  // Trigger build API
+  async function triggerBuild(repoPath) {
+    if (!repoPath) return;
+    const btn1 = document.getElementById('btn-build');
+    const btn2 = document.getElementById('hero-btn-build');
+    btn1.textContent = '构建中...'; btn1.disabled = true;
+    btn2.textContent = '构建中...'; btn2.disabled = true;
+    showToast('正在构建代码图谱，请稍候...', 15000);
+
+    try {
+      const res = await fetch('/api/build', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repo: repoPath })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || '构建服务返回错误');
+      }
+      loadGraph(data);
+      showToast(`构建成功！已加载 ${data.name || ''} 图谱`);
+    } catch (err) {
+      showToast('构建失败: ' + err.message, 5000);
+    } finally {
+      btn1.textContent = '构建'; btn1.disabled = false;
+      btn2.textContent = '开始构建'; btn2.disabled = false;
+    }
+  }
+
+  // Wire build inputs
+  document.getElementById('btn-build').onclick = () => {
+    triggerBuild(document.getElementById('repo-input').value.trim());
+  };
+  document.getElementById('repo-input').onkeydown = e => {
+    if (e.key === 'Enter') triggerBuild(e.target.value.trim());
+  };
+  document.getElementById('hero-btn-build').onclick = () => {
+    triggerBuild(document.getElementById('hero-repo-input').value.trim());
+  };
+  document.getElementById('hero-repo-input').onkeydown = e => {
+    if (e.key === 'Enter') triggerBuild(e.target.value.trim());
+  };
+
+  // Canvas Resize
   function resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     width = window.innerWidth;
@@ -643,10 +836,19 @@ html, body {
   }
   window.addEventListener('resize', resize);
   resize();
-  fitView();
 
+  // Load initial graph
+  try {
+    const initialData = JSON.parse(document.getElementById('graph-data').textContent);
+    loadGraph(initialData);
+  } catch (e) {
+    loadGraph({ name: "Code Atlas", nodes: [], edges: [], stats: {} });
+  }
+
+  // Canvas Render
   function render() {
     ctx.clearRect(0, 0, width, height);
+    if (!totalNodes) return;
 
     const pad = 80 / zoom;
     const vLeft = -panX / zoom - pad;
@@ -699,7 +901,7 @@ html, body {
       ctx.stroke();
     }
 
-    // 2. Draw Nodes (Single Batch Fill)
+    // 2. Draw Nodes
     ctx.fillStyle = active !== -1 ? 'rgba(43, 46, 43, 0.22)' : '#262926';
     ctx.beginPath();
     for (let i = 0; i < totalNodes; i++) {
@@ -767,7 +969,7 @@ html, body {
       }
     }
 
-    // 4. Labels (Obsidian Zoom-In Typography)
+    // 4. Labels
     const shouldShowLabels = zoom > 0.65 || active !== -1 || totalNodes < 40;
     if (shouldShowLabels) {
       const fontSize = Math.max(10, Math.min(13, 11.5 / Math.sqrt(zoom)));
@@ -792,7 +994,6 @@ html, body {
         }
       }
 
-      // Avoid label overlap
       const occupied = [];
       for (const idx of labelsToDraw) {
         if (!isNodeVisible(idx)) continue;
@@ -947,7 +1148,6 @@ html, body {
   }
 
   function createRelationChips(nodeIndices, container) {
-    // Count duplicates
     const counts = new Map();
     for (const idx of nodeIndices) {
       counts.set(idx, (counts.get(idx) || 0) + 1);
@@ -1059,11 +1259,11 @@ html, body {
   document.getElementById('btn-fit').onclick = () => fitView();
 
   document.getElementById('btn-export').onclick = () => {
-    const blob = new Blob([JSON.stringify(rawGraph, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(currentGraph, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${rawGraph.name || 'graph'}.json`;
+    a.download = `${currentGraph.name || 'graph'}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -1111,7 +1311,7 @@ html, body {
   });
 
   window.addEventListener('keydown', e => {
-    if (e.key === '/' && document.activeElement !== searchInput) {
+    if (e.key === '/' && document.activeElement !== searchInput && document.activeElement !== document.getElementById('repo-input')) {
       e.preventDefault();
       searchInput.focus();
     }
