@@ -3,131 +3,1124 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="A local, function-level map of your codebase.">
-<title>Code Agent · Code atlas</title>
+<title>代码图谱 · Code Atlas</title>
 <style>
 @font-face{font-family:"Anthropic Serif";src:local("Anthropic Serif"),url("https://cdn.prod.website-files.com/67ce28cfec624e2b733f8a52/69971a1551eb6cda0d656e8a_AnthropicSerif-Roman-Web.woff2") format("woff2");font-weight:300 800;font-style:normal;font-display:swap}
 @font-face{font-family:"Anthropic Serif";src:url("https://cdn.prod.website-files.com/67ce28cfec624e2b733f8a52/69971a15a9fb8c1107a3570e_AnthropicSerif-Italic-Web.woff2") format("woff2");font-weight:300 800;font-style:italic;font-display:swap}
-:root{color-scheme:light;--paper:#f7f5ef;--ink:#353d35;--muted:#898b80;--line:#e2e2d8;--accent:#aa573f;--font:"Anthropic Serif","Noto Serif SC","Songti SC",SimSun,serif}
-*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 var(--font);overflow:hidden}
-button,input,select,option{font:inherit;color:inherit}button{cursor:pointer;border:0;background:transparent;padding:8px 12px;border-radius:6px;transition:background .18s,color .18s}button:hover{background:#eae9e0}button:active{transform:translateY(1px)}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-header{height:88px;margin:0 30px;display:flex;align-items:center;gap:18px;border-bottom:1px solid var(--line)}.brand{display:flex;align-items:center;gap:13px;min-width:0}.mark{width:29px;height:29px;color:var(--accent)}.brand small{color:var(--muted);font-size:12px;letter-spacing:.05em}h1{font-size:26px;letter-spacing:-.035em;font-weight:500;line-height:1.1;margin:3px 0;max-width:42vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.metrics{margin-left:auto;display:flex;gap:28px;color:var(--muted);font-size:13px}.metrics b{font-weight:500;color:var(--ink);font-size:22px;margin-right:7px;font-variant-numeric:tabular-nums}#export{border:1px solid var(--line);margin-left:16px;white-space:nowrap}
-main{height:calc(100dvh - 88px);display:grid;grid-template-columns:260px minmax(0,1fr)}aside{padding:26px 20px 20px 30px;border-right:1px solid var(--line);overflow:auto;scrollbar-width:thin;scrollbar-color:#d5d7cb transparent}.search{position:relative}.search svg{position:absolute;left:10px;top:13px;width:15px;height:15px;color:var(--muted)}input{width:100%;padding:10px 10px 10px 32px;border:1px solid var(--line);background:transparent;border-radius:6px;outline:0}input::placeholder{color:var(--muted)}select{width:100%;background:transparent;border:0;border-bottom:1px solid var(--line);padding:12px 0;margin:8px 0 22px;outline:0}.section-title{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;margin:0 0 10px}.list button{display:block;width:100%;padding:9px 8px;text-align:left;overflow-wrap:anywhere;line-height:1.25;margin-left:-8px}.list small{display:block;font-size:11px;color:var(--muted);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.list .active{color:var(--accent)}#more{font-size:12px;color:var(--muted);padding-left:0}#detail h2{font-size:25px;font-weight:500;letter-spacing:-.03em;line-height:1.15;overflow-wrap:anywhere;margin:22px 0 10px}#back{padding-left:0;color:var(--muted);font-size:13px}#location{font-size:12px;color:var(--muted);overflow-wrap:anywhere}#focus{margin:10px 0 18px;border:1px solid var(--line);width:100%;font-size:13px}.relation-group{border-top:1px solid var(--line);padding-top:16px;margin-top:8px}#details-more{font-size:12px;color:var(--muted)}
-.stage{position:relative;overflow:hidden;min-width:0}.stage-top{position:absolute;inset:23px 26px auto;display:flex;align-items:center;justify-content:space-between;gap:20px;z-index:1;pointer-events:none}.stage-title{color:var(--muted);font-size:14px;font-style:italic}.switch{display:flex;gap:2px;background:#edece4;padding:3px;border-radius:7px;pointer-events:auto}.switch button{font-size:12px;padding:5px 13px}.switch button[aria-pressed=true]{background:var(--paper);box-shadow:0 1px 3px #363c3010}canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none}canvas:active{cursor:grabbing}.tools{position:absolute;right:24px;bottom:24px;display:flex;align-items:center;gap:3px;border:1px solid var(--line);border-radius:8px;background:var(--paper)}.tools button{padding:6px 12px;font-size:14px}.tools button:nth-child(2){border-left:1px solid var(--line);border-right:1px solid var(--line);border-radius:0}.bottom{position:absolute;left:28px;bottom:28px;color:var(--muted);font-size:12px;pointer-events:none;max-width:65%}#legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px}.legend-item{display:flex;align-items:center;gap:5px}.legend-item i{width:6px;height:6px;border-radius:50%}.legend-item span{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#hint{color:#9fa095;font-size:11px}#empty{position:absolute;inset:42% 20%;text-align:center;color:var(--muted);pointer-events:none}.tip{position:absolute;padding:6px 11px;background:#fffef9eF;border:1px solid var(--line);border-radius:5px;font-size:13px;pointer-events:none;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}[hidden]{display:none!important}
-@media(max-width:760px){header{margin:0 20px;height:80px}.metrics{gap:10px}.metrics b{font-size:18px;margin-right:4px}.metrics span:last-child{display:none}main{height:calc(100dvh - 80px);grid-template-columns:220px 1fr}aside{padding:20px}.stage-top{inset:18px 20px auto}.stage-title{display:none}.stage-top{justify-content:flex-end}.bottom{left:20px;max-width:55%}#legend{display:none}h1{font-size:23px}#export{margin-left:0}}
-@media(max-width:520px){header{gap:10px;margin:0 14px}.mark{display:none}.metrics{gap:8px}.metrics span:nth-child(2){display:none}main{grid-template-columns:160px 1fr}aside{padding:16px 12px}h1{font-size:21px;max-width:32vw}.brand small{font-size:10px}.switch button{padding:5px 8px}.tools{right:12px;bottom:18px}.bottom{bottom:67px;left:15px;max-width:80%}#detail h2{font-size:21px}}
-@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+:root {
+  --bg: #fcfaf7;
+  --card-bg: rgba(255, 255, 255, 0.94);
+  --border: #e8e4db;
+  --border-light: #f2eee6;
+  --ink: #2b2e2b;
+  --ink-secondary: #656a65;
+  --ink-muted: #9ba09a;
+  --accent: #c85a32;
+  --accent-light: #faeee7;
+  --font: "Anthropic Serif", "Noto Serif SC", "Songti SC", SimSun, Georgia, serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+#canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+#canvas:active { cursor: grabbing; }
+
+/* Top Floating Header Bar (Responsive & Non-intrusive) */
+.top-bar {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  pointer-events: none;
+  z-index: 10;
+}
+.panel {
+  background: var(--card-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 14px rgba(40, 30, 20, 0.05);
+  border-radius: 8px;
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+  white-space: nowrap;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.brand-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.stats {
+  font-size: 11.5px;
+  color: var(--ink-secondary);
+  border-left: 1px solid var(--border-light);
+  padding-left: 10px;
+}
+.stats b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.search-icon {
+  position: absolute;
+  left: 8px;
+  width: 13px;
+  height: 13px;
+  color: var(--ink-muted);
+  pointer-events: none;
+}
+.search-input {
+  font-family: var(--font);
+  font-size: 12.5px;
+  width: 140px;
+  transition: width 0.2s ease, border-color 0.2s;
+  padding: 4px 22px 4px 26px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--ink);
+  outline: none;
+}
+.search-input:focus {
+  width: 220px;
+  border-color: var(--accent);
+  background: #ffffff;
+}
+.search-input::placeholder { color: var(--ink-muted); font-size: 12px; }
+.search-clear {
+  position: absolute;
+  right: 6px;
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: 13px;
+  display: none;
+  line-height: 1;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: row;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.04);
+  padding: 2px;
+  border-radius: 6px;
+}
+.filter-btn {
+  font-family: var(--font);
+  font-size: 11.5px;
+  border: none;
+  background: transparent;
+  padding: 3px 8px;
+  border-radius: 4px;
+  color: var(--ink-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.filter-btn:hover { color: var(--ink); }
+.filter-btn.active {
+  background: #ffffff;
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  pointer-events: auto;
+}
+.btn-icon {
+  font-family: var(--font);
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  height: 30px;
+  min-width: 30px;
+  padding: 0 8px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  color: var(--ink-secondary);
+  font-size: 12px;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(40, 30, 20, 0.04);
+  white-space: nowrap;
+}
+.btn-icon:hover {
+  color: var(--ink);
+  background: #ffffff;
+  border-color: var(--ink-muted);
+}
+
+/* Floating Inspector Card */
+.inspector-card {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 320px;
+  max-height: calc(100vh - 100px);
+  background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 30px rgba(40, 30, 20, 0.1);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  z-index: 25;
+  animation: cardIn 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.inspector-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.inspector-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--accent-light);
+  color: var(--accent);
+  font-weight: 600;
+  display: inline-block;
+  margin-bottom: 4px;
+}
+.inspector-title {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink);
+  word-break: break-all;
+}
+.inspector-close {
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 4px;
+}
+.inspector-close:hover { color: var(--ink); }
+.inspector-meta {
+  font-size: 12px;
+  color: var(--ink-secondary);
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 9px;
+  line-height: 1.5;
+}
+.inspector-relations {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  max-height: 36vh;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+.relation-title {
+  font-size: 11px;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+.chip-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.chip {
+  font-family: var(--font);
+  font-size: 11px;
+  padding: 3px 8px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.12s;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-light);
+}
+.inspector-actions {
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid var(--border-light);
+  padding-top: 10px;
+}
+.btn-action {
+  font-family: var(--font);
+  flex: 1;
+  font-size: 12px;
+  padding: 6px 10px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-action:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Tooltip */
+.tooltip {
+  position: absolute;
+  background: rgba(35, 38, 35, 0.92);
+  color: #fcfaf7;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 20;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  transform: translate(-50%, -100%);
+  margin-top: -8px;
+}
+
+/* Bottom Hint */
+.bottom-hint {
+  position: absolute;
+  bottom: 14px;
+  left: 18px;
+  font-size: 11.5px;
+  color: var(--ink-muted);
+  pointer-events: none;
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 820px) {
+  .top-bar { flex-wrap: wrap; }
+  .stats { display: none; }
+}
 </style>
 </head>
 <body>
-<header>
-<div class="brand"><svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="12.5" stroke="currentColor" stroke-width=".7"/><path d="M6 10 24 8 19 27 6 10 28 19 24 8M6 10 4 22 19 27M4 22 28 19" stroke="currentColor" stroke-width=".7"/><g fill="currentColor"><circle cx="6" cy="10" r="2"/><circle cx="24" cy="8" r="2"/><circle cx="19" cy="27" r="2"/><circle cx="28" cy="19" r="2"/><circle cx="4" cy="22" r="2"/></g></svg><div><small>Code Agent · Code atlas</small><h1 id="title">代码图谱</h1></div></div>
-<div class="metrics" id="stats"></div><button id="export" title="导出完整图数据">导出 JSON ↗</button>
-</header>
-<main>
-<aside>
-<div class="search"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="5.4" stroke="currentColor" stroke-width="1.2"/><path d="m12 12 5 5" stroke="currentColor" stroke-width="1.2"/></svg><input id="search" aria-label="搜索函数" placeholder="搜索函数…" autocomplete="off"></div>
-<select id="file" aria-label="选择文件"><option value="">全部文件</option></select>
-<section id="browse"><div class="section-title"><span id="list-title">Functions</span><span id="result-count"></span></div><div class="list" id="results"></div><button id="more" hidden>显示更多</button></section>
-<section id="detail" hidden><button id="back">← 返回列表</button><h2 id="name"></h2><p id="location"></p><button id="focus">只看关联</button><div class="list" id="relations"></div><button id="details-more" hidden>更多关联</button></section>
-</aside>
-<section class="stage"><div class="stage-top"><span class="stage-title">A constellation of your code.</span><div class="switch" aria-label="图谱粒度"><button id="functions" aria-pressed="true">函数</button><button id="structure" aria-pressed="false">结构</button></div></div>
-<canvas id="canvas" tabindex="0" aria-label="球形代码图。拖动旋转，滚轮缩放；也可通过左侧列表查看函数和调用关系。"></canvas>
-<div class="tip" id="tooltip" hidden></div><div id="empty" hidden></div>
-<div class="bottom"><div id="legend"></div><div id="view-count"></div><div id="hint">拖动旋转 · 滚轮缩放 · 点击查看关联</div></div>
-<div class="tools"><button id="zoom-out" aria-label="缩小">−</button><button id="reset">全图</button><button id="zoom-in" aria-label="放大">＋</button></div>
-</section>
-</main>
+<canvas id="canvas"></canvas>
+
+<!-- Top Floating Bar -->
+<div class="top-bar">
+  <div class="panel">
+    <div class="brand">
+      <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="6" cy="6" r="3"/><circle cx="18" cy="8" r="3"/><circle cx="12" cy="18" r="3"/>
+        <line x1="8.5" y1="7.5" x2="15.5" y2="7.5"/>
+        <line x1="7.5" y1="8.5" x2="10.5" y2="15.5"/>
+        <line x1="16.5" y1="10.5" x2="13.5" y2="15.5"/>
+      </svg>
+      <span id="repo-title">代码图谱</span>
+    </div>
+    <div class="stats" id="stats-badge"></div>
+  </div>
+
+  <div class="panel">
+    <div class="search-box">
+      <svg class="search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="8" cy="8" r="5.5"/><line x1="12" y1="12" x2="16.5" y2="16.5"/>
+      </svg>
+      <input class="search-input" id="search-input" placeholder="搜索符号、文件..." autocomplete="off">
+      <button class="search-clear" id="search-clear">×</button>
+    </div>
+    <div class="filter-group">
+      <button class="filter-btn active" data-filter="function">仅函数</button>
+      <button class="filter-btn" data-filter="all">全部节点</button>
+      <button class="filter-btn" data-filter="connected">仅连通</button>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn-icon" id="btn-zoom-in" title="放大">＋</button>
+    <button class="btn-icon" id="btn-zoom-out" title="缩小">−</button>
+    <button class="btn-icon" id="btn-fit" title="居中全景">⛶ 全图</button>
+    <button class="btn-icon" id="btn-export" title="导出 JSON">导出 ↗</button>
+  </div>
+</div>
+
+<!-- Floating Inspector Card -->
+<div class="inspector-card" id="inspector" style="display: none;">
+  <div class="inspector-header">
+    <div>
+      <span class="inspector-badge" id="insp-badge">FUNCTION</span>
+      <h3 class="inspector-title" id="insp-title"></h3>
+    </div>
+    <button class="inspector-close" id="insp-close">×</button>
+  </div>
+  <div class="inspector-meta" id="insp-meta"></div>
+  <div class="inspector-relations" id="insp-relations"></div>
+  <div class="inspector-actions">
+    <button class="btn-action" id="insp-btn-focus">聚焦关联</button>
+    <button class="btn-action" id="insp-btn-center">居中定位</button>
+  </div>
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip" style="display: none;"></div>
+
+<!-- Bottom Hint -->
+<div class="bottom-hint">
+  拖拽平移 · 滚轮缩放 · 点击节点查看调用链 · 双击居中
+</div>
+
 <script type="application/json" id="graph-data">__GRAPH_DATA__</script>
 <script>
-const $=id=>document.getElementById(id),FONT='"Anthropic Serif","Songti SC",SimSun,serif';
-let graph;try{graph=JSON.parse($('graph-data').textContent)}catch{graph={name:'Code atlas',nodes:[],edges:[],stats:{}}}
-const nodes=graph.nodes,byId=new Map(nodes.map(n=>[n.id,n])),adj=new Map(nodes.map(n=>[n.id,[]]));
-const relations=[...new Map(graph.edges.map(e=>[e.source+':'+e.target+':'+e.kind,e])).values()];
-for(const e of relations){adj.get(e.source)?.push(e);if(e.target!==e.source)adj.get(e.target)?.push(e)}
-const files=[...new Set(nodes.filter(n=>n.kind==='function').map(n=>n.file))].sort(),palette=['#6e8273','#bd8464','#718a97','#978664','#908699','#8b9b78','#ad837c','#79958f'];
-const colorByFile=new Map(files.map((f,i)=>[f,palette[i%palette.length]]));
-$('title').textContent=graph.name;document.title=graph.name+' · Code Agent';
-for(const [value,label] of [[nodes.filter(n=>n.kind==='function').length,'函数'],[files.length,'源码文件'],[relations.filter(e=>e.kind==='calls').length,'调用关系']]){
- const span=document.createElement('span'),b=document.createElement('b');b.textContent=value.toLocaleString();span.append(b,label);$('stats').append(span);
-}
-for(const file of files){const option=document.createElement('option');option.value=file;option.textContent=file;$('file').append(option)}
-const canvas=$('canvas'),ctx=canvas.getContext('2d');let visible=[],links=[],positions=new Map(),points=[],labelOrder=[],mode='function',selected=null,hovered=null,local=false;
-let width=0,height=0,yaw=.35,pitch=-.18,zoom=1,frame=0,drag=null,limit=40,relationLimit=30;
-const near=id=>new Set([id,...(adj.get(id)||[]).flatMap(e=>[e.source,e.target])]);
-function schedule(){if(!frame)frame=requestAnimationFrame(()=>{frame=0;draw()})}
-function layout(){
- const ordered=[...visible].sort((a,b)=>a.file.localeCompare(b.file)||a.line-b.line),count=ordered.length;
- positions=new Map(ordered.map((n,i)=>{const y=1-2*(i+.5)/Math.max(1,count),r=Math.sqrt(1-y*y),angle=i*2.3999632297;return[n.id,{x:Math.cos(angle)*r,y,z:Math.sin(angle)*r}]}));
-}
-function list(){
- const query=$('search').value.toLowerCase(),matches=visible.filter(n=>(n.name+' '+n.file).toLowerCase().includes(query));
- $('results').replaceChildren();$('result-count').textContent=matches.length.toLocaleString();$('list-title').textContent=mode==='function'?'Functions':'Structure';
- for(const node of matches.slice(0,limit)){const button=document.createElement('button'),small=document.createElement('small');button.textContent=node.name;small.textContent=node.file+':'+node.line;button.append(small);button.onclick=()=>select(node);$('results').append(button)}
- $('more').hidden=matches.length<=limit;schedule();
-}
-function refresh(){
- const file=$('file').value,neighbors=local&&selected?near(selected.id):null;
- visible=nodes.filter(n=>(mode==='all'||n.kind==='function')&&(!file||n.file===file)&&(!neighbors||neighbors.has(n.id)));
- const ids=new Set(visible.map(n=>n.id));links=relations.filter(e=>ids.has(e.source)&&ids.has(e.target));
- labelOrder=[...visible].sort((a,b)=>(adj.get(b.id)?.length||0)-(adj.get(a.id)?.length||0)).map(n=>n.id);
- $('functions').setAttribute('aria-pressed',mode==='function');$('structure').setAttribute('aria-pressed',mode==='all');
- $('empty').hidden=!!visible.length;$('empty').textContent=nodes.length?'当前范围没有函数，切换「结构」查看文件。':'运行 code_agent.py --graph 生成图谱。';
- $('view-count').textContent=visible.length.toLocaleString()+' 个'+(mode==='function'?'函数':'节点')+' · '+links.length.toLocaleString()+' 条关系';
- const groups=[...new Set(visible.map(n=>n.file))];$('legend').replaceChildren();
- for(const file of groups.slice(0,4)){const item=document.createElement('span'),dot=document.createElement('i'),label=document.createElement('span');item.className='legend-item';dot.style.background=colorByFile.get(file)||'#a1a391';label.textContent=file.split('/').pop();item.title=file;item.append(dot,label);$('legend').append(item)}
- layout();list();
-}
-function draw(){
- if(!width||!height)return;
- const start=performance.now(),dpr=Math.min(devicePixelRatio||1,2),radius=Math.min(width,height)*.34*zoom,cx=width/2,cy=height*.47,cyaw=Math.cos(yaw),syaw=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
- ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
- const active=hovered||selected,neighbors=active?near(active.id):null,query=selected?'':$('search').value.toLowerCase(),projected=new Map(),batches=new Map();
- points=visible.map(n=>{const p=positions.get(n.id),x=p.x*cyaw+p.z*syaw,z=-p.x*syaw+p.z*cyaw,y=p.y*cp-z*sp,depth=p.y*sp+z*cp,perspective=3.4/(3.4-depth*.4);
-  const point={node:n,x:cx+x*radius*perspective,y:cy+y*radius*perspective,z:depth,r:(1.8+Math.min(2.2,Math.log2(1+(adj.get(n.id)?.length||0))*.42))*(.78+(depth+1)*.18)*Math.sqrt(zoom)*(visible.length>3000?.55:1)};
-  projected.set(n.id,point);return point;
- });
- ctx.strokeStyle='#939f94';ctx.lineWidth=.8;ctx.globalAlpha=active?.055:visible.length>3000?.055:.3;ctx.beginPath();
- for(const e of links){const a=projected.get(e.source),b=projected.get(e.target);if((a.x<0&&b.x<0)||(a.x>width&&b.x>width)||(a.y<0&&b.y<0)||(a.y>height&&b.y>height))continue;ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y)}ctx.stroke();
- if(active){ctx.strokeStyle='#a75b43';ctx.lineWidth=1.25;ctx.globalAlpha=.75;ctx.beginPath();for(const e of adj.get(active.id)||[]){const a=projected.get(e.source),b=projected.get(e.target);if(a&&b){ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y)}}ctx.stroke()}
- for(const point of points){if(point.x< -10||point.x>width+10||point.y< -10||point.y>height+10)continue;const n=point.node,match=!query||(n.name+' '+n.file).toLowerCase().includes(query),bucket=Math.min(7,Math.floor((point.z+1)*3.999)),dim=!match||(active&&!neighbors.has(n.id)),color=active===n?'#a75b43':colorByFile.get(n.file)||'#a1a391',key=bucket+'|'+color+'|'+dim;
-  if(!batches.has(key))batches.set(key,{bucket,color,alpha:dim?.1:.45+bucket*.075,points:[]});batches.get(key).points.push(point);
- }
- for(const batch of [...batches.values()].sort((a,b)=>a.bucket-b.bucket)){ctx.fillStyle=batch.color;ctx.globalAlpha=batch.alpha;ctx.beginPath();for(const p of batch.points){const r=p.node===active?p.r+2:p.r;if(visible.length>3000&&zoom<1.8){ctx.rect(p.x-r,p.y-r,r*2,r*2)}else{ctx.moveTo(p.x+r,p.y);ctx.arc(p.x,p.y,r,0,Math.PI*2)}}ctx.fill()}
- const labels=[],occupied=[];for(const id of neighbors||labelOrder){const p=projected.get(id);if(p&&(active||p.z>.1)&&p.x>=0&&p.x<width-20&&p.y>70&&p.y<height-95)labels.push(p);if(labels.length>=(active?22:visible.length>150?10:16))break}
- ctx.font='14px '+FONT;ctx.textBaseline='middle';
- for(const p of labels){if(p.x<0||p.x>width-20||p.y<70||p.y>height-95)continue;const name=p.node.name.slice(0,42),w=ctx.measureText(name).width,x=p.x+p.r+7,y=p.y;if(p.node!==active&&occupied.some(b=>x<b.x+b.w&&x+w>b.x&&Math.abs(y-b.y)<17))continue;occupied.push({x,y,w});ctx.globalAlpha=p.node===active?1:.72;ctx.lineWidth=4;ctx.strokeStyle='#f7f5ef';ctx.strokeText(name,x,y);ctx.fillStyle=p.node===active?'#a75b43':'#566456';ctx.fillText(name,x,y)}
- ctx.globalAlpha=1;canvas.dataset.frameMs=(performance.now()-start).toFixed(1);
-}
-function details(){
- const node=selected,edges=adj.get(node.id)||[];relationLimit=Math.max(30,relationLimit);$('name').textContent=node.name;$('location').textContent=node.file+' · '+node.line+(node.end&&node.end!==node.line?'–'+node.end:'')+' 行';$('relations').replaceChildren();
- const groups=[['调用',e=>e.source===node.id&&e.kind==='calls'],['被调用',e=>e.target===node.id&&e.kind==='calls'],['结构关系',e=>e.kind!=='calls']];
- let rendered=0;for(const [title,test] of groups){const members=edges.filter(test);if(!members.length)continue;const section=document.createElement('div'),caption=document.createElement('div');section.className='relation-group';caption.className='section-title';caption.textContent=title+' · '+members.length;section.append(caption);
-  for(const e of members){if(rendered++>=relationLimit)continue;const neighbor=byId.get(e.source===node.id?e.target:e.source),button=document.createElement('button');button.textContent=neighbor.name;button.onclick=()=>{if(neighbor.kind!=='function')mode='all';$('file').value='';refresh();select(neighbor)};section.append(button)}$('relations').append(section);
- }$('details-more').hidden=edges.length<=relationLimit;
-}
-function select(node){
- selected=node;hovered=null;$('tooltip').hidden=true;$('browse').hidden=true;$('detail').hidden=false;relationLimit=30;details();
- if(local)refresh();face(node);
-}
-function face(node){const p=positions.get(node.id);if(p){yaw=-Math.atan2(p.x,p.z);pitch=Math.atan2(p.y,Math.hypot(p.x,p.z))}schedule()}
-function reset(){selected=hovered=null;local=false;zoom=1;yaw=.35;pitch=-.18;$('detail').hidden=true;$('browse').hidden=false;$('tooltip').hidden=true;$('focus').textContent='只看关联';refresh()}
-function hit(x,y){let best=null,distance=12;for(const p of points){const d=Math.hypot(p.x-x,p.y-y);if(d<distance){best=p;distance=d}}return best}
-canvas.onpointerdown=e=>{drag={x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY};hovered=null;$('tooltip').hidden=true;canvas.setPointerCapture(e.pointerId)};
-canvas.onpointermove=e=>{const rect=canvas.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top;if(drag){yaw+=(e.clientX-drag.x)*.007;pitch=Math.max(-1.5,Math.min(1.5,pitch+(e.clientY-drag.y)*.007));drag.x=e.clientX;drag.y=e.clientY;schedule();return}
- const point=hit(x,y),next=point?.node||null;if(next!==hovered){hovered=next;schedule()}$('tooltip').hidden=!next;if(next){$('tooltip').textContent=next.name;$('tooltip').style.left=Math.min(width-200,x+14)+'px';$('tooltip').style.top=(y+16)+'px'}};
-canvas.onpointerup=e=>{if(!drag)return;const clicked=Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)<5;drag=null;if(clicked){const r=canvas.getBoundingClientRect(),point=hit(e.clientX-r.left,e.clientY-r.top);if(point)select(point.node)}};
-canvas.onpointercancel=()=>drag=null;canvas.onpointerleave=()=>{if(!drag){hovered=null;$('tooltip').hidden=true;schedule()}};
-canvas.onwheel=e=>{e.preventDefault();zoom=Math.max(.35,Math.min(8,zoom*Math.exp(-e.deltaY*.001)));schedule()};
-$('search').oninput=()=>{limit=40;$('browse').hidden=false;$('detail').hidden=true;selected=null;list()};$('file').onchange=reset;
-$('functions').onclick=()=>{mode='function';reset()};$('structure').onclick=()=>{mode='all';reset()};$('more').onclick=()=>{limit+=40;list()};
-$('back').onclick=reset;$('focus').onclick=()=>{local=!local;$('focus').textContent=local?'返回全图':'只看关联';zoom=1;refresh();face(selected)};
-$('details-more').onclick=()=>{relationLimit+=30;details()};$('reset').onclick=()=>{$('search').value='';$('file').value='';reset()};
-$('zoom-in').onclick=()=>{zoom=Math.min(8,zoom*1.3);schedule()};$('zoom-out').onclick=()=>{zoom=Math.max(.35,zoom/1.3);schedule()};
-canvas.onkeydown=e=>{if(e.key==='Escape')reset();else if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();yaw+=(e.key==='ArrowLeft'?-.1:e.key==='ArrowRight'?.1:0);pitch+=(e.key==='ArrowUp'?-.1:e.key==='ArrowDown'?.1:0);schedule()}};
-$('export').onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(graph,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='graph.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000)};
-new ResizeObserver(()=>{const rect=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);width=rect.width;height=rect.height;canvas.width=width*dpr;canvas.height=height*dpr;schedule()}).observe(canvas);
-document.fonts.ready.then(()=>{document.body.dataset.serifLoaded=[...document.fonts].some(f=>f.family==='Anthropic Serif'&&f.status==='loaded');schedule()});refresh();
+(function() {
+  const FONT_SERIF = '"Anthropic Serif", "Noto Serif SC", "Songti SC", SimSun, Georgia, serif';
+  let rawGraph = { name: "Code Atlas", nodes: [], edges: [], stats: {} };
+  try {
+    rawGraph = JSON.parse(document.getElementById('graph-data').textContent);
+  } catch (e) {
+    console.error("Failed to parse graph data", e);
+  }
+
+  const nodes = rawGraph.nodes || [];
+  const edges = rawGraph.edges || [];
+  const totalNodes = nodes.length;
+
+  document.getElementById('repo-title').textContent = (rawGraph.name || '代码图谱') + ' · 关系图谱';
+  document.title = (rawGraph.name || '代码图谱') + ' · 关系图谱';
+
+  const fnCount = nodes.filter(n => n.kind === 'function').length;
+  const fileCount = new Set(nodes.map(n => n.file)).size;
+  const callCount = edges.filter(e => e.kind === 'calls').length;
+  document.getElementById('stats-badge').innerHTML = 
+    `<b>${fnCount.toLocaleString()}</b> 函数 · <b>${fileCount.toLocaleString()}</b> 文件 · <b>${callCount.toLocaleString()}</b> 关联`;
+
+  const adj = new Map();
+  const callers = new Map();
+  const callees = new Map();
+  const degrees = new Uint16Array(totalNodes);
+
+  for (let i = 0; i < totalNodes; i++) {
+    adj.set(i, []);
+    callers.set(i, []);
+    callees.set(i, []);
+  }
+
+  const edgeSet = new Set();
+  const cleanEdges = [];
+  for (const e of edges) {
+    if (e.source === undefined || e.target === undefined || e.source >= totalNodes || e.target >= totalNodes) continue;
+    const key = e.source < e.target ? `${e.source}_${e.target}` : `${e.target}_${e.source}`;
+    if (!edgeSet.has(key)) {
+      edgeSet.add(key);
+      cleanEdges.push(e);
+      adj.get(e.source).push(e.target);
+      adj.get(e.target).push(e.source);
+      degrees[e.source]++;
+      degrees[e.target]++;
+    }
+    if (e.kind === 'calls') {
+      callees.get(e.source).push(e.target);
+      callers.get(e.target).push(e.source);
+    }
+  }
+
+  // Node positions and radii
+  const posX = new Float32Array(totalNodes);
+  const posY = new Float32Array(totalNodes);
+  const radii = new Float32Array(totalNodes);
+
+  // Group by file
+  const files = [...new Set(nodes.map(n => n.file))];
+  const fileNodes = new Map();
+  for (let i = 0; i < totalNodes; i++) {
+    const f = nodes[i].file;
+    if (!fileNodes.has(f)) fileNodes.set(f, []);
+    fileNodes.get(f).push(i);
+    const d = degrees[i];
+    radii[i] = Math.max(3.2, Math.min(14, 3.5 + Math.sqrt(d) * 1.8));
+  }
+
+  // Position file clusters in an expansive celestial sunflower layout
+  const clusterDist = Math.max(220, Math.min(650, Math.sqrt(totalNodes) * 36));
+  const fileClusters = new Map();
+  files.forEach((f, idx) => {
+    const r = Math.sqrt(idx + 0.5) * clusterDist;
+    const theta = idx * 2.3999632297;
+    fileClusters.set(f, { x: Math.cos(theta) * r, y: Math.sin(theta) * r });
+  });
+
+  // Distribute nodes around cluster center
+  for (const [f, nIndices] of fileNodes.entries()) {
+    const center = fileClusters.get(f);
+    nIndices.sort((a, b) => degrees[b] - degrees[a]);
+    for (let k = 0; k < nIndices.length; k++) {
+      const idx = nIndices[k];
+      if (k === 0) {
+        posX[idx] = center.x;
+        posY[idx] = center.y;
+      } else {
+        const angle = k * 2.3999632 + (idx % 7) * 0.4;
+        const dist = 40 + Math.sqrt(k) * 45;
+        posX[idx] = center.x + Math.cos(angle) * dist;
+        posY[idx] = center.y + Math.sin(angle) * dist;
+      }
+    }
+  }
+
+  // Organic Force Relaxation (Springs + Coulomb Repulsion)
+  const iterCount = totalNodes > 4000 ? 18 : 45;
+  for (let iter = 0; iter < iterCount; iter++) {
+    // 1. Spring force along edges
+    for (let i = 0; i < cleanEdges.length; i++) {
+      const e = cleanEdges[i];
+      const s = e.source, t = e.target;
+      let dx = posX[t] - posX[s];
+      let dy = posY[t] - posY[s];
+      let d = Math.hypot(dx, dy) || 1;
+      const targetDist = 65 + (radii[s] + radii[t]) * 2.2;
+      const f = (d - targetDist) * 0.03;
+      const fx = (dx / d) * f, fy = (dy / d) * f;
+      posX[s] += fx; posY[s] += fy;
+      posX[t] -= fx; posY[t] -= fy;
+    }
+
+    // 2. Node-node repulsion (All-pairs for < 1500 nodes)
+    if (totalNodes < 1500) {
+      for (let i = 0; i < totalNodes; i++) {
+        for (let j = i + 1; j < totalNodes; j++) {
+          let dx = posX[j] - posX[i];
+          let dy = posY[j] - posY[i];
+          let d = Math.hypot(dx, dy) || 1;
+          const minD = radii[i] + radii[j] + 50;
+          if (d < minD) {
+            const rep = (minD - d) / minD * 1.5;
+            const rx = (dx / d) * rep, ry = (dy / d) * rep;
+            posX[i] -= rx; posY[i] -= ry;
+            posX[j] += rx; posY[j] += ry;
+          }
+        }
+      }
+    }
+
+    // 3. Gentle center pull
+    for (let i = 0; i < totalNodes; i++) {
+      posX[i] *= 0.995;
+      posY[i] *= 0.995;
+    }
+  }
+
+  // Canvas setup
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  let width = 0, height = 0;
+  let panX = 0, panY = 0, zoom = 1;
+  let activeFilter = 'function'; // Default to function-level
+  let searchQuery = '';
+  let selectedNode = -1;
+  let hoveredNode = -1;
+  let focusedSubGraph = false;
+  let isDragging = false;
+  let dragStartX = 0, dragStartY = 0;
+  let panStartX = 0, panStartY = 0;
+  let draggedNodeIdx = -1;
+  let animFrame = 0;
+
+  function requestDraw() {
+    if (!animFrame) {
+      animFrame = requestAnimationFrame(() => {
+        animFrame = 0;
+        render();
+      });
+    }
+  }
+
+  function isNodeVisible(idx) {
+    if (activeFilter === 'function' && nodes[idx].kind !== 'function') return false;
+    if (activeFilter === 'connected' && degrees[idx] === 0) return false;
+    if (focusedSubGraph && selectedNode !== -1) {
+      if (idx === selectedNode) return true;
+      const neighbors = adj.get(selectedNode);
+      return neighbors && neighbors.includes(idx);
+    }
+    return true;
+  }
+
+  function fitView(padding = 90) {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    let visibleCount = 0;
+    for (let i = 0; i < totalNodes; i++) {
+      if (!isNodeVisible(i)) continue;
+      visibleCount++;
+      if (posX[i] < minX) minX = posX[i];
+      if (posX[i] > maxX) maxX = posX[i];
+      if (posY[i] < minY) minY = posY[i];
+      if (posY[i] > maxY) maxY = posY[i];
+    }
+    if (!visibleCount) {
+      minX = -200; maxX = 200; minY = -200; maxY = 200;
+    }
+    const graphW = (maxX - minX) || 100;
+    const graphH = (maxY - minY) || 100;
+    const scaleX = (width - padding * 2) / graphW;
+    const scaleY = (height - padding * 2 - 40) / graphH;
+    zoom = Math.min(1.6, Math.max(0.08, Math.min(scaleX, scaleY)));
+    const midX = (minX + maxX) / 2;
+    const midY = (minY + maxY) / 2;
+    panX = width / 2 - midX * zoom;
+    panY = (height + 40) / 2 - midY * zoom;
+    requestDraw();
+  }
+
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = Math.floor(width * dpr);
+    canvas.height = Math.floor(height * dpr);
+    ctx.scale(dpr, dpr);
+    requestDraw();
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  fitView();
+
+  function render() {
+    ctx.clearRect(0, 0, width, height);
+
+    const pad = 80 / zoom;
+    const vLeft = -panX / zoom - pad;
+    const vRight = (width - panX) / zoom + pad;
+    const vTop = -panY / zoom - pad;
+    const vBottom = (height - panY) / zoom + pad;
+
+    ctx.save();
+    ctx.translate(panX, panY);
+    ctx.scale(zoom, zoom);
+
+    const active = selectedNode !== -1 ? selectedNode : hoveredNode;
+    let activeNeighbors = null;
+    if (active !== -1) {
+      activeNeighbors = new Set(adj.get(active));
+      activeNeighbors.add(active);
+    }
+
+    // 1. Draw Links
+    ctx.beginPath();
+    const linkAlpha = totalNodes > 4000 ? (zoom < 0.3 ? 0.025 : 0.05) : 0.09;
+    ctx.strokeStyle = active !== -1 ? 'rgba(45, 48, 45, 0.025)' : `rgba(45, 48, 45, ${linkAlpha})`;
+    ctx.lineWidth = Math.max(0.65, 0.95 / Math.sqrt(zoom));
+
+    for (let i = 0; i < cleanEdges.length; i++) {
+      const e = cleanEdges[i];
+      const s = e.source, t = e.target;
+      if (!isNodeVisible(s) || !isNodeVisible(t)) continue;
+      const x1 = posX[s], y1 = posY[s], x2 = posX[t], y2 = posY[t];
+      if ((x1 < vLeft && x2 < vLeft) || (x1 > vRight && x2 > vRight) ||
+          (y1 < vTop && y2 < vTop) || (y1 > vBottom && y2 > vBottom)) continue;
+
+      if (active !== -1 && (s === active || t === active)) continue;
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+    }
+    ctx.stroke();
+
+    // Active links
+    if (active !== -1) {
+      ctx.beginPath();
+      ctx.strokeStyle = '#c85a32';
+      ctx.lineWidth = 1.7 / Math.sqrt(zoom);
+      const activeEdges = adj.get(active) || [];
+      for (const target of activeEdges) {
+        if (!isNodeVisible(target)) continue;
+        ctx.moveTo(posX[active], posY[active]);
+        ctx.lineTo(posX[target], posY[target]);
+      }
+      ctx.stroke();
+    }
+
+    // 2. Draw Nodes (Single Batch Fill)
+    ctx.fillStyle = active !== -1 ? 'rgba(43, 46, 43, 0.22)' : '#262926';
+    ctx.beginPath();
+    for (let i = 0; i < totalNodes; i++) {
+      if (!isNodeVisible(i)) continue;
+      const x = posX[i], y = posY[i];
+      if (x < vLeft || x > vRight || y < vTop || y > vBottom) continue;
+      if (activeNeighbors && activeNeighbors.has(i)) continue;
+
+      const r = radii[i];
+      ctx.moveTo(x + r, y);
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+    }
+    ctx.fill();
+
+    // Highlighted nodes
+    if (activeNeighbors) {
+      ctx.fillStyle = '#262926';
+      ctx.beginPath();
+      for (const nIdx of activeNeighbors) {
+        if (nIdx === active || !isNodeVisible(nIdx)) continue;
+        const x = posX[nIdx], y = posY[nIdx], r = radii[nIdx] + 1;
+        ctx.moveTo(x + r, y);
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+      }
+      ctx.fill();
+
+      // Neighbor rings
+      ctx.strokeStyle = '#c85a32';
+      ctx.lineWidth = 1.3 / Math.sqrt(zoom);
+      ctx.beginPath();
+      for (const nIdx of activeNeighbors) {
+        if (nIdx === active || !isNodeVisible(nIdx)) continue;
+        const x = posX[nIdx], y = posY[nIdx], r = radii[nIdx] + 1;
+        ctx.moveTo(x + r, y);
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+      }
+      ctx.stroke();
+
+      // Active node
+      if (isNodeVisible(active)) {
+        const ax = posX[active], ay = posY[active], ar = radii[active] + 3;
+        ctx.fillStyle = '#c85a32';
+        ctx.beginPath();
+        ctx.arc(ax, ay, ar, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2.2 / Math.sqrt(zoom);
+        ctx.stroke();
+      }
+    }
+
+    // 3. Search query highlight
+    if (searchQuery) {
+      ctx.strokeStyle = '#c85a32';
+      ctx.lineWidth = 2.5 / Math.sqrt(zoom);
+      for (let i = 0; i < totalNodes; i++) {
+        if (!isNodeVisible(i)) continue;
+        const n = nodes[i];
+        if ((n.name + ' ' + n.file).toLowerCase().includes(searchQuery)) {
+          const x = posX[i], y = posY[i], r = radii[i] + 4;
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // 4. Labels (Obsidian Zoom-In Typography)
+    const shouldShowLabels = zoom > 0.65 || active !== -1 || totalNodes < 40;
+    if (shouldShowLabels) {
+      const fontSize = Math.max(10, Math.min(13, 11.5 / Math.sqrt(zoom)));
+      ctx.font = `${fontSize}px ${FONT_SERIF}`;
+      ctx.textBaseline = 'middle';
+      ctx.lineJoin = 'round';
+
+      const labelsToDraw = [];
+      if (active !== -1) {
+        labelsToDraw.push(active);
+        for (const nIdx of (adj.get(active) || [])) {
+          if (labelsToDraw.length < 35) labelsToDraw.push(nIdx);
+        }
+      } else {
+        for (let i = 0; i < totalNodes; i++) {
+          if (!isNodeVisible(i)) continue;
+          const x = posX[i], y = posY[i];
+          if (x < vLeft || x > vRight || y < vTop || y > vBottom) continue;
+          if (zoom < 0.9 && degrees[i] < 2) continue;
+          labelsToDraw.push(i);
+          if (labelsToDraw.length >= 80) break;
+        }
+      }
+
+      // Avoid label overlap
+      const occupied = [];
+      for (const idx of labelsToDraw) {
+        if (!isNodeVisible(idx)) continue;
+        const x = posX[idx], y = posY[idx], r = radii[idx];
+        const name = nodes[idx].name;
+        const textW = ctx.measureText(name).width;
+        const lx = x + r + 6 / Math.sqrt(zoom);
+        const ly = y;
+
+        const padX = 4 / Math.sqrt(zoom);
+        const padY = 7 / Math.sqrt(zoom);
+        if (idx !== active) {
+          const collides = occupied.some(b => 
+            lx < b.x + b.w + padX && lx + textW + padX > b.x &&
+            Math.abs(ly - b.y) < padY * 2
+          );
+          if (collides) continue;
+        }
+        occupied.push({ x: lx, y: ly, w: textW });
+
+        // Background Halo
+        ctx.strokeStyle = '#fcfaf7';
+        ctx.lineWidth = 3.6 / Math.sqrt(zoom);
+        ctx.strokeText(name, lx, ly);
+
+        // Text fill
+        ctx.fillStyle = (idx === active) ? '#c85a32' : (idx === hoveredNode ? '#111111' : '#2b2e2b');
+        ctx.fillText(name, lx, ly);
+      }
+    }
+
+    ctx.restore();
+  }
+
+  function hitTest(screenX, screenY) {
+    const worldX = (screenX - panX) / zoom;
+    const worldY = (screenY - panY) / zoom;
+    const hitRadius = Math.max(9, 15 / zoom);
+
+    let closest = -1;
+    let closestDist = hitRadius;
+
+    for (let i = 0; i < totalNodes; i++) {
+      if (!isNodeVisible(i)) continue;
+      const dx = posX[i] - worldX;
+      const dy = posY[i] - worldY;
+      const dist = Math.hypot(dx, dy);
+      if (dist < closestDist + radii[i]) {
+        closest = i;
+        closestDist = dist;
+      }
+    }
+    return closest;
+  }
+
+  canvas.addEventListener('pointerdown', e => {
+    isDragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    panStartX = panX;
+    panStartY = panY;
+
+    const hit = hitTest(e.clientX, e.clientY);
+    draggedNodeIdx = hit !== -1 ? hit : -1;
+    canvas.setPointerCapture(e.pointerId);
+  });
+
+  canvas.addEventListener('pointermove', e => {
+    if (isDragging) {
+      const dx = e.clientX - dragStartX;
+      const dy = e.clientY - dragStartY;
+
+      if (draggedNodeIdx !== -1) {
+        posX[draggedNodeIdx] += dx / zoom;
+        posY[draggedNodeIdx] += dy / zoom;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+      } else {
+        panX = panStartX + dx;
+        panY = panStartY + dy;
+      }
+      requestDraw();
+      return;
+    }
+
+    const hit = hitTest(e.clientX, e.clientY);
+    if (hit !== hoveredNode) {
+      hoveredNode = hit;
+      requestDraw();
+      updateTooltip(e.clientX, e.clientY);
+    } else if (hoveredNode !== -1) {
+      updateTooltip(e.clientX, e.clientY);
+    }
+  });
+
+  canvas.addEventListener('pointerup', e => {
+    if (!isDragging) return;
+    const moved = Math.hypot(e.clientX - dragStartX, e.clientY - dragStartY);
+    isDragging = false;
+
+    if (moved < 5) {
+      const hit = hitTest(e.clientX, e.clientY);
+      if (hit !== -1) {
+        selectNode(hit);
+      } else {
+        deselectNode();
+      }
+    }
+    draggedNodeIdx = -1;
+    requestDraw();
+  });
+
+  canvas.addEventListener('pointercancel', () => {
+    isDragging = false;
+    draggedNodeIdx = -1;
+  });
+
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+    const factor = e.deltaY < 0 ? 1.15 : 0.87;
+    const newZoom = Math.min(8, Math.max(0.04, zoom * factor));
+
+    panX = mouseX - (mouseX - panX) * (newZoom / zoom);
+    panY = mouseY - (mouseY - panY) * (newZoom / zoom);
+    zoom = newZoom;
+    requestDraw();
+  }, { passive: false });
+
+  canvas.addEventListener('dblclick', e => {
+    const hit = hitTest(e.clientX, e.clientY);
+    if (hit !== -1) {
+      centerOnNode(hit);
+    } else {
+      fitView();
+    }
+  });
+
+  function updateTooltip(x, y) {
+    const tooltip = document.getElementById('tooltip');
+    if (hoveredNode === -1 || isDragging || hoveredNode === selectedNode) {
+      tooltip.style.display = 'none';
+      return;
+    }
+    const n = nodes[hoveredNode];
+    const deg = degrees[hoveredNode];
+    tooltip.innerHTML = `<b>${n.name}</b> <span style="opacity:0.75; font-size:11px;">(${n.kind}) · ${deg} 关联</span>`;
+    tooltip.style.left = `${x}px`;
+    tooltip.style.top = `${y}px`;
+    tooltip.style.display = 'block';
+  }
+
+  function createRelationChips(nodeIndices, container) {
+    // Count duplicates
+    const counts = new Map();
+    for (const idx of nodeIndices) {
+      counts.set(idx, (counts.get(idx) || 0) + 1);
+    }
+    const unique = [...counts.keys()].slice(0, 30);
+    for (const c of unique) {
+      const count = counts.get(c);
+      const btn = document.createElement('button');
+      btn.className = 'chip';
+      btn.textContent = count > 1 ? `${nodes[c].name} ×${count}` : nodes[c].name;
+      btn.title = `${nodes[c].file} : ${nodes[c].line}`;
+      btn.onclick = () => { selectNode(c); centerOnNode(c); };
+      container.appendChild(btn);
+    }
+  }
+
+  function selectNode(idx) {
+    selectedNode = idx;
+    focusedSubGraph = false;
+    updateTooltip(0, 0);
+    const n = nodes[idx];
+    const card = document.getElementById('inspector');
+    document.getElementById('insp-badge').textContent = n.kind.toUpperCase();
+    document.getElementById('insp-title').textContent = n.name;
+    document.getElementById('insp-meta').innerHTML = 
+      `<div><b>文件:</b> ${n.file}</div>` +
+      `<div><b>位置:</b> 第 ${n.line}${n.end && n.end !== n.line ? ' – ' + n.end : ''} 行</div>` +
+      `<div><b>连通度:</b> ${degrees[idx]} (入度: ${callers.get(idx).length}, 出度: ${callees.get(idx).length})</div>`;
+
+    const relationsDiv = document.getElementById('insp-relations');
+    relationsDiv.innerHTML = '';
+
+    const myCallers = callers.get(idx) || [];
+    const myCallees = callees.get(idx) || [];
+    const otherNeighbors = (adj.get(idx) || []).filter(i => !myCallers.includes(i) && !myCallees.includes(i));
+
+    if (myCallers.length > 0) {
+      const sec = document.createElement('div');
+      sec.innerHTML = `<div class="relation-title">被调用 (${myCallers.length})</div>`;
+      const chips = document.createElement('div');
+      chips.className = 'chip-container';
+      createRelationChips(myCallers, chips);
+      sec.appendChild(chips);
+      relationsDiv.appendChild(sec);
+    }
+
+    if (myCallees.length > 0) {
+      const sec = document.createElement('div');
+      sec.innerHTML = `<div class="relation-title">调用 (${myCallees.length})</div>`;
+      const chips = document.createElement('div');
+      chips.className = 'chip-container';
+      createRelationChips(myCallees, chips);
+      sec.appendChild(chips);
+      relationsDiv.appendChild(sec);
+    }
+
+    if (otherNeighbors.length > 0) {
+      const sec = document.createElement('div');
+      sec.innerHTML = `<div class="relation-title">包含 / 继承 (${otherNeighbors.length})</div>`;
+      const chips = document.createElement('div');
+      chips.className = 'chip-container';
+      createRelationChips(otherNeighbors, chips);
+      sec.appendChild(chips);
+      relationsDiv.appendChild(sec);
+    }
+
+    document.getElementById('insp-btn-focus').textContent = '聚焦关联';
+    card.style.display = 'flex';
+    requestDraw();
+  }
+
+  function deselectNode() {
+    selectedNode = -1;
+    focusedSubGraph = false;
+    document.getElementById('inspector').style.display = 'none';
+    requestDraw();
+  }
+
+  function centerOnNode(idx) {
+    if (idx === -1) return;
+    zoom = Math.max(1.3, zoom);
+    panX = width / 2 - posX[idx] * zoom;
+    panY = (height + 40) / 2 - posY[idx] * zoom;
+    requestDraw();
+  }
+
+  document.getElementById('insp-close').onclick = deselectNode;
+  document.getElementById('insp-btn-center').onclick = () => centerOnNode(selectedNode);
+  document.getElementById('insp-btn-focus').onclick = () => {
+    focusedSubGraph = !focusedSubGraph;
+    document.getElementById('insp-btn-focus').textContent = focusedSubGraph ? '恢复全景' : '聚焦关联';
+    requestDraw();
+  };
+
+  document.getElementById('btn-zoom-in').onclick = () => {
+    const newZoom = Math.min(8, zoom * 1.3);
+    panX = width / 2 - (width / 2 - panX) * (newZoom / zoom);
+    panY = height / 2 - (height / 2 - panY) * (newZoom / zoom);
+    zoom = newZoom;
+    requestDraw();
+  };
+  document.getElementById('btn-zoom-out').onclick = () => {
+    const newZoom = Math.max(0.04, zoom / 1.3);
+    panX = width / 2 - (width / 2 - panX) * (newZoom / zoom);
+    panY = height / 2 - (height / 2 - panY) * (newZoom / zoom);
+    zoom = newZoom;
+    requestDraw();
+  };
+  document.getElementById('btn-fit').onclick = () => fitView();
+
+  document.getElementById('btn-export').onclick = () => {
+    const blob = new Blob([JSON.stringify(rawGraph, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${rawGraph.name || 'graph'}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter = btn.dataset.filter;
+      fitView();
+    };
+  });
+
+  const searchInput = document.getElementById('search-input');
+  const searchClear = document.getElementById('search-clear');
+
+  searchInput.addEventListener('input', e => {
+    searchQuery = e.target.value.trim().toLowerCase();
+    searchClear.style.display = searchQuery ? 'block' : 'none';
+    requestDraw();
+  });
+
+  searchClear.onclick = () => {
+    searchInput.value = '';
+    searchQuery = '';
+    searchClear.style.display = 'none';
+    requestDraw();
+  };
+
+  searchInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && searchQuery) {
+      for (let i = 0; i < totalNodes; i++) {
+        if (!isNodeVisible(i)) continue;
+        if ((nodes[i].name + ' ' + nodes[i].file).toLowerCase().includes(searchQuery)) {
+          selectNode(i);
+          centerOnNode(i);
+          break;
+        }
+      }
+    }
+    if (e.key === 'Escape') {
+      searchInput.blur();
+      searchClear.click();
+    }
+  });
+
+  window.addEventListener('keydown', e => {
+    if (e.key === '/' && document.activeElement !== searchInput) {
+      e.preventDefault();
+      searchInput.focus();
+    }
+    if (e.key === 'Escape') {
+      deselectNode();
+    }
+  });
+
+})();
 </script>
 </body>
 </html>

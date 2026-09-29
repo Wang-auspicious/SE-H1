@@ -48,13 +48,19 @@ def run_python(code_or_file, cwd="."):
 
 
 def api_key():
-    key = os.getenv("OPENCODE_API_KEY") or os.getenv("OPENCODE_GO_API_KEY")
+    key = os.getenv("OPENCODE_API_KEY") or os.getenv("OPENCODE_GO_API_KEY") or os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENAI_API_KEY")
     if not key:
-        path = Path(os.getenv("XDG_DATA_HOME", str(Path.home() / ".local/share"))) / "opencode/auth.json"
-        try:
-            key = json.loads(path.read_text("utf-8"))["opencode-go"]["key"]
-        except (OSError, ValueError, KeyError, TypeError):
-            pass
+        paths = [
+            Path(os.getenv("XDG_DATA_HOME", str(Path.home() / ".local/share"))) / "opencode/auth.json",
+            Path(os.getenv("APPDATA", str(Path.home() / "AppData/Roaming"))) / "opencode/auth.json",
+            Path.home() / ".codex/auth.json"
+        ]
+        for p in paths:
+            try:
+                key = json.loads(p.read_text("utf-8"))["opencode-go"]["key"]
+                if key: break
+            except (OSError, ValueError, KeyError, TypeError):
+                pass
     if not key:
         raise ValueError("Set OPENCODE_API_KEY or connect OpenCode Go in OpenCode. Use --graph without a key.")
     return key
