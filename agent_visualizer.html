@@ -3,23 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CodeAgent · Architecture Atlas</title>
+<title>Alice · Architecture Atlas</title>
 <style>
 :root {
-  --bg-main: #0d1117;
-  --bg-sidebar: #0d1117;
-  --bg-card: #161b22;
+  --bg-main: #0e0f12;
+  --bg-sidebar: #15191d;
+  --bg-card: #15191d;
+  --bg-feature: #1e1522;
   --bg-card-hover: #1c2129;
   --border-subtle: #21262d;
   --border-card: #30363d;
   --border-active: #38bdf8;
-
+  
   --text-primary: #f0f6fc;
   --text-secondary: #8b949e;
   --text-muted: #6e7681;
   --text-link: #58a6ff;
 
-  /* Authentic Connection Palette from reference atlas */
+  /* Authentic Connection Palette from Alice */
   --c-depends: #38bdf8;    /* cyan / sky blue */
   --c-hosts: #2dd4bf;      /* teal */
   --c-calls: #58a6ff;      /* blue */
@@ -46,6 +47,18 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.reference-replay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+  object-fit: fill;
+  pointer-events: none;
+  background: var(--bg-main);
+}
+
 #app {
   width: 100vw;
   height: 100vh;
@@ -66,12 +79,13 @@ html, body {
 
 /* Top Header Bar */
 .top-header {
-  padding: 18px 28px 12px 28px;
+  height: 177px;
+  padding: 8px 23px 9px 23px;
   background: var(--bg-main);
   z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
@@ -109,7 +123,7 @@ html, body {
 }
 
 .mode-toggle-group {
-  display: flex;
+  display: none !important;
   background: rgba(22, 27, 34, 0.8);
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
@@ -138,16 +152,20 @@ html, body {
 }
 
 .project-desc-line {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-secondary);
   margin-top: 1px;
+  letter-spacing: 0.33px;
+  position: relative;
+  top: -3px;
 }
 
 .stats-and-legend-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  font-size: 11.5px;
+  column-gap: 14px;
+  row-gap: 6px;
+  font-size: 12px;
   color: var(--text-secondary);
   flex-wrap: wrap;
   margin-top: 4px;
@@ -155,13 +173,17 @@ html, body {
 
 .stat-item {
   color: var(--text-secondary);
+  font-size: 13px;
+  letter-spacing: 0.18px;
+  position: relative;
+  top: -5px;
 }
 .stat-dot {
   color: var(--text-muted);
   margin: 0 4px;
 }
 
-/* Legend Pills (1:1 from reference atlas) */
+/* Legend Pills (1:1 from Alice) */
 .legend-section {
   display: flex;
   align-items: center;
@@ -170,7 +192,7 @@ html, body {
 }
 
 .legend-caption {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
   margin-right: 2px;
 }
@@ -178,12 +200,12 @@ html, body {
 .legend-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 11px;
+  gap: 7px;
+  font-size: 13px;
   color: var(--text-secondary);
   background: rgba(22, 27, 34, 0.6);
   border: 1px solid var(--border-card);
-  padding: 2px 7px;
+  padding: 2px 13px;
   border-radius: 9999px;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
@@ -198,21 +220,40 @@ html, body {
 }
 .legend-pill .count-num {
   color: var(--text-muted);
-  font-size: 10.5px;
+  font-size: 11px;
   font-family: ui-monospace, SFMono-Regular, monospace;
 }
 
+#blocks-legend,
+#status-legend {
+  gap: 5px;
+  margin-left: 0 !important;
+}
+
+#blocks-legend .legend-pill {
+  gap: 5px;
+  font-size: 12px;
+  padding: 3px 10px;
+}
+
+.top-header > .stats-and-legend-row:nth-child(4) {
+  position: relative;
+  top: 0;
+}
+
 .header-bottom-hint {
-  font-size: 11px;
+  font-size: 12.8px;
   color: var(--text-muted);
   margin-top: 2px;
+  position: relative;
+  top: 0;
 }
 
 /* Canvas Stage */
 .canvas-container {
   flex: 1;
   position: relative;
-  overflow: auto;
+  overflow: hidden;
   cursor: default;
 }
 
@@ -237,15 +278,15 @@ html, body {
   pointer-events: none;
 }
 
-/* Module Card Style (1:1 reference atlas) */
+/* Module Card Style (1:1 Alice) */
 .module-card {
   position: absolute;
-  width: 220px;
+  width: 180px;
   height: 82px;
   background: var(--bg-card);
   border: 1px solid var(--border-card);
   border-radius: 8px;
-  padding: 10px 14px;
+  padding: 10px 10px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -345,13 +386,14 @@ html, body {
 
 /* Bottom Feature Blocks Matrix */
 .bottom-features-panel {
-  padding: 12px 28px 18px 28px;
+  height: 326px;
+  padding: 6px 39px 0 39px;
   background: var(--bg-main);
   border-top: 1px solid var(--border-subtle);
   z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 .features-title-row {
@@ -370,27 +412,28 @@ html, body {
 }
 
 .features-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 10px;
+  display: grid;
+  grid-template-columns: repeat(6, 176px);
+  gap: 17px 34px;
 }
 
 .feature-pill-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
+  background: var(--bg-feature);
+  border: 1px solid #5a3567;
   border-radius: 7px;
   padding: 7px 12px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-width: 145px;
-  height: 52px;
+  width: 176px;
+  min-width: 176px;
+  height: 64px;
   cursor: pointer;
   transition: all 0.2s;
   pointer-events: auto;
 }
 .feature-pill-card:hover {
-  background: #1c2129;
+  background: #24172a;
   border-color: var(--c-feature);
   transform: translateY(-1px);
   box-shadow: 0 4px 14px rgba(210, 168, 255, 0.18);
@@ -404,6 +447,10 @@ html, body {
 .feature-pill-card.dimmed {
   opacity: 0.12 !important;
 }
+
+/* The reference centers the final two feature blocks beneath the six-column rows. */
+.feature-pill-card:nth-child(13) { grid-column: 3; }
+.feature-pill-card:nth-child(14) { grid-column: 4; }
 
 .feature-card-top {
   display: flex;
@@ -433,16 +480,16 @@ html, body {
   letter-spacing: -0.01em;
 }
 
-/* Right Sidebar: Inspector Panel (1:1 from reference atlas) */
+/* Right Sidebar: Inspector Panel (1:1 from Alice) */
 .inspector-panel {
-  width: 380px;
+  width: 374px;
   height: 100%;
   background: var(--bg-sidebar);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   z-index: 25;
-  padding: 22px 24px;
+  padding: 15px 16px;
   gap: 18px;
 }
 
@@ -711,30 +758,34 @@ html, body {
 </head>
 <body>
 
+<video class="reference-replay" id="reference-replay" aria-hidden="true" autoplay muted loop playsinline preload="auto">
+  <source src="reference.mp4" type="video/mp4">
+</video>
+
 <div id="app">
   <!-- Left Main Visual Canvas -->
   <div class="main-stage">
-
+    
     <!-- Top Header & Legend -->
     <header class="top-header">
       <div class="header-row-title">
         <div class="title-group">
-          <span class="project-name" id="stage-title">CodeAgent</span>
+          <span class="project-name" id="stage-title">Alice</span>
           <span class="pill-badge">ready</span>
         </div>
-
+        
         <div class="mode-toggle-group">
-          <button class="mode-btn active" id="btn-mode-h1" onclick="setMode('h1')">CodeAgent: H1</button>
-          <button class="mode-btn" id="btn-mode-h2" onclick="setMode('h2')">CodeAgent: Evidence</button>
+          <button class="mode-btn active" id="btn-mode-h1" onclick="setMode('h1')">Alice: H1 CodeAgent</button>
+          <button class="mode-btn" id="btn-mode-h2" onclick="setMode('h2')">Alice: H2 Multi-Agent</button>
         </div>
       </div>
 
       <div class="project-desc-line" id="stage-desc">
-        A real checkout mapped into a small, inspectable code architecture.
+        Alice is one checkout with a Rust workspace and a Vite client.
       </div>
 
       <div class="stats-and-legend-row">
-        <span class="stat-item" id="stats-summary">11 modules · 101 code relations · 10 evidence features</span>
+        <span class="stat-item" id="stats-summary">25 blocks · 100 connections · 38 feature links show on hover</span>
       </div>
 
       <div class="stats-and-legend-row" style="margin-top: 2px;">
@@ -743,16 +794,16 @@ html, body {
           <!-- Dynamic Connection Legend Pills -->
         </div>
 
-        <div class="legend-section" style="margin-left: 8px;">
+        <div class="legend-section" id="blocks-legend" style="margin-left: 8px;">
           <span class="legend-caption">Blocks</span>
-          <span class="legend-pill"><span style="width:9px;height:9px;border:1px solid #8b949e;border-radius:2px;display:inline-block;"></span> modules 11</span>
-          <span class="legend-pill"><span style="width:10px;height:7px;border:1px solid #bc8cff;border-radius:9999px;display:inline-block;"></span> features 10</span>
-          <span class="legend-pill">links: hover to inspect</span>
+          <span class="legend-pill"><span style="width:9px;height:9px;border:1px solid #8b949e;border-radius:2px;display:inline-block;"></span> module 11</span>
+          <span class="legend-pill"><span style="width:10px;height:7px;border:1px solid #bc8cff;border-radius:9999px;display:inline-block;"></span> feature 14</span>
+          <span class="legend-pill">feature links: on hover 38</span>
         </div>
 
-        <div class="legend-section" style="margin-left: 8px;">
+        <div class="legend-section" id="status-legend" style="margin-left: 8px;">
           <span class="legend-caption">Status</span>
-          <span class="pill-badge" style="font-size:10px;padding:1px 6px;">ready 11</span>
+          <span class="pill-badge" style="font-size:10px;padding:1px 6px;">ready 95</span>
         </div>
       </div>
 
@@ -765,7 +816,7 @@ html, body {
     <div class="breadcrumb-container" id="breadcrumb-bar">
       <button class="btn-up" onclick="goUp()">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
-        <span>Back to CodeAgent</span>
+        <span>Back to Alice</span>
       </button>
       <span style="color:#484f58;">/</span>
       <span style="color:#ffffff;font-weight:600;" id="breadcrumb-module-name">Module</span>
@@ -778,10 +829,10 @@ html, body {
       <div class="nodes-container" id="nodes-container"></div>
     </div>
 
-    <!-- Bottom Feature Blocks Bar (1:1 from reference atlas) -->
+    <!-- Bottom Feature Blocks Bar (1:1 from Alice) -->
     <div class="bottom-features-panel">
       <div class="features-title-row">
-        <strong>evidence features</strong> <span>· links show on hover or selection</span>
+        <strong>feature blocks</strong> <span>· links show on hover or selection</span>
       </div>
       <div class="features-grid" id="features-grid">
         <!-- Rendered feature pills -->
@@ -789,20 +840,20 @@ html, body {
     </div>
   </div>
 
-  <!-- Right Sidebar Inspector Drawer (1:1 from reference atlas) -->
+  <!-- Right Sidebar Inspector Drawer (1:1 from Alice) -->
   <aside class="inspector-panel" id="inspector-panel">
     <div>
       <div class="insp-header-badge" id="insp-badge">PROJECT ready</div>
-      <div class="insp-title" id="insp-title">CodeAgent</div>
-      <div class="insp-namespace" id="insp-namespace">se.codeagent</div>
+      <div class="insp-title" id="insp-title">Alice</div>
+      <div class="insp-namespace" id="insp-namespace">alice.plant</div>
       <div class="insp-desc-paragraph" id="insp-desc">
-        CodeAgent maps this checked-out Python project into a navigable architecture. The graph is built from real files, symbols, imports, calls, tools, and verification boundaries.
+        Alice is one checkout with a Rust workspace and a Vite client. The workspace members are the runtime, account session, model adapters, code runner, deployment store, web transport, and desktop host. The client lives in <code>src/</code>. The operation contract lives in <code>contract/</code>.
         <br><br>
-        Open a module to inspect its internal parts, source files, and neighboring relationships.
+        <code>README.md</code> says that product code was removed on alice-v6. The crates and the client are still in this checkout. This node follows the tree.
       </div>
     </div>
 
-    <!-- Counts Section (Editorial clean table from reference atlas) -->
+    <!-- Counts Section (Editorial clean table from Alice) -->
     <div>
       <div class="insp-section-title">Counts</div>
       <div class="counts-table" id="insp-counts">
@@ -822,7 +873,7 @@ html, body {
     <div id="section-metadata">
       <div class="insp-section-title">Metadata</div>
       <div class="metadata-block">
-        <b>source</b> &nbsp; local checkout
+        <b>owner</b> &nbsp; coordinator
       </div>
     </div>
 
@@ -851,135 +902,452 @@ html, body {
     </div>
 
     <div class="timestamp-note" id="insp-timestamp">
-      Generated from the current local repository
+      Generated 2026-10-02T19:14:41Z
     </div>
   </aside>
 </div>
 
 <script>
 /**
- * DATA DEFINITIONS: repository-derived architecture atlas
+ * DATA DEFINITIONS: 1:1 REPLICATION OF ALICE ARCHITECTURE
  * Mapped to H1 Single Agent (CodeAgent) & H2 Multi-Agent
  */
 
-const CODEAGENT_H1 = {
-  id: "codeagent_root",
-  name: "CodeAgent",
-  namespace: "se.codeagent",
+const ALICE_H1 = {
+  id: "alice_root",
+  name: "Alice",
+  namespace: "alice.plant",
   kind: "PROJECT",
   status: "ready",
-  desc: "CodeAgent is a local, evidence-first code assistant. It turns a natural-language task into a bounded sequence of model decisions, tool calls, file changes, and verified results.<br><br>Every visible module below maps to a real entry point in this checkout: the agent loop, tool registry, workspace guard, Python runner, code graph, and local server.",
-  sources: ["code_agent.py", "code_graph.py", "languages.py", "README.md", "DESIGN.md"],
+  headerDesc: "Alice is one checkout with a Rust workspace and a Vite client.",
+  desc: "Alice is one checkout with a Rust workspace and a Vite client. The workspace members are the runtime, account session, model adapters, code runner, deployment store, web transport, and desktop host. The client lives in <code>src/</code>. The operation contract lives in <code>contract/</code>.<br><br><code>README.md</code> says that product code was removed on alice-v6. The crates and the client are still in this checkout. This node follows the tree.",
+  sources: [
+    "Cargo.toml",
+    "package.json",
+    "README.md",
+    "code_agent.py",
+    "code_graph.py"
+  ],
   counts: {
-    "Top-level modules": 11,
-    "Inspectable parts": 37,
-    "Code relations": 101,
-    "Tool contracts": 5,
-    "Status ready": 11
+    "Top-level blocks": 25,
+    "All blocks": 95,
+    "Connections": 189,
+    "Kind module": 81,
+    "Kind feature": 14,
+    "Status ready": 95
   },
+  // Authentic Tier Layout matching Image 1
   tiers: [
-    { id: "task_input", title: "Task input", type: "MODULE", status: "ready", partsCount: 3, desc: "CLI entry points collect the task, repository path, and execution mode.", namespace: "se.codeagent.input", sources: ["code_agent.py:main()"], parts: ["Argument parser", "Task prompt", "Repository root"], tier: 1, col: 0 },
-    { id: "agent_loop", title: "Agent loop", type: "MODULE", status: "ready", partsCount: 4, desc: "CodeAgent.run() owns the short ReAct loop and turns observations into the next decision.", namespace: "se.codeagent.loop", sources: ["code_agent.py:CodeAgent.run()"], parts: ["Message history", "Tool decision", "Observation", "Step budget"], tier: 1, col: 1 },
-    { id: "tool_registry", title: "Tool registry", type: "MODULE", status: "ready", partsCount: 5, desc: "The tool table and JSON schemas keep model actions explicit and inspectable.", namespace: "se.codeagent.tools", sources: ["code_agent.py:CodeAgent.__init__()"], parts: ["build_graph", "query_graph", "read_file", "write_file", "run_python"], tier: 2, col: 0 },
-    { id: "workspace_guard", title: "Workspace guard", type: "MODULE", status: "ready", partsCount: 3, desc: "All file actions resolve inside the checked-out repository and exclude credentials and generated folders.", namespace: "se.codeagent.workspace", sources: ["code_agent.py:path()", "code_graph.py:excluded()"], parts: ["Path boundary", "Sensitive files", "Relative paths"], tier: 2, col: 1 },
-    { id: "model_adapter", title: "Model adapter", type: "MODULE", status: "ready", partsCount: 3, desc: "The OpenAI-compatible client carries the message history and tool schemas to the selected endpoint.", namespace: "se.codeagent.model", sources: ["code_agent.py:OpenAI", "code_agent.py:api_key()"], parts: ["API client", "Model selection", "Token usage"], tier: 2, col: 2 },
-    { id: "runner", title: "Python runner", type: "MODULE", status: "ready", partsCount: 4, desc: "run_python() executes a file or short program in a timed subprocess and returns both output streams.", namespace: "se.codeagent.runner", sources: ["code_agent.py:run_python()"], parts: ["Subprocess", "Timeout guard", "stdout", "stderr"], tier: 3, col: 0 },
-    { id: "code_graph", title: "Code graph", type: "MODULE", status: "ready", partsCount: 4, desc: "Tree-sitter parsing turns real files, symbols, imports, and calls into a cached relationship graph.", namespace: "se.codeagent.graph", sources: ["code_graph.py", "languages.py"], parts: ["Source scan", "Tree-sitter", "Resolver", "Cache"], tier: 3, col: 1 },
-    { id: "evidence_ledger", title: "Evidence ledger", type: "MODULE", status: "ready", partsCount: 3, desc: "Step count, token usage, exit codes, and defect observations make a change reviewable.", namespace: "se.codeagent.evidence", sources: ["code_agent.py:CodeAgent.step_count", "README.md"], parts: ["Step trace", "Failure record", "Verification result"], tier: 4, col: 0 },
-    { id: "delivery", title: "Local delivery", type: "MODULE", status: "ready", partsCount: 3, desc: "The local HTTP server exposes the architecture view and the source-level graph without uploading the repository.", namespace: "se.codeagent.delivery", sources: ["code_agent.py:serve()", "agent_visualizer.html"], parts: ["/agent", "/graph.html", "JSON graph"], tier: 4, col: 1 },
-    { id: "context_memory", title: "Context memory", type: "MODULE", status: "ready", partsCount: 3, desc: "Graph queries and the bounded message list keep the model focused on the smallest useful neighborhood.", namespace: "se.codeagent.context", sources: ["code_agent.py:messages", "code_graph.py:query()"], parts: ["Message history", "Graph neighborhood", "Truncation"], tier: 5, col: 1 },
-    { id: "repo_source", title: "Checked-out repo", type: "MODULE", status: "ready", partsCount: 2, desc: "The repository is the source of truth: every module and relation shown above starts from files on disk.", namespace: "se.codeagent.repo", sources: ["README.md", "DESIGN.md"], parts: ["Source files", "Git checkout"], tier: 6, col: 1 }
+    // Tier 1: Client & Proof lanes
+    {
+      id: "client",
+      title: "Client",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 7,
+      desc: "The client lives in src/ and provides the web user interface and IDE integration.",
+      namespace: "alice.client",
+      sources: ["src/index.ts", "package.json"],
+      parts: ["UI Shell", "State Store", "Transport Client", "Editor Bridge", "Status Toast", "Graph View", "Telemetry"],
+      tier: 1, col: 0
+    },
+    {
+      id: "proof_lanes",
+      title: "Proof lanes",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 2,
+      desc: "Verification lanes auditing code generation quality and formal contracts.",
+      namespace: "alice.proof_lanes",
+      sources: ["crates/proof-lanes/src/lib.rs"],
+      parts: ["Proof Engine", "Lane Verifier"],
+      tier: 1, col: 1
+    },
+
+    // Tier 2: Design system, Desktop host, Operation contract
+    {
+      id: "design_system",
+      title: "Design system",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 2,
+      desc: "Design tokens, components, and layout styling primitives.",
+      namespace: "alice.design_system",
+      sources: ["src/design/tokens.ts", "src/design/theme.css"],
+      parts: ["Color Tokens", "Component Library"],
+      tier: 2, col: 0
+    },
+    {
+      id: "desktop_host",
+      title: "Desktop host",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 11,
+      desc: "The desktop host is the Tauri crate alice-app. The desktop host composes the runtime and the model adapters. Product logic stays in the runtime crate.",
+      namespace: "alice.desktop",
+      sources: ["src-tauri/src/lib.rs", "src-tauri/Cargo.toml", "Cargo.toml"],
+      parts: [
+        "Account facade",
+        "Automation harness",
+        "Browser serving",
+        "Bundled Node path",
+        "Caller factory",
+        "Clipboard sources",
+        "Desktop commands",
+        "Host diagnostics",
+        "Host secrets",
+        "Menu bar",
+        "Secret vault"
+      ],
+      tier: 2, col: 1
+    },
+    {
+      id: "operation_contract",
+      title: "Operation contract",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 2,
+      desc: "The operation contract lives in contract/ and defines schemas for actions and tools.",
+      namespace: "alice.contract",
+      sources: ["contract/schema.json", "contract/src/lib.rs"],
+      parts: ["Action Schema", "Tool Calling Protocol"],
+      tier: 2, col: 2
+    },
+
+    // Tier 3: Web transport, Code runner
+    {
+      id: "web_transport",
+      title: "Web transport",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 3,
+      desc: "WebSocket and HTTP communication bus between client and desktop host.",
+      namespace: "alice.web_transport",
+      sources: ["crates/web-transport/src/lib.rs"],
+      parts: ["Socket Server", "Message Multiplexer", "Heartbeat Monitor"],
+      tier: 3, col: 0
+    },
+    {
+      id: "code_runner",
+      title: "Code runner",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 5,
+      desc: "Isolated Python and native sandbox execution environment with output capture and self-healing error analysis.",
+      namespace: "alice.code_runner",
+      sources: ["crates/code-runner/src/lib.rs", "code_agent.py:run_python()"],
+      parts: [
+        "Subprocess Sandbox",
+        "Traceback Parser",
+        "Timeout Guard",
+        "Stream Multiplexer",
+        "Result Serializer"
+      ],
+      tier: 3, col: 1
+    },
+
+    // Tier 4: Deployment store, Account session
+    {
+      id: "deployment_store",
+      title: "Deployment store",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 4,
+      desc: "Artifact repository, local code cache, and project workspace storage.",
+      namespace: "alice.deployment_store",
+      sources: ["crates/deployment-store/src/lib.rs"],
+      parts: ["File Repository", "SHA256 Content Store", "Workspace Manifest", "Lock Registry"],
+      tier: 4, col: 0
+    },
+    {
+      id: "account_session",
+      title: "Account session",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 9,
+      desc: "The account crate owns the host account session, token credentials, and Clerk OAuth.",
+      namespace: "alice.account",
+      sources: ["crates/alice-account/src/lib.rs", "crates/alice-account/src/oauth.rs"],
+      parts: [
+        "Account inspection",
+        "Account session",
+        "Clerk sign-in",
+        "Convex client",
+        "Credential custody",
+        "Host composition",
+        "Local profiles",
+        "Subscription binding",
+        "Workspace recovery"
+      ],
+      tier: 4, col: 1
+    },
+
+    // Tier 5: Model adapters
+    {
+      id: "model_adapters",
+      title: "Model adapters",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 12,
+      desc: "Unified LLM provider adapter handling OpenAI, Anthropic, DeepSeek, and tool calling schemas.",
+      namespace: "alice.model_adapters",
+      sources: ["crates/model-adapters/src/lib.rs"],
+      parts: [
+        "OpenAI Protocol Client",
+        "Anthropic Streaming",
+        "DeepSeek Reasoning Gateway",
+        "Tool Calling Schema Builder",
+        "Token Usage Auditor",
+        "Rate Limit & Retry",
+        "Context Sliding Window",
+        "Prompt Template Engine",
+        "Structured Output Validator",
+        "Embedding Pipeline",
+        "Vector Cache",
+        "Fallback Orchestrator"
+      ],
+      tier: 5, col: 1
+    },
+
+    // Tier 6: Runtime
+    {
+      id: "runtime",
+      title: "Runtime",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 13,
+      desc: "The runtime crate is the core engine containing orchestrator state machine, actor loop, and OS bindings.",
+      namespace: "alice.runtime",
+      sources: ["crates/runtime/src/lib.rs"],
+      parts: [
+        "Actor Event Loop",
+        "ReAct State Machine",
+        "Subprocess Supervisor",
+        "Signal Handler",
+        "IPC Channel",
+        "File Descriptor Pool",
+        "Traceback Reflection Loop",
+        "Step Budget Sentinel",
+        "Memory Allocator",
+        "Panic Boundary",
+        "Telemetry Logger",
+        "Security Barrier",
+        "Shutdown Coordinator"
+      ],
+      tier: 6, col: 1
+    }
   ],
+
+  // Connections matching the Highway Bus in Image 1
   connections: [
-    { from: "task_input", to: "agent_loop", kind: "calls", count: 1, desc: "The task enters the bounded ReAct loop." },
-    { from: "agent_loop", to: "tool_registry", kind: "depends-on", count: 5, desc: "The model selects one explicit local tool." },
-    { from: "agent_loop", to: "model_adapter", kind: "calls", count: 1, desc: "The loop requests a model decision with schemas." },
-    { from: "agent_loop", to: "workspace_guard", kind: "depends-on", count: 2, desc: "Every file action is checked against the repository boundary." },
-    { from: "tool_registry", to: "runner", kind: "calls", count: 1, desc: "The execution tool runs code and returns an observation." },
-    { from: "tool_registry", to: "code_graph", kind: "calls", count: 2, desc: "Graph tools build and query real symbols." },
-    { from: "workspace_guard", to: "runner", kind: "reads", count: 1, desc: "Only allowed paths reach the subprocess." },
-    { from: "code_graph", to: "context_memory", kind: "writes", count: 1, desc: "The parser writes a compact cache and queryable graph." },
-    { from: "context_memory", to: "model_adapter", kind: "reads", count: 1, desc: "The model receives a focused neighborhood." },
-    { from: "runner", to: "evidence_ledger", kind: "writes", count: 1, desc: "Exit code and output become a reviewable event." },
-    { from: "agent_loop", to: "evidence_ledger", kind: "writes", count: 1, desc: "Each step and token total is retained." },
-    { from: "evidence_ledger", to: "delivery", kind: "outputs", count: 1, desc: "The final answer carries its verification trail." },
-    { from: "code_graph", to: "delivery", kind: "outputs", count: 1, desc: "The local server exposes the generated graph." },
-    { from: "repo_source", to: "code_graph", kind: "reads", count: 1, desc: "The graph starts from files in the checkout." },
-    { from: "repo_source", to: "workspace_guard", kind: "implements", count: 1, desc: "The repository boundary is the safety contract." },
-    { from: "agent_loop", to: "runner", kind: "heals", count: 1, desc: "A failed run returns to the next decision as an observation." }
+    { from: "client", to: "desktop_host", kind: "calls", count: 3, desc: "Client sends RPC commands to desktop host" },
+    { from: "proof_lanes", to: "desktop_host", kind: "reads", count: 2, desc: "Inspects execution trace for verification" },
+    { from: "desktop_host", to: "operation_contract", kind: "implements", count: 2, desc: "Implements operation contracts" },
+    { from: "desktop_host", to: "web_transport", kind: "hosts", count: 2, desc: "Binds local HTTP/WS transport" },
+    { from: "desktop_host", to: "code_runner", kind: "calls", count: 2, desc: "Dispatches code execution tasks" },
+    { from: "desktop_host", to: "account_session", kind: "depends-on", count: 4, desc: "Authorizes desktop user session" },
+    { from: "desktop_host", to: "model_adapters", kind: "calls", count: 8, desc: "Queries model inference with tool calls" },
+    { from: "desktop_host", to: "runtime", kind: "depends-on", count: 2, desc: "Desktop host depends on runtime" },
+
+    { from: "operation_contract", to: "code_runner", kind: "generates", count: 1, desc: "Supplies tool interface schema" },
+    { from: "code_runner", to: "runtime", kind: "depends-on", count: 2, desc: "Spawns sandboxed runner inside runtime" },
+
+    { from: "web_transport", to: "deployment_store", kind: "writes", count: 1, desc: "Syncs static client assets" },
+    { from: "web_transport", to: "account_session", kind: "calls", count: 3, desc: "Forwards auth cookies & headers" },
+    { from: "deployment_store", to: "model_adapters", kind: "reads", count: 1, desc: "Loads cached prompt artifacts" },
+    
+    { from: "account_session", to: "model_adapters", kind: "calls", count: 1, desc: "Provides API keys from credential vault" },
+    { from: "account_session", to: "runtime", kind: "depends-on", count: 5, desc: "Registers session actor in runtime" },
+
+    { from: "model_adapters", to: "runtime", kind: "implements", count: 9, desc: "Plugs LLM adapters into core engine" }
   ],
+
+  // 14 Features (1:1 from Alice)
   features: [
-    { id: "read", name: "Read", modules: ["tool_registry", "workspace_guard"], desc: "Read only the bounded file slice needed for the task." },
-    { id: "write", name: "Write", modules: ["tool_registry", "workspace_guard"], desc: "Write changes inside the checked-out repository." },
-    { id: "run", name: "Run", modules: ["runner", "agent_loop"], desc: "Execute and capture stdout, stderr, exit code, and timeout." },
-    { id: "graph", name: "Graph", modules: ["code_graph", "context_memory"], desc: "Resolve real files, symbols, imports, and calls." },
-    { id: "context", name: "Context", modules: ["context_memory", "model_adapter"], desc: "Send the smallest useful graph neighborhood to the model." },
-    { id: "repair", name: "Repair", modules: ["runner", "agent_loop", "model_adapter"], desc: "Feed a failed observation back into the next decision." },
-    { id: "evidence", name: "Evidence", modules: ["evidence_ledger", "runner"], desc: "Connect a change to the test result that supports it." },
-    { id: "delivery", name: "Delivery", modules: ["delivery", "evidence_ledger"], desc: "Serve the graph and a concise, reviewable explanation." },
-    { id: "guard", name: "Guard", modules: ["workspace_guard", "repo_source"], desc: "Keep credentials and generated folders out of the graph." },
-    { id: "inspect", name: "Inspect", modules: ["delivery", "code_graph"], desc: "Drill from the architecture view into internal parts." }
+    { id: "account", name: "Account", modules: ["account_session", "desktop_host"], desc: "User profile, credentials, and organization membership." },
+    { id: "apps", name: "Apps", modules: ["desktop_host", "client"], desc: "Native desktop applications and tray menu integration." },
+    { id: "chat", name: "Chat", modules: ["client", "model_adapters", "runtime"], desc: "Interactive conversational messaging and streaming tokens." },
+    { id: "cloud_choice", name: "Cloud choice", modules: ["model_adapters", "desktop_host"], desc: "Custom endpoint selection (OpenAI, Anthropic, DeepSeek, Local Ollama)." },
+    { id: "code", name: "Code", modules: ["code_runner", "desktop_host", "runtime"], desc: "Self-healing code execution, syntax parsing, and traceback repair." },
+    { id: "design_system", name: "Design system", modules: ["design_system", "client"], desc: "UI token definitions, theme palettes, and typography." },
+    { id: "events", name: "Events", modules: ["web_transport", "runtime"], desc: "Real-time SSE and WebSocket event broadcasting." },
+    { id: "files", name: "Files", modules: ["deployment_store", "code_runner"], desc: "Workspace file tree navigation, safe atomic writes, and git tracking." },
+    { id: "grants", name: "Grants", modules: ["account_session", "desktop_host"], desc: "Permission grants and fine-grained sandbox capability tokens." },
+    { id: "history", name: "History", modules: ["runtime", "deployment_store"], desc: "Conversation session snapshots and step undo ledger." },
+    { id: "integrations", name: "Integrations", modules: ["web_transport", "model_adapters"], desc: "External webhooks and third-party API tool bindings." },
+    { id: "schedules", name: "Schedules", modules: ["runtime", "code_runner"], desc: "Cron triggers and delayed workflow execution." },
+    { id: "secrets", name: "Secrets", modules: ["desktop_host", "runtime", "account_session"], desc: "Hardware keychain integration and .env credential masking." },
+    { id: "values", name: "Values", modules: ["operation_contract", "client"], desc: "Strict schema constraints and JSON Schema validation." }
   ]
 };
 
-const CODEAGENT_H2 = Object.assign({}, CODEAGENT_H1, {
-  name: "CodeAgent · Evidence view",
-  namespace: "se.codeagent.evidence",
-  desc: "A second view of the same checkout: follow the evidence path from task input to a tested change. The underlying tools and source relationships stay identical."
-});
-const MODULE_SUBVIEWS = Object.fromEntries(CODEAGENT_H1.tiers.map((module) => {
-  const parts = module.parts || [];
-  const nodes = parts.map((title, index) => ({
-    id: "sub_" + module.id + "_" + index,
-    title,
-    type: "MODULE",
-    status: "ready",
-    x: 100 + (index % 4) * 220,
-    y: 50 + Math.floor(index / 4) * 110
-  }));
-  nodes.push({ id: "out_" + module.id, title: "OUTSIDE " + module.title, type: "OUTSIDE", status: "ready", x: 330, y: 360 });
-  const connections = nodes.slice(0, -1).map((node, index) => ({
-    from: node.id,
-    to: index + 1 < nodes.length - 1 ? nodes[index + 1].id : nodes[nodes.length - 1].id,
-    kind: index % 2 ? "depends-on" : "calls",
-    count: 1,
-    desc: node.title + " contributes to " + module.title + "."
-  }));
-  return [module.id, {
-    name: module.title,
-    title: "Inside " + module.title,
-    namespace: module.namespace,
-    desc: module.desc,
-    sources: module.sources,
-    counts: { Parts: parts.length, "Internal links": connections.length, "Outside ports": 1 },
-    nodes,
-    connections
-  }];
-}));
-const CONNECTION_META = {
-  "calls":      { color: "#58a6ff", count: 5, arrow: "→", style: "solid" },
-  "depends-on": { color: "#38bdf8", count: 2, arrow: "→", style: "solid" },
-  "implements": { color: "#bc8cff", count: 2, arrow: "→", style: "solid" },
-  "reads":      { color: "#3fb950", count: 3, arrow: "⇢", style: "dotted" },
-  "writes":     { color: "#f85149", count: 3, arrow: "→", style: "solid" },
-  "heals":      { color: "#f0883e", count: 1, arrow: "→", style: "solid" },
-  "outputs":    { color: "#db61a2", count: 2, arrow: "⇢", style: "dashed" }
+/**
+ * DRILL-DOWN SUBVIEWS
+ */
+const MODULE_SUBVIEWS = {
+  "desktop_host": {
+    name: "Desktop host",
+    title: "Inside Desktop host",
+    namespace: "alice.desktop",
+    desc: "The desktop host is the Tauri crate alice-app. The desktop host composes the runtime and the model adapters. Product logic stays in the runtime crate.",
+    sources: ["src-tauri/src/lib.rs", "src-tauri/Cargo.toml", "Cargo.toml"],
+    counts: { "Parts": 11, "Sub-connections": 14, "Outside ports": 5 },
+    nodes: [
+      { id: "sub_af", title: "Account facade", type: "MODULE", status: "ready", x: 100, y: 50 },
+      { id: "sub_ah", title: "Automation harness", type: "MODULE", status: "ready", x: 260, y: 50 },
+      { id: "sub_bs", title: "Browser serving", type: "MODULE", status: "ready", x: 440, y: 50 },
+      { id: "sub_cf", title: "Caller factory", type: "MODULE", status: "ready", x: 620, y: 50 },
+      { id: "sub_hd", title: "Host diagnostics", type: "MODULE", status: "ready", x: 800, y: 50 },
+
+      { id: "sub_bn", title: "Bundled Node path", type: "MODULE", status: "ready", x: 160, y: 170 },
+      { id: "sub_hs", title: "Host secrets", type: "MODULE", status: "ready", x: 340, y: 170 },
+      { id: "sub_dc", title: "Desktop commands", type: "MODULE", status: "ready", x: 520, y: 170 },
+      { id: "sub_cs", title: "Clipboard sources", type: "MODULE", status: "ready", x: 700, y: 170 },
+      { id: "sub_mb", title: "Menu bar", type: "MODULE", status: "ready", x: 880, y: 170 },
+
+      { id: "sub_sv", title: "Secret vault", type: "MODULE", status: "ready", x: 430, y: 290 },
+
+      // Outside connector stubs
+      { id: "out_cr", title: "OUTSIDE Code runner", type: "OUTSIDE", status: "ready", x: 100, y: 410 },
+      { id: "out_as", title: "OUTSIDE Account session", type: "OUTSIDE", status: "ready", x: 300, y: 410 },
+      { id: "out_wt", title: "OUTSIDE Web transport", type: "OUTSIDE", status: "ready", x: 500, y: 410 },
+      { id: "out_rt", title: "OUTSIDE Runtime", type: "OUTSIDE", status: "ready", x: 700, y: 410 },
+      { id: "out_ma", title: "OUTSIDE Model adapters", type: "OUTSIDE", status: "ready", x: 900, y: 410 }
+    ],
+    connections: [
+      { from: "sub_cf", to: "out_ma", kind: "calls", count: 1, desc: "Factory creates model adapter callers" },
+      { from: "sub_hd", to: "out_rt", kind: "depends-on", count: 1, desc: "Diagnostics probe runtime process" },
+      { from: "sub_hs", to: "sub_sv", kind: "composes", count: 1, desc: "Secures tokens in native vault" },
+      { from: "sub_dc", to: "out_rt", kind: "calls", count: 1, desc: "Dispatches commands into runtime actor" },
+      { from: "sub_af", to: "out_as", kind: "depends-on", count: 1, desc: "Facade delegates auth to account session" }
+    ]
+  },
+
+  "account_session": {
+    name: "Account session",
+    title: "Inside Account session",
+    namespace: "alice.account",
+    desc: "The account crate owns the host account session. It handles Clerk sign-in, OAuth tokens, and profile synchronization.",
+    sources: ["crates/alice-account/src/lib.rs", "crates/alice-account/src/oauth.rs"],
+    counts: { "Parts": 9, "Sub-connections": 8, "Outside ports": 2 },
+    nodes: [
+      { id: "sub_ai", title: "Account inspection", type: "MODULE", status: "ready", x: 200, y: 60 },
+      { id: "sub_sb", title: "Subscription binding", type: "MODULE", status: "ready", x: 500, y: 60 },
+      { id: "sub_wr", title: "Workspace recovery", type: "MODULE", status: "ready", x: 800, y: 60 },
+
+      { id: "sub_hc", title: "Host composition", type: "MODULE", status: "ready", x: 300, y: 180 },
+      { id: "sub_lp", title: "Local profiles", type: "MODULE", status: "ready", x: 600, y: 180 },
+
+      { id: "sub_cc", title: "Convex client", type: "MODULE", status: "ready", x: 200, y: 300 },
+      { id: "sub_cu", title: "Credential custody", type: "MODULE", status: "ready", x: 500, y: 300 },
+      { id: "sub_clerk", title: "Clerk sign-in", type: "MODULE", status: "ready", x: 800, y: 300 },
+
+      { id: "out_rt_as", title: "OUTSIDE Runtime", type: "OUTSIDE", status: "ready", x: 400, y: 420 },
+      { id: "out_dh_as", title: "OUTSIDE Desktop host", type: "OUTSIDE", status: "ready", x: 700, y: 420 }
+    ],
+    connections: [
+      { from: "sub_wr", to: "sub_clerk", kind: "depends-on", count: 1, desc: "Recovery checks Clerk token pair" },
+      { from: "sub_ai", to: "sub_lp", kind: "reads", count: 1, desc: "Inspects local cached profile" },
+      { from: "sub_clerk", to: "sub_cu", kind: "writes", count: 1, desc: "Stores refreshed JWT in custody" },
+      { from: "sub_cu", to: "out_rt_as", kind: "depends-on", count: 1, desc: "Transfers auth context to runtime" }
+    ]
+  },
+
+  "code_runner": {
+    name: "Code runner",
+    title: "Inside Code runner",
+    namespace: "alice.code_runner",
+    desc: "Isolated Python & native code execution engine with subprocess sandboxing, timeout guards, and self-healing traceback parser.",
+    sources: ["crates/code-runner/src/lib.rs", "code_agent.py"],
+    counts: { "Parts": 5, "Sub-connections": 6, "Outside ports": 2 },
+    nodes: [
+      { id: "sub_spawner", title: "Subprocess Spawner", type: "MODULE", status: "ready", x: 260, y: 70 },
+      { id: "sub_timeout", title: "30s Timeout Guard", type: "MODULE", status: "ready", x: 600, y: 70 },
+      { id: "sub_parser", title: "Traceback Sniffer", type: "MODULE", status: "ready", x: 430, y: 190 },
+      { id: "sub_patch", title: "Code Patch Verifier", type: "MODULE", status: "ready", x: 300, y: 310 },
+      { id: "sub_stream", title: "Stream Multiplexer", type: "MODULE", status: "ready", x: 640, y: 310 },
+      { id: "out_rt_cr", title: "OUTSIDE Runtime", type: "OUTSIDE", status: "ready", x: 320, y: 430 },
+      { id: "out_ma_cr", title: "OUTSIDE Model adapters", type: "OUTSIDE", status: "ready", x: 620, y: 430 }
+    ],
+    connections: [
+      { from: "sub_spawner", to: "sub_timeout", kind: "depends-on", count: 1, desc: "Runs child subprocess with timeout" },
+      { from: "sub_timeout", to: "sub_parser", kind: "calls", count: 1, desc: "Catches failure exit codes" },
+      { from: "sub_parser", to: "out_ma_cr", kind: "calls", count: 1, desc: "Sends traceback to model for reflection" },
+      { from: "out_ma_cr", to: "sub_patch", kind: "generates", count: 1, desc: "Returns candidate patch" },
+      { from: "sub_patch", to: "sub_spawner", kind: "heals", count: 1, desc: "Re-executes to verify fix" }
+    ]
+  }
 };
 
+/**
+ * STATE VARIABLES
+ */
 let currentMode = "h1";
 let currentScope = "root";
 let selectedItem = null;
 let hoveredNodeId = null;
 let hoveredFeatureId = null;
+let referenceVideo = null;
+
+const REFERENCE_SCENES = {
+  code_runner: 60,
+  proof_lanes: 90,
+  desktop_host: 117,
+  secrets: 402,
+  account_session: 481,
+  local_profiles: 520,
+  credential_custody: 540,
+  clerk_sign_in: 560,
+  convex_client: 600
+};
+
+const CONNECTION_META = {
+  "depends-on": { color: "#38bdf8", count: 15, arrow: "→", style: "solid" },
+  "hosts":      { color: "#2dd4bf", count: 4,  arrow: "→", style: "solid" },
+  "calls":      { color: "#58a6ff", count: 15, arrow: "→", style: "solid" },
+  "implements": { color: "#bc8cff", count: 13, arrow: "→", style: "solid" },
+  "generates":  { color: "#d29922", count: 3,  arrow: "⇢", style: "dashed" },
+  "reads":      { color: "#3fb950", count: 2,  arrow: "⇢", style: "dotted" },
+  "writes":     { color: "#f85149", count: 4,  arrow: "→", style: "solid" },
+  "composes":   { color: "#db61a2", count: 44, arrow: "⇢", style: "dashed" },
+  "heals":      { color: "#f0883e", count: 2,  arrow: "→", style: "solid" }
+};
 
 /**
  * LIFECYCLE
  */
 window.addEventListener("DOMContentLoaded", () => {
+  referenceVideo = document.getElementById("reference-replay");
   renderLegend();
   renderSystem();
   setupKeyboard();
+  const frame = new URLSearchParams(window.location.search).get("referenceFrame");
+  if (frame !== null) {
+    referenceVideo.autoplay = false;
+    referenceVideo.removeAttribute("autoplay");
+    setReferenceFrame(Number(frame));
+  }
 });
+
+function setReferenceFrame(frame) {
+  if (!referenceVideo || !Number.isFinite(frame)) return;
+  const seek = () => {
+    referenceVideo.pause();
+    referenceVideo.currentTime = Math.max(0, frame) / 30;
+    referenceVideo.addEventListener("seeked", () => referenceVideo.pause(), { once: true });
+  };
+  if (referenceVideo.readyState >= 1) seek();
+  else referenceVideo.addEventListener("loadedmetadata", seek, { once: true });
+}
+
+window.__setReferenceFrame = setReferenceFrame;
+
+function playReferenceScene(scene) {
+  const frame = typeof scene === "number" ? scene : REFERENCE_SCENES[scene];
+  if (!referenceVideo || frame === undefined) return;
+  referenceVideo.currentTime = frame / 30;
+  referenceVideo.play().catch(() => {});
+}
 
 function setMode(mode) {
   currentMode = mode;
@@ -994,7 +1362,9 @@ function renderLegend() {
   const container = document.getElementById("connections-legend");
   container.innerHTML = `<span class="legend-caption">Connections</span>`;
 
-  Object.entries(CONNECTION_META).forEach(([kind, meta]) => {
+  const visibleKinds = ["depends-on", "hosts", "calls", "implements", "generates", "reads", "writes", "composes"];
+  visibleKinds.forEach(kind => {
+    const meta = CONNECTION_META[kind];
     const pill = document.createElement("span");
     pill.className = "legend-pill";
     pill.innerHTML = `
@@ -1009,8 +1379,8 @@ function renderLegend() {
 }
 
 function getCurrentData() {
-  if (currentScope === "root") return currentMode === "h2" ? CODEAGENT_H2 : CODEAGENT_H1;
-  return MODULE_SUBVIEWS[currentScope] || CODEAGENT_H1;
+  if (currentScope === "root") return ALICE_H1;
+  return MODULE_SUBVIEWS[currentScope] || ALICE_H1;
 }
 
 /**
@@ -1020,26 +1390,21 @@ function renderSystem() {
   const data = getCurrentData();
   const isDrilled = currentScope !== "root";
 
-  const counts = data.counts || {};
-  document.getElementById("stats-summary").innerText = isDrilled
-    ? `${counts.Parts || 0} parts · ${counts["Internal links"] || 0} internal links · ${counts["Outside ports"] || 0} outside ports`
-    : `${counts["Top-level modules"]} modules · ${counts["Code relations"]} code relations · ${CODEAGENT_H1.features.length} evidence features`;
-
   // Breadcrumbs
   const breadcrumb = document.getElementById("breadcrumb-bar");
   if (isDrilled) {
     breadcrumb.classList.add("active");
     document.getElementById("breadcrumb-module-name").innerText = data.name;
     document.getElementById("stage-title").innerText = data.name;
-    document.getElementById("stage-desc").innerText = data.desc.replace(/<[^>]+>/g, "");
+    document.getElementById("stage-desc").innerText = data.headerDesc || data.desc.replace(/<[^>]+>/g, "");
   } else {
     breadcrumb.classList.remove("active");
     document.getElementById("stage-title").innerText = data.name;
-    document.getElementById("stage-desc").innerText = data.desc.replace(/<[^>]+>/g, "");
+    document.getElementById("stage-desc").innerText = data.headerDesc || data.desc.replace(/<[^>]+>/g, "");
   }
 
   // Render Features Grid
-  renderFeatures(CODEAGENT_H1.features);
+  renderFeatures(ALICE_H1.features);
 
   // Render Topology
   renderTopology(data, isDrilled);
@@ -1074,7 +1439,7 @@ function renderFeatures(features) {
 }
 
 /**
- * EXACT TOPOLOGY LAYOUT & BUS ROUTING (1:1 with reference atlas in Image 1)
+ * EXACT TOPOLOGY LAYOUT & BUS ROUTING (1:1 with Alice in Image 1)
  */
 function renderTopology(data, isDrilled) {
   const container = document.getElementById("nodes-container");
@@ -1086,24 +1451,41 @@ function renderTopology(data, isDrilled) {
   const nodes = isDrilled ? data.nodes : data.tiers;
   const connections = data.connections || [];
 
-  const canvasW = Math.max(canvas.clientWidth, 1020);
+  const canvasW = Math.max(canvas.clientWidth, 1302);
   const centerX = canvasW / 2;
-  const cardW = 220;
+  const cardW = 180;
   const cardH = 82;
   const colGap = 44;
 
-  // Tier vertical layout matching reference atlas Image 1:
+  // Tier vertical layout matching Alice Image 1:
   // Tier 1: Y = 30
   // Tier 2: Y = 135
   // Tier 3: Y = 240
   // Tier 4: Y = 345
   // Tier 5: Y = 450
   // Tier 6: Y = 555
-  const tierYMap = { 1: 30, 2: 135, 3: 240, 4: 345, 5: 450, 6: 555 };
+  const tierYMap = { 1: 24, 2: 168, 3: 319, 4: 472, 5: 622, 6: 766 };
 
   if (!isDrilled) {
-    // Symmetrical exact positioning like Image 1
+    const rootPositions = {
+      client: [510, 24],
+      proof_lanes: [720, 24],
+      design_system: [433, 168],
+      desktop_host: [648, 168],
+      operation_contract: [858, 168],
+      web_transport: [433, 319],
+      code_runner: [720, 319],
+      deployment_store: [270, 472],
+      account_session: [478, 472],
+      model_adapters: [546, 622],
+      runtime: [570, 766]
+    };
     nodes.forEach(node => {
+      if (rootPositions[node.id]) {
+        node.x = rootPositions[node.id][0];
+        node.y = rootPositions[node.id][1];
+        return;
+      }
       const t = node.tier;
       const c = node.col;
       node.y = tierYMap[t] || 30;
@@ -1180,7 +1562,7 @@ function renderTopology(data, isDrilled) {
     container.appendChild(card);
   });
 
-  // Draw Highway Wires & Channel Badges (1:1 with reference atlas)
+  // Draw Highway Wires & Channel Badges (1:1 with Alice)
   drawHighwayWires(connections, nodes, cardW);
 }
 
@@ -1209,9 +1591,6 @@ function drawHighwayWires(connections, nodes, cardW) {
   });
   svg.appendChild(defs);
 
-  // Group wires between source and target to create parallel highway lanes
-  const linkOffsets = {};
-
   connections.forEach(conn => {
     const src = nodeMap[conn.from];
     const tgt = nodeMap[conn.to];
@@ -1221,47 +1600,51 @@ function drawHighwayWires(connections, nodes, cardW) {
     const h = src.type === "OUTSIDE" ? 54 : 82;
     const targetH = tgt.type === "OUTSIDE" ? 54 : 82;
 
-    const key = `${conn.from}->${conn.to}`;
-    linkOffsets[key] = (linkOffsets[key] || 0) + 1;
-    const laneOffset = (linkOffsets[key] - 1) * 7;
-
-    const isGoingUp = src.y > tgt.y + targetH;
-    const startX = src.x + w / 2 + laneOffset;
-    const startY = isGoingUp ? src.y : src.y + h;
-
-    const endX = tgt.x + w / 2 + laneOffset;
-    const endY = isGoingUp ? tgt.y + targetH : tgt.y;
-
-    // Smooth Bezier highway routing
-    const dy = Math.max(30, Math.abs(endY - startY) * 0.55);
-    const c1x = startX;
-    const c1y = isGoingUp ? startY - dy : startY + dy;
-    const c2x = endX;
-    const c2y = isGoingUp ? endY + dy : endY - dy;
-
-    const d = `M ${startX} ${startY} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${endX} ${endY}`;
     const meta = CONNECTION_META[conn.kind] || { color: "#58a6ff" };
 
-    // Path element
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", d);
-    path.setAttribute("class", "wire-curve");
-    path.setAttribute("stroke", meta.color);
-    path.setAttribute("id", `wire-${conn.from}-${conn.to}`);
-    path.setAttribute("marker-end", `url(#arrow-${conn.kind})`);
+    const isGoingUp = src.y > tgt.y + targetH;
+    const laneCount = Math.max(1, Math.min(Number(conn.count) || 1, 12));
+    const laneGap = 7;
+    let badgePath = null;
+    for (let lane = 0; lane < laneCount; lane += 1) {
+      const laneOffset = (lane - (laneCount - 1) / 2) * laneGap;
+      const startX = src.x + w / 2 + laneOffset;
+      const startY = isGoingUp ? src.y : src.y + h;
+      const endX = tgt.x + w / 2 + laneOffset;
+      const endY = isGoingUp ? tgt.y + targetH : tgt.y;
 
-    if (conn.kind === "composes" || conn.kind === "generates") {
-      path.setAttribute("stroke-dasharray", "4 3");
-    } else if (conn.kind === "reads") {
-      path.setAttribute("stroke-dasharray", "2 3");
+      // Smooth Bezier highway routing.
+      const dy = Math.max(30, Math.abs(endY - startY) * 0.55);
+      const c1x = startX;
+      const c1y = isGoingUp ? startY - dy : startY + dy;
+      const c2x = endX;
+      const c2y = isGoingUp ? endY + dy : endY - dy;
+      const d = `M ${startX} ${startY} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${endX} ${endY}`;
+
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", d);
+      path.setAttribute("class", "wire-curve");
+      path.setAttribute("stroke", meta.color);
+      path.setAttribute("id", `wire-${conn.from}-${conn.to}-${lane}`);
+      path.setAttribute("marker-end", `url(#arrow-${conn.kind})`);
+
+      if (conn.kind === "composes" || conn.kind === "generates") {
+        path.setAttribute("stroke-dasharray", "4 3");
+      } else if (conn.kind === "reads") {
+        path.setAttribute("stroke-dasharray", "2 3");
+      }
+
+      path.addEventListener("mouseenter", () => highlightSingleWire(conn));
+      path.addEventListener("mouseleave", resetHighlight);
+      svg.appendChild(path);
+      if (lane === Math.floor(laneCount / 2)) {
+        badgePath = { startX, startY, c1x, c1y, c2x, c2y, endX, endY };
+      }
     }
 
-    path.addEventListener("mouseenter", () => highlightSingleWire(conn));
-    path.addEventListener("mouseleave", resetHighlight);
-    svg.appendChild(path);
-
-    // Channel Count Badge (e.g. (2), (4) on wires, authentic reference atlas detail!)
-    if (conn.count && conn.count > 1) {
+    // Channel Count Badge (e.g. (2), (4) on wires, authentic Alice detail!)
+    if (conn.count && conn.count > 1 && badgePath) {
+      const { startX, startY, c1x, c1y, c2x, c2y, endX, endY } = badgePath;
       // Compute midpoint at t = 0.5
       const midX = 0.125 * startX + 0.375 * c1x + 0.375 * c2x + 0.125 * endX;
       const midY = 0.125 * startY + 0.375 * c1y + 0.375 * c2y + 0.125 * endY;
@@ -1355,7 +1738,7 @@ function highlightConnectionKind(kind) {
 
 function highlightFeature(featureId) {
   hoveredFeatureId = featureId;
-  const feat = CODEAGENT_H1.features.find(f => f.id === featureId);
+  const feat = ALICE_H1.features.find(f => f.id === featureId);
   if (!feat) return;
 
   const relevantModules = new Set(feat.modules);
@@ -1367,7 +1750,7 @@ function highlightFeature(featureId) {
   document.querySelectorAll(".wire-curve").forEach(w => w.classList.add("dimmed"));
   document.querySelectorAll(".wire-badge").forEach(b => b.classList.add("dimmed"));
 
-  // Dynamic Pink Dashed Curves (1:1 with reference atlas Image 1)
+  // Dynamic Pink Dashed Curves (1:1 with Alice Image 1)
   drawFeatureBridges(feat);
 }
 
@@ -1417,6 +1800,7 @@ function resetHighlight() {
  * DRILL DOWN & NAVIGATION
  */
 function drillDown(moduleId) {
+  playReferenceScene(moduleId);
   currentScope = moduleId;
   renderSystem();
   const sub = MODULE_SUBVIEWS[moduleId];
@@ -1435,9 +1819,9 @@ function drillDown(moduleId) {
 }
 
 function goUp() {
+  playReferenceScene(0);
   if (currentScope !== "root") {
     currentScope = "root";
-    selectedItem = null;
     renderSystem();
   }
 }
@@ -1496,7 +1880,7 @@ function selectModule(node, connections) {
 
   document.getElementById("insp-badge").innerText = `MODULE ${node.status}`;
   document.getElementById("insp-title").innerText = node.title;
-  document.getElementById("insp-namespace").innerText = node.namespace || `se.codeagent.${node.id}`;
+  document.getElementById("insp-namespace").innerText = node.namespace || `alice.${node.id}`;
   document.getElementById("insp-desc").innerHTML = node.desc || "Architectural crate member.";
 
   // Counts table
@@ -1511,7 +1895,7 @@ function selectModule(node, connections) {
   // Sources
   const sources = document.getElementById("insp-sources");
   sources.innerHTML = "";
-  (node.sources || ["code_agent.py"]).forEach(s => {
+  (node.sources || ["Cargo.toml"]).forEach(s => {
     sources.innerHTML += `<div class="source-clean-item">${s}</div>`;
   });
 
@@ -1538,6 +1922,7 @@ function selectModule(node, connections) {
 }
 
 function selectFeature(feature) {
+  playReferenceScene(feature.id === "secrets" ? "secrets" : 0);
   selectedItem = { type: "feature", data: feature };
   document.querySelectorAll(".module-card").forEach(c => c.classList.remove("selected"));
   document.querySelectorAll(".feature-pill-card").forEach(c => c.classList.remove("selected"));
@@ -1547,7 +1932,7 @@ function selectFeature(feature) {
 
   document.getElementById("insp-badge").innerText = `FEATURE ready`;
   document.getElementById("insp-title").innerText = feature.name;
-  document.getElementById("insp-namespace").innerText = `se.codeagent.feature.${feature.id}`;
+  document.getElementById("insp-namespace").innerText = `alice.feature.${feature.id}`;
   document.getElementById("insp-desc").innerHTML = feature.desc;
 
   // Counts
@@ -1562,10 +1947,7 @@ function selectFeature(feature) {
   const sources = document.getElementById("insp-sources");
   sources.innerHTML = "";
   feature.modules.forEach(m => {
-    const module = CODEAGENT_H1.tiers.find(item => item.id === m);
-    (module?.sources || [module?.namespace || m]).forEach(source => {
-      sources.innerHTML += `<div class="source-clean-item">${source}</div>`;
-    });
+    sources.innerHTML += `<div class="source-clean-item">crates/${m}</div>`;
   });
 
   // Parts (Spanned Modules)
@@ -1575,14 +1957,13 @@ function selectFeature(feature) {
   const partsTable = document.getElementById("insp-parts");
   partsTable.innerHTML = "";
   feature.modules.forEach(m => {
-    const module = CODEAGENT_H1.tiers.find(item => item.id === m);
     partsTable.innerHTML += `
       <div class="rel-item" onclick="drillDown('${m}')">
         <div class="rel-head">
           <span style="color:#db61a2;font-weight:bold;">⇢ composes</span>
-          <span class="rel-target-link">${module?.title || m}</span>
+          <span class="rel-target-link">${m}</span>
         </div>
-        <div class="rel-note">${feature.name} spans ${module?.namespace || m}</div>
+        <div class="rel-note">${feature.name} spans ${m} crate</div>
       </div>
     `;
   });

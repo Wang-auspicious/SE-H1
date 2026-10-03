@@ -7,6 +7,7 @@ import uuid
 import webbrowser
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from openai import OpenAI, APIError, APIStatusError
 from code_graph import CodeGraph, excluded
@@ -275,7 +276,8 @@ def serve(repo=".", port=8766):
             self.send_error(404)
 
         def do_GET(self):
-            if self.path in ("/agent", "/atlas", "/visualizer", "/architecture"):
+            request_path = urlsplit(self.path).path
+            if request_path in ("/agent", "/atlas", "/visualizer", "/architecture"):
                 vis_path = Path(__file__).parent / "agent_visualizer.html"
                 if not vis_path.exists():
                     vis_path = Path(__file__).parent.parent / "agent_visualizer.html"
