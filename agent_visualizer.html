@@ -1,0 +1,2019 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodeAgent · Architecture & Execution Atlas</title>
+<style>
+:root {
+  --bg-main: #080b11;
+  --bg-surface: #0e131d;
+  --bg-card: #121824;
+  --bg-card-hover: #172030;
+  --bg-card-inner: #0b0f17;
+  --border-dim: #1a2233;
+  --border-card: #222d42;
+  --border-card-hover: #3b82f6;
+  --text-main: #f1f5f9;
+  --text-muted: #8b9bb4;
+  --text-dim: #4b586e;
+  
+  /* Semantic Connection Colors (1:1 from video) */
+  --c-depends: #2dd4bf;   /* teal */
+  --c-calls: #3b82f6;     /* blue */
+  --c-hosts: #38bdf8;     /* cyan */
+  --c-implements: #a855f7;/* purple */
+  --c-generates: #f59e0b; /* amber */
+  --c-reads: #10b981;     /* emerald */
+  --c-writes: #f43f5e;    /* rose/red */
+  --c-composes: #ec4899;  /* pink */
+  --c-heals: #fb923c;     /* orange self-healing */
+  --c-feature: #d946ef;   /* fuchsia */
+  --c-status-ready: #10b981;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", "Helvetica Neue", sans-serif;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Background Subtle Dot Grid */
+body::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* App Container */
+#app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* Left Main Area */
+.main-stage {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Top Navigation & Legend Header */
+.top-header {
+  padding: 16px 24px 10px 24px;
+  border-bottom: 1px solid var(--border-dim);
+  background: rgba(8, 11, 17, 0.85);
+  backdrop-filter: blur(12px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.header-row-1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.project-title-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.project-name {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+}
+
+.badge-ready {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: var(--c-status-ready);
+  font-size: 10px;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.badge-ready::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--c-status-ready);
+}
+
+.project-desc {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.mode-switcher {
+  display: flex;
+  background: #111724;
+  border: 1px solid var(--border-card);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.mode-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.mode-tab.active {
+  background: #1e293b;
+  color: #ffffff;
+  font-weight: 600;
+}
+.mode-tab:hover:not(.active) {
+  color: #cbd5e1;
+}
+
+/* Stats and Legend Row */
+.header-row-2 {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.stats-summary {
+  color: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.legend-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.legend-label {
+  color: var(--text-dim);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 9.5px;
+  letter-spacing: 0.5px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 1px 5px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.legend-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.legend-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.legend-guide {
+  margin-left: auto;
+  color: #64748b;
+  font-size: 11px;
+  font-style: italic;
+}
+
+/* Breadcrumb Navigation when Drilled Down */
+.breadcrumb-bar {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  background: rgba(20, 27, 41, 0.6);
+  padding: 6px 24px;
+  border-bottom: 1px solid var(--border-dim);
+  color: var(--text-muted);
+}
+.breadcrumb-bar.active {
+  display: flex;
+}
+.btn-back-up {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-card);
+  color: #e2e8f0;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+.btn-back-up:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+.breadcrumb-sep { color: var(--text-dim); }
+.breadcrumb-current { color: #fff; font-weight: 600; }
+
+/* Canvas Area */
+.canvas-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: auto;
+  cursor: default;
+}
+
+#graph-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  overflow: visible;
+}
+
+.graph-nodes-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Module Card Style (1:1 with Video) */
+.module-card {
+  position: absolute;
+  width: 196px;
+  height: 78px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 7px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.25s ease,
+              border-color 0.2s ease,
+              box-shadow 0.2s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.module-card:hover {
+  transform: translateY(-2px);
+  border-color: #38bdf8;
+  background: var(--bg-card-hover);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 12px rgba(56, 189, 248, 0.25);
+}
+
+.module-card.selected {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 1px #38bdf8, 0 8px 24px rgba(0, 0, 0, 0.7);
+}
+
+.module-card.dimmed {
+  opacity: 0.12 !important;
+  filter: grayscale(40%);
+  pointer-events: none;
+}
+
+.module-card.outside-connector {
+  border-style: dashed;
+  background: rgba(14, 19, 29, 0.85);
+  border-color: #334155;
+  height: 52px;
+}
+.module-card.outside-connector .card-title {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* Card Contents */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.card-type {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.card-status {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--c-status-ready);
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 1px 6px;
+  border-radius: 9999px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 2px 0;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.card-drill-arrow {
+  color: #475569;
+  font-size: 12px;
+  transition: transform 0.2s;
+}
+.module-card:hover .card-drill-arrow {
+  color: #38bdf8;
+  transform: translateX(2px);
+}
+
+/* Bottom Feature Blocks Matrix */
+.bottom-features-bar {
+  padding: 12px 24px 16px 24px;
+  background: rgba(8, 11, 17, 0.95);
+  border-top: 1px solid var(--border-dim);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.features-header {
+  font-size: 11px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.features-header span {
+  color: #475569;
+}
+
+.features-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.feature-pill {
+  background: #0f1420;
+  border: 1px solid #231f3d;
+  border-radius: 6px;
+  padding: 5px 11px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  transition: all 0.2s;
+  pointer-events: auto;
+}
+.feature-pill:hover {
+  background: #1a1836;
+  border-color: var(--c-feature);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(217, 70, 239, 0.2);
+}
+.feature-pill.active {
+  border-color: var(--c-feature);
+  background: #24163d;
+  box-shadow: 0 0 10px rgba(217, 70, 239, 0.4);
+}
+.feature-pill.dimmed {
+  opacity: 0.15;
+}
+
+.feature-tag {
+  font-size: 9px;
+  font-weight: 700;
+  color: #c084fc;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.feature-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #e2e8f0;
+}
+.feature-status {
+  font-size: 9px;
+  color: var(--c-status-ready);
+  background: rgba(16, 185, 129, 0.1);
+  padding: 1px 5px;
+  border-radius: 9999px;
+}
+
+/* Right Sidebar: Inspector Panel (1:1 with video) */
+.inspector-panel {
+  width: 360px;
+  height: 100%;
+  background: #0b0f17;
+  border-left: 1px solid var(--border-dim);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  z-index: 25;
+}
+
+.inspector-header {
+  padding: 20px 20px 14px 20px;
+  border-bottom: 1px solid var(--border-dim);
+  background: rgba(11, 15, 23, 0.9);
+}
+
+.inspector-kind-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--c-status-ready);
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.inspector-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.inspector-namespace {
+  font-size: 11px;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  margin-bottom: 12px;
+}
+
+.inspector-desc {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #94a3b8;
+}
+
+.inspector-body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.inspector-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Counts Grid */
+.counts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.count-cell {
+  background: #101622;
+  border: 1px solid var(--border-card);
+  padding: 8px 10px;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.count-label { font-size: 11px; color: #8896ab; }
+.count-value { font-size: 12px; font-weight: 600; color: #fff; font-family: ui-monospace, monospace; }
+
+/* Sources List */
+.source-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.source-item {
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #38bdf8;
+  background: #101622;
+  border: 1px solid var(--border-card);
+  padding: 6px 10px;
+  border-radius: 5px;
+  word-break: break-all;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+.source-item:hover {
+  background: #182236;
+  border-color: #38bdf8;
+}
+
+/* Parts Checklist */
+.parts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.part-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: #101622;
+  border: 1px solid var(--border-card);
+  border-radius: 5px;
+  font-size: 11.5px;
+  color: #cbd5e1;
+}
+.part-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.part-box {
+  width: 10px;
+  height: 10px;
+  border: 1px solid #475569;
+  border-radius: 2px;
+}
+.part-status {
+  font-size: 9px;
+  color: var(--c-status-ready);
+  background: rgba(16, 185, 129, 0.1);
+  padding: 1px 5px;
+  border-radius: 9999px;
+  font-family: ui-monospace, monospace;
+}
+
+/* Relations List (Outgoing / Incoming) */
+.relation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.relation-item {
+  background: #101622;
+  border: 1px solid var(--border-card);
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.relation-item:hover {
+  border-color: #3b82f6;
+  background: #151e30;
+}
+.relation-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.relation-arrow { font-size: 12px; }
+.relation-kind { font-weight: 600; font-family: ui-monospace, monospace; font-size: 10.5px; }
+.relation-target { color: #ffffff; font-weight: 500; }
+.relation-desc {
+  font-size: 11px;
+  color: #8896ab;
+  padding-left: 16px;
+}
+
+/* SVG Wires and Bezier Connectors */
+.wire-path {
+  fill: none;
+  stroke-width: 1.4;
+  opacity: 0.7;
+  transition: opacity 0.25s ease, stroke-width 0.2s ease, filter 0.2s ease;
+  pointer-events: stroke;
+}
+.wire-path:hover {
+  stroke-width: 2.5;
+  opacity: 1 !important;
+  cursor: pointer;
+}
+.wire-path.dimmed {
+  opacity: 0.05 !important;
+}
+.wire-path.highlighted {
+  opacity: 1 !important;
+  stroke-width: 2.2;
+}
+
+.feature-wire {
+  fill: none;
+  stroke: var(--c-feature);
+  stroke-width: 1.8;
+  stroke-dasharray: 5 4;
+  animation: dashAnimation 1.5s linear infinite;
+  opacity: 0.85;
+}
+@keyframes dashAnimation {
+  from { stroke-dashoffset: 18; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* Scrollbar customization */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #334155; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- Left Main Workspace -->
+  <div class="main-stage">
+    
+    <!-- Top Header & Legend (1:1 with Video Top) -->
+    <header class="top-header">
+      <div class="header-row-1">
+        <div class="project-title-area">
+          <span class="project-name" id="stage-title">CodeAgent</span>
+          <span class="badge-ready">ready</span>
+        </div>
+        
+        <div class="mode-switcher">
+          <button class="mode-tab active" id="tab-h1" onclick="switchSystemMode('h1')">H1: Single Agent (ReAct & PSP2)</button>
+          <button class="mode-tab" id="tab-h2" onclick="switchSystemMode('h2')">H2: Multi-Agent System (Preview)</button>
+        </div>
+      </div>
+      
+      <div class="project-desc" id="stage-desc">
+        Minimal Self-Healing Code Agent with ReAct loop, AST graph engine, and sandboxed execution.
+      </div>
+      
+      <div class="header-row-2">
+        <div class="stats-summary" id="stats-summary">
+          10 blocks · 22 connections · 10 feature links show on hover
+        </div>
+        
+        <div class="legend-group" id="legend-group">
+          <!-- Dynamic Connections Legend -->
+        </div>
+        
+        <div class="legend-guide">
+          Arrows point from user to used part. Click a block with parts to open. Esc goes up.
+        </div>
+      </div>
+    </header>
+    
+    <!-- Breadcrumb when drilled down into a module -->
+    <div class="breadcrumb-bar" id="breadcrumb-bar">
+      <button class="btn-back-up" onclick="goUp()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+        <span>Back to Root</span>
+      </button>
+      <span class="breadcrumb-sep">/</span>
+      <span class="breadcrumb-current" id="breadcrumb-current-name">Module</span>
+      <span class="legend-guide" style="margin-left: auto;">Press [Esc] to return</span>
+    </div>
+
+    <!-- Center Canvas Area -->
+    <div class="canvas-wrapper" id="canvas-wrapper">
+      <svg id="graph-svg"></svg>
+      <div class="graph-nodes-layer" id="nodes-layer"></div>
+    </div>
+
+    <!-- Bottom Feature Blocks Bar (Cross-Cutting Concerns) -->
+    <div class="bottom-features-bar">
+      <div class="features-header">
+        <strong>feature blocks</strong> <span>· links show on hover or selection</span>
+      </div>
+      <div class="features-grid" id="features-grid">
+        <!-- Injected feature pills -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Sidebar Inspector Drawer (1:1 with Video Right) -->
+  <aside class="inspector-panel" id="inspector-panel">
+    <div class="inspector-header">
+      <div class="inspector-kind-badge" id="insp-badge">PROJECT ready</div>
+      <div class="inspector-title" id="insp-title">CodeAgent</div>
+      <div class="inspector-namespace" id="insp-namespace">se.homework1.agent</div>
+      <div class="inspector-desc" id="insp-desc">
+        A lightweight self-healing code agent built with native Python ReAct state machine, AST code graph analyzer, and sandboxed subprocess execution.
+      </div>
+    </div>
+
+    <div class="inspector-body">
+      <!-- Counts Section -->
+      <div>
+        <div class="inspector-section-title">Counts</div>
+        <div class="counts-grid" id="insp-counts">
+          <!-- dynamic count cells -->
+        </div>
+      </div>
+
+      <!-- Sources Section -->
+      <div id="insp-sources-section">
+        <div class="inspector-section-title">Sources</div>
+        <div class="source-list" id="insp-sources">
+          <!-- dynamic source files -->
+        </div>
+      </div>
+
+      <!-- Parts Section -->
+      <div id="insp-parts-section">
+        <div class="inspector-section-title" id="insp-parts-title">Parts (0)</div>
+        <div class="parts-list" id="insp-parts">
+          <!-- dynamic parts list -->
+        </div>
+      </div>
+
+      <!-- Outgoing Section -->
+      <div id="insp-outgoing-section">
+        <div class="inspector-section-title" id="insp-outgoing-title">Outgoing (0)</div>
+        <div class="relation-list" id="insp-outgoing">
+          <!-- dynamic outgoing -->
+        </div>
+      </div>
+
+      <!-- Incoming Section -->
+      <div id="insp-incoming-section">
+        <div class="inspector-section-title" id="insp-incoming-title">Incoming (0)</div>
+        <div class="relation-list" id="insp-incoming">
+          <!-- dynamic incoming -->
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+/**
+ * DATA DEFINITIONS: H1 Single Agent vs H2 Multi-Agent Architecture
+ */
+
+const H1_SYSTEM = {
+  id: "root",
+  name: "CodeAgent",
+  namespace: "se.homework1.codeagent",
+  kind: "PROJECT",
+  status: "ready",
+  desc: "Minimal Self-Healing Code Agent with ReAct loop, AST graph engine, and sandboxed execution.",
+  sources: [
+    "code_agent.py",
+    "code_graph.py",
+    "languages.py",
+    "DESIGN.md",
+    "README.md"
+  ],
+  counts: {
+    "Top-level blocks": 10,
+    "All blocks": 58,
+    "Connections": 24,
+    "Kind module": 10,
+    "Kind feature": 10,
+    "Status ready": 58
+  },
+  tiers: [
+    // Tier 1: Entry & Measurement (Y: 30)
+    {
+      id: "cli_client",
+      title: "Client & CLI",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 4,
+      desc: "Command-line interface, interactive REPL loop, and local HTTP visualization server.",
+      namespace: "codeagent.client",
+      sources: ["code_agent.py:main()", "code_agent.py:serve()"],
+      parts: ["CLI Argument Parser", "Interactive REPL Loop", "Local HTTP Server", "Browser Auto-Launcher"],
+      tier: 1, col: 1
+    },
+    {
+      id: "proof_lanes",
+      title: "PSP2 Evaluator",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 3,
+      desc: "PSP0 to PSP2 engineering metrics tracker: tokens, latency, iterations, and tracebacks.",
+      namespace: "codeagent.metrics.evaluator",
+      sources: ["code_agent.py:token_usage", "DESIGN.md:PSP2"],
+      parts: ["Token Usage Meter", "Step & Latency Counter", "PSP Quality Ledger"],
+      tier: 1, col: 2
+    },
+
+    // Tier 2: Brain / Reasoning Layer (Y: 150)
+    {
+      id: "prompt_engine",
+      title: "Prompt & Context",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 4,
+      desc: "System prompt engineering, role boundaries, and sliding context window management.",
+      namespace: "codeagent.prompt.engine",
+      sources: ["code_agent.py:SYSTEM_PROMPT", "DESIGN.md:Prompt"],
+      parts: ["Role Persona Enforcer", "Sliding Window Trimmer", "Few-shot Context Bank", "Conversation Memory"],
+      tier: 2, col: 0
+    },
+    {
+      id: "react_core",
+      title: "ReAct Controller",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 9,
+      desc: "State machine coordinating Thought -> Tool Action -> Observation -> Self-Healing loop.",
+      namespace: "codeagent.orchestrator.react",
+      sources: ["code_agent.py:CodeAgent.run()", "DESIGN.md:ReAct"],
+      parts: [
+        "Thought Parser",
+        "Action Dispatcher",
+        "Observation Buffer",
+        "Step Counter Guard",
+        "Max-Steps Breaker",
+        "Sliding Context Window",
+        "ReAct System Prompt",
+        "Conversation History",
+        "Finish Reason Handler"
+      ],
+      tier: 2, col: 1
+    },
+    {
+      id: "model_adapter",
+      title: "Model Adapter",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 6,
+      desc: "OpenAI / DeepSeek protocol adapter with Function Calling schema and JSON payload handling.",
+      namespace: "codeagent.adapters.llm",
+      sources: ["code_agent.py:OpenAI", "code_agent.py:api_key()"],
+      parts: [
+        "API Credential Resolver",
+        "Function Schema Compiler",
+        "Tool Call Parser",
+        "Streaming Response Parser",
+        "Retry & Backoff Guard",
+        "DeepSeek / GPT Gateway"
+      ],
+      tier: 2, col: 2
+    },
+
+    // Tier 3: Supervision & Dispatch (Y: 270)
+    {
+      id: "self_healing",
+      title: "Self-Healing Engine",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 6,
+      desc: "Catches test failures & tracebacks, formulates reflection prompts, and applies corrective code patches.",
+      namespace: "codeagent.self_healing.supervisor",
+      sources: ["code_agent.py:run()", "DESIGN.md:Self-Healing"],
+      parts: [
+        "Traceback Error Interceptor",
+        "Root Cause Reflection",
+        "Patch Candidate Generator",
+        "Regression Verifier",
+        "Anti-loop Recursion Guard",
+        "Differential Code Patcher"
+      ],
+      tier: 3, col: 0
+    },
+    {
+      id: "tool_dispatcher",
+      title: "Tool Dispatcher",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 5,
+      desc: "Central tool gateway validating arguments against JSON schemas and routing execution.",
+      namespace: "codeagent.tools.dispatcher",
+      sources: ["code_agent.py:CodeAgent.tools", "code_agent.py:schemas"],
+      parts: [
+        "Dynamic Tool Registry",
+        "JSON Schema Validator",
+        "Permission & Path Guard",
+        "Tool Result Serializer",
+        "Exception Wrapper"
+      ],
+      tier: 3, col: 1
+    },
+    {
+      id: "code_graph",
+      title: "Code Graph Engine",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 7,
+      desc: "Tree-sitter AST parser extracting definitions, imports, calls, and building interactive topology.",
+      namespace: "codeagent.tools.code_graph",
+      sources: ["code_graph.py:CodeGraph", "languages.py"],
+      parts: [
+        "Tree-sitter AST Parser",
+        "Language Registry (12 langs)",
+        "Symbol Definition Index",
+        "Static Import & Call Linker",
+        "Incremental SHA256 Cache",
+        "JSON & HTML Exporter",
+        "Graph Query Engine"
+      ],
+      tier: 3, col: 2
+    },
+
+    // Tier 4: Execution Sandboxes & Tools (Y: 390)
+    {
+      id: "python_sandbox",
+      title: "Python Sandbox",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 5,
+      desc: "Subprocess execution sandbox running code files with 30s timeout guard and stdout/stderr capture.",
+      namespace: "codeagent.tools.python_sandbox",
+      sources: ["code_agent.py:run_python()"],
+      parts: [
+        "Subprocess Spawner",
+        "30s Timeout Enforcer",
+        "Stdout / Stderr Buffer",
+        "Exit Code Evaluator",
+        "Isolated Temp Workspace"
+      ],
+      tier: 4, col: 0
+    },
+    {
+      id: "file_sandbox",
+      title: "File System Tool",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 4,
+      desc: "Constrained file read/write operations with path traversal protection and secret masking.",
+      namespace: "codeagent.tools.fs",
+      sources: ["code_agent.py:read_file()", "code_agent.py:write_file()"],
+      parts: [
+        "Path Traversal Barrier",
+        "Secret Key Filter (.env)",
+        "Atomic File Writer",
+        "Paged 200-Line Reader"
+      ],
+      tier: 4, col: 1
+    },
+    {
+      id: "ast_parser",
+      title: "Syntax Grammar AST",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 4,
+      desc: "Multi-language Tree-sitter grammar grammars and AST walker.",
+      namespace: "codeagent.tools.ast",
+      sources: ["languages.py"],
+      parts: [
+        "Grammar Loader",
+        "C-extension Bindings",
+        "Query Pattern Matcher",
+        "Error Node Recovery"
+      ],
+      tier: 4, col: 2
+    },
+
+    // Tier 5: Runtime Host (Y: 510)
+    {
+      id: "runtime",
+      title: "Agent Runtime Host",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 5,
+      desc: "Host process environment, OS signaling, environment variables, and garbage collection.",
+      namespace: "codeagent.runtime.host",
+      sources: ["Python 3.10+", "sys.executable"],
+      parts: [
+        "Process Signal Handler",
+        "Env & Secret Store",
+        "Thread & Subprocess Pool",
+        "Memory & GC Supervisor",
+        "Stdout Logger"
+      ],
+      tier: 5, col: 1
+    }
+  ],
+  connections: [
+    { from: "cli_client", to: "react_core", kind: "calls", desc: "Dispatches user goal into ReAct loop" },
+    { from: "cli_client", to: "code_graph", kind: "hosts", desc: "Hosts interactive graph server & opens browser" },
+    { from: "proof_lanes", to: "react_core", kind: "reads", desc: "Audits token usage and step counts" },
+    
+    { from: "react_core", to: "model_adapter", kind: "calls", desc: "Requests next thought and tool_calls" },
+    { from: "react_core", to: "tool_dispatcher", kind: "calls", desc: "Invokes selected tool with arguments" },
+    { from: "react_core", to: "self_healing", kind: "composes", desc: "Delegates error traceback on failure" },
+    { from: "model_adapter", to: "runtime", kind: "depends-on", desc: "Resolves API keys and network sockets" },
+    
+    { from: "self_healing", to: "python_sandbox", kind: "reads", desc: "Inspects failed execution output & traceback" },
+    { from: "self_healing", to: "model_adapter", kind: "calls", desc: "Sends reflection prompt for patch synthesis" },
+    { from: "self_healing", to: "file_sandbox", kind: "writes", desc: "Applies verified patch to source file" },
+
+    { from: "tool_dispatcher", to: "python_sandbox", kind: "calls", desc: "Executes run_python command" },
+    { from: "tool_dispatcher", to: "file_sandbox", kind: "calls", desc: "Executes read_file or write_file" },
+    { from: "tool_dispatcher", to: "code_graph", kind: "calls", desc: "Executes build_graph or query_graph" },
+
+    { from: "python_sandbox", to: "runtime", kind: "depends-on", desc: "Spawns child subprocesses via sys.executable" },
+    { from: "file_sandbox", to: "runtime", kind: "depends-on", desc: "Interacts with OS file descriptors" },
+    { from: "code_graph", to: "runtime", kind: "depends-on", desc: "Loads Tree-sitter C/Rust dynamic libraries" },
+    
+    { from: "self_healing", to: "react_core", kind: "heals", desc: "Returns repaired state back to ReAct loop" }
+  ],
+  features: [
+    { id: "feat_healing", name: "Self-Healing", modules: ["self_healing", "python_sandbox", "react_core", "model_adapter"], desc: "Automatic crash capture -> reflection -> code patch -> re-test verification loop." },
+    { id: "feat_ast", name: "AST Code Graph", modules: ["code_graph", "tool_dispatcher", "cli_client"], desc: "Tree-sitter multi-language syntax tree parsing and static relationship indexing." },
+    { id: "feat_react", name: "ReAct Loop", modules: ["react_core", "model_adapter", "tool_dispatcher"], desc: "Autonomous Thought -> Tool Action -> Observation execution cycle." },
+    { id: "feat_sandbox", name: "Sandboxed Exec", modules: ["python_sandbox", "tool_dispatcher", "self_healing"], desc: "Isolated subprocess runner with 30s timeout guard and stream capture." },
+    { id: "feat_files", name: "Safe File I/O", modules: ["file_sandbox", "tool_dispatcher"], desc: "Path traversal barrier, sensitive key protection, and atomic write guarantees." },
+    { id: "feat_func_call", name: "Function Calling", modules: ["model_adapter", "tool_dispatcher", "react_core"], desc: "Strict JSON Schema validation and OpenAI/DeepSeek function calling protocol." },
+    { id: "feat_psp", name: "PSP2 Metrics", modules: ["proof_lanes", "react_core", "model_adapter"], desc: "Personal Software Process engineering ledger recording token economics and quality." },
+    { id: "feat_secret", name: "Secret Masking", modules: ["file_sandbox", "model_adapter", "cli_client"], desc: "Prevents leaking .env, credentials.json, and private keys into LLM context." },
+    { id: "feat_circuit", name: "Circuit Breaker", modules: ["react_core", "self_healing", "python_sandbox"], desc: "Max-steps recursion limit and execution timeouts preventing infinite loops." }
+  ]
+};
+
+/**
+ * H2 Multi-Agent System Preview Data
+ */
+const H2_SYSTEM = {
+  id: "root_h2",
+  name: "Multi-Agent System",
+  namespace: "se.homework2.multiagent",
+  kind: "PROJECT",
+  status: "ready",
+  desc: "Multi-Agent collaborative software development network with role-specialized agents and artifact bus.",
+  sources: [
+    "coordinator_agent.py",
+    "coder_agent.py",
+    "reviewer_agent.py",
+    "tester_agent.py",
+    "shared_blackboard.py"
+  ],
+  counts: {
+    "Top-level blocks": 7,
+    "All blocks": 42,
+    "Connections": 18,
+    "Kind module": 7,
+    "Kind feature": 8,
+    "Status ready": 42
+  },
+  tiers: [
+    {
+      id: "h2_user",
+      title: "User / Gateway",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 3,
+      desc: "User goal ingestion, specification compiler, and human-in-the-loop review interface.",
+      namespace: "multiagent.gateway",
+      sources: ["gateway.py"],
+      parts: ["Goal Parser", "Spec Validator", "Approval Barrier"],
+      tier: 1, col: 0
+    },
+    {
+      id: "h2_planner",
+      title: "Planner & Coordinator",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 6,
+      desc: "Decomposes complex requirements into DAG subtasks and orchestrates worker agent hand-offs.",
+      namespace: "multiagent.agents.coordinator",
+      sources: ["coordinator_agent.py"],
+      parts: ["Task DAG Decomposer", "Agent Router", "Consensus Arbitrator", "Execution Monitor", "Handoff Contract", "Quality Gate"],
+      tier: 2, col: 0
+    },
+    {
+      id: "h2_coder",
+      title: "Coder Agent",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 5,
+      desc: "Specialized in code generation, AST-aware refactoring, and patch synthesis.",
+      namespace: "multiagent.agents.coder",
+      sources: ["coder_agent.py"],
+      parts: ["AST Code Synthesizer", "Diff Patch Applier", "Context Window Optimizer", "Docstring Generator", "Type Annotator"],
+      tier: 3, col: 0
+    },
+    {
+      id: "h2_reviewer",
+      title: "Reviewer & Critic",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 5,
+      desc: "Performs rigorous code review, static analysis, security vulnerability audits, and style checks.",
+      namespace: "multiagent.agents.reviewer",
+      sources: ["reviewer_agent.py"],
+      parts: ["Security Lint Engine", "Style & PEP8 Auditor", "Design Pattern Critic", "Edge-case Probe", "Approval Signer"],
+      tier: 3, col: 1
+    },
+    {
+      id: "h2_tester",
+      title: "Tester & Sandbox",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 5,
+      desc: "Generates boundary unit tests, executes test suites in isolated sandbox, and reports tracebacks.",
+      namespace: "multiagent.agents.tester",
+      sources: ["tester_agent.py"],
+      parts: ["Pytest Runner", "Coverage Analyzer", "Fuzzing Generator", "Failure Reproducer", "Traceback Parser"],
+      tier: 3, col: 2
+    },
+    {
+      id: "h2_supervisor",
+      title: "Supervisor & Healer",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 4,
+      desc: "Supervises multi-agent deadlocks, arbitration failures, and runs regression self-healing cycles.",
+      namespace: "multiagent.supervision",
+      sources: ["supervisor.py"],
+      parts: ["Deadlock Detector", "Arbitration Court", "Auto-remediation Bot", "PSP Process Audit"],
+      tier: 4, col: 0
+    },
+    {
+      id: "h2_blackboard",
+      title: "Shared Memory Bus",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 6,
+      desc: "Blackboard architecture: shared repository state, artifact ledger, and cross-agent communication bus.",
+      namespace: "multiagent.memory.blackboard",
+      sources: ["shared_blackboard.py"],
+      parts: ["Artifact Store", "Vector Code Memory", "Pub/Sub Event Bus", "Lock & Transaction Guard", "State Snapshotter", "Telemetry Stream"],
+      tier: 4, col: 1
+    }
+  ],
+  connections: [
+    { from: "h2_user", to: "h2_planner", kind: "calls", desc: "Submits project requirements" },
+    { from: "h2_planner", to: "h2_coder", kind: "delegates", desc: "Assigns implementation tasks" },
+    { from: "h2_planner", to: "h2_reviewer", kind: "delegates", desc: "Requests independent code audit" },
+    { from: "h2_planner", to: "h2_tester", kind: "delegates", desc: "Orders unit test generation & execution" },
+    
+    { from: "h2_coder", to: "h2_blackboard", kind: "writes", desc: "Publishes draft code & patches" },
+    { from: "h2_reviewer", to: "h2_coder", kind: "calls", desc: "Sends review findings and refactoring requests" },
+    { from: "h2_tester", to: "h2_blackboard", kind: "writes", desc: "Publishes test run results & failure logs" },
+    
+    { from: "h2_tester", to: "h2_supervisor", kind: "calls", desc: "Triggers escalation upon recurring test failure" },
+    { from: "h2_supervisor", to: "h2_coder", kind: "heals", desc: "Forces targeted self-healing patch session" },
+    { from: "h2_planner", to: "h2_blackboard", kind: "composes", desc: "Maintains global milestone roadmap" }
+  ],
+  features: [
+    { id: "h2_feat_collab", name: "Role Collaboration", modules: ["h2_planner", "h2_coder", "h2_reviewer", "h2_tester"], desc: "Hierarchical agent task delegation and peer review protocol." },
+    { id: "h2_feat_bb", name: "Blackboard Bus", modules: ["h2_blackboard", "h2_coder", "h2_tester", "h2_planner"], desc: "Decoupled state synchronization across agents." },
+    { id: "h2_feat_critic", name: "Adversarial Review", modules: ["h2_reviewer", "h2_coder"], desc: "Two-player game between generator and critic to guarantee code safety." },
+    { id: "h2_feat_heal", name: "Collective Healing", modules: ["h2_supervisor", "h2_tester", "h2_coder"], desc: "Ecosystem-wide failure triage and self-repair." }
+  ]
+};
+
+/**
+ * DRILL-DOWN SUBMODULE VIEWS
+ */
+const MODULE_SUBVIEWS = {
+  "react_core": {
+    name: "ReAct Controller",
+    parentTitle: "Inside ReAct Controller",
+    namespace: "codeagent.orchestrator.react",
+    desc: "The autonomous ReAct state machine handles Thought parsing, Action selection, Tool call invocation, and Observation accumulation.",
+    sources: ["code_agent.py:CodeAgent", "DESIGN.md:ReAct"],
+    counts: { "Internal parts": 9, "Sub-connections": 8, "Outside ports": 3 },
+    nodes: [
+      { id: "sub_thought", title: "Thought Parser", type: "MODULE", status: "ready", x: 260, y: 50 },
+      { id: "sub_action", title: "Action Dispatcher", type: "MODULE", status: "ready", x: 480, y: 50 },
+      { id: "sub_step", title: "Step & Budget Guard", type: "MODULE", status: "ready", x: 700, y: 50 },
+
+      { id: "sub_window", title: "Context Window Slider", type: "MODULE", status: "ready", x: 370, y: 170 },
+      { id: "sub_history", title: "Conversation History", type: "MODULE", status: "ready", x: 590, y: 170 },
+
+      { id: "sub_circuit", title: "Circuit Breaker", type: "MODULE", status: "ready", x: 480, y: 290 },
+
+      // Outside connector stubs
+      { id: "out_model", title: "OUTSIDE Model Adapter", type: "OUTSIDE", status: "ready", x: 240, y: 410 },
+      { id: "out_tools", title: "OUTSIDE Tool Dispatcher", type: "OUTSIDE", status: "ready", x: 480, y: 410 },
+      { id: "out_healing", title: "OUTSIDE Self-Healing", type: "OUTSIDE", status: "ready", x: 720, y: 410 }
+    ],
+    connections: [
+      { from: "sub_thought", to: "sub_action", kind: "calls", desc: "Converts model thought into tool invocation" },
+      { from: "sub_action", to: "sub_step", kind: "depends-on", desc: "Checks step budget before dispatch" },
+      { from: "sub_action", to: "out_tools", kind: "calls", desc: "Passes execution to tool registry" },
+      { from: "sub_thought", to: "out_model", kind: "depends-on", desc: "Consumes assistant message content" },
+      { id: "c_obs", from: "out_tools", to: "sub_history", kind: "writes", desc: "Appends tool observation message" },
+      { from: "sub_history", to: "sub_window", kind: "composes", desc: "Trims older turns to fit token budget" },
+      { from: "sub_step", to: "sub_circuit", kind: "calls", desc: "Trips fuse if steps >= max_steps" },
+      { from: "sub_circuit", to: "out_healing", kind: "heals", desc: "Initiates fallback recovery upon error" }
+    ]
+  },
+
+  "self_healing": {
+    name: "Self-Healing Engine",
+    parentTitle: "Inside Self-Healing Engine",
+    namespace: "codeagent.self_healing",
+    desc: "Autonomous PSP2 self-healing supervisor: captures traceback, synthesizes reflection, and verifies code patch.",
+    sources: ["code_agent.py:run()", "DESIGN.md:Self-Healing"],
+    counts: { "Internal parts": 6, "Sub-connections": 7, "Outside ports": 3 },
+    nodes: [
+      { id: "sub_sniffer", title: "Traceback Interceptor", type: "MODULE", status: "ready", x: 300, y: 60 },
+      { id: "sub_ast_loc", title: "Root Cause Analyzer", type: "MODULE", status: "ready", x: 580, y: 60 },
+      
+      { id: "sub_reflect", title: "Reflection Synthesizer", type: "MODULE", status: "ready", x: 440, y: 180 },
+      
+      { id: "sub_patch", title: "Patch Generator", type: "MODULE", status: "ready", x: 300, y: 300 },
+      { id: "sub_verifier", title: "Regression Verifier", type: "MODULE", status: "ready", x: 580, y: 300 },
+
+      // Outside ports
+      { id: "out_python", title: "OUTSIDE Python Sandbox", type: "OUTSIDE", status: "ready", x: 240, y: 430 },
+      { id: "out_model_h", title: "OUTSIDE Model Adapter", type: "OUTSIDE", status: "ready", x: 480, y: 430 },
+      { id: "out_fs_h", title: "OUTSIDE File System", type: "OUTSIDE", status: "ready", x: 720, y: 430 }
+    ],
+    connections: [
+      { from: "out_python", to: "sub_sniffer", kind: "reads", desc: "Captures exit code != 0 and stderr" },
+      { from: "sub_sniffer", to: "sub_ast_loc", kind: "calls", desc: "Extracts failing file and line number" },
+      { from: "sub_ast_loc", to: "sub_reflect", kind: "calls", desc: "Builds prompt: 'Why did this code fail?'" },
+      { from: "sub_reflect", to: "out_model_h", kind: "calls", desc: "Queries LLM for minimal repair diff" },
+      { from: "out_model_h", to: "sub_patch", kind: "generates", desc: "Receives repaired code text" },
+      { from: "sub_patch", to: "out_fs_h", kind: "writes", desc: "Overwrites target script file" },
+      { from: "sub_patch", to: "sub_verifier", kind: "calls", desc: "Triggers second test run to confirm fix" }
+    ]
+  },
+
+  "code_graph": {
+    name: "Code Graph Engine",
+    parentTitle: "Inside Code Graph Engine",
+    namespace: "codeagent.tools.code_graph",
+    desc: "Tree-sitter AST static analyzer mapping repositories into deterministic files, symbols, imports, and calls.",
+    sources: ["code_graph.py", "languages.py"],
+    counts: { "Internal parts": 7, "Sub-connections": 7, "Outside ports": 2 },
+    nodes: [
+      { id: "sub_ts_parser", title: "Tree-sitter Parser", type: "MODULE", status: "ready", x: 300, y: 60 },
+      { id: "sub_grammar", title: "Grammar Registry", type: "MODULE", status: "ready", x: 580, y: 60 },
+      
+      { id: "sub_sym_index", title: "Symbol Extractor", type: "MODULE", status: "ready", x: 440, y: 180 },
+      
+      { id: "sub_import_res", title: "Import & Call Resolver", type: "MODULE", status: "ready", x: 300, y: 300 },
+      { id: "sub_cache_sys", title: "SHA256 Incremental Cache", type: "MODULE", status: "ready", x: 580, y: 300 },
+
+      { id: "out_fs_cg", title: "OUTSIDE File System", type: "OUTSIDE", status: "ready", x: 360, y: 430 },
+      { id: "out_cli_cg", title: "OUTSIDE Visualizer Web", type: "OUTSIDE", status: "ready", x: 600, y: 430 }
+    ],
+    connections: [
+      { from: "sub_grammar", to: "sub_ts_parser", kind: "implements", desc: "Supplies language tree-sitter bindings" },
+      { from: "out_fs_cg", to: "sub_cache_sys", kind: "reads", desc: "Hashes file bytes to avoid reparsing" },
+      { from: "sub_ts_parser", to: "sub_sym_index", kind: "generates", desc: "Traverses AST nodes for defs" },
+      { from: "sub_sym_index", to: "sub_import_res", kind: "calls", desc: "Resolves function call identifiers" },
+      { from: "sub_import_res", to: "sub_cache_sys", kind: "writes", desc: "Persists graph.json and cache.json" },
+      { from: "sub_cache_sys", to: "out_cli_cg", kind: "generates", desc: "Injects graph into interactive HTML" }
+    ]
+  },
+
+  "tool_dispatcher": {
+    name: "Tool Dispatcher",
+    parentTitle: "Inside Tool Dispatcher",
+    namespace: "codeagent.tools.dispatcher",
+    desc: "Safe tool execution boundary with dynamic schemas, argument validation, and output formatting.",
+    sources: ["code_agent.py:CodeAgent.tools"],
+    counts: { "Internal parts": 5, "Sub-connections": 6, "Outside ports": 3 },
+    nodes: [
+      { id: "sub_registry", title: "Tool Registry", type: "MODULE", status: "ready", x: 360, y: 70 },
+      { id: "sub_validator", title: "Schema Validator", type: "MODULE", status: "ready", x: 600, y: 70 },
+      
+      { id: "sub_sandbox_g", title: "Permission Barrier", type: "MODULE", status: "ready", x: 480, y: 190 },
+
+      { id: "sub_serializer", title: "Result Serializer", type: "MODULE", status: "ready", x: 480, y: 310 },
+
+      { id: "out_py_td", title: "OUTSIDE Python Sandbox", type: "OUTSIDE", status: "ready", x: 260, y: 430 },
+      { id: "out_fs_td", title: "OUTSIDE File System", type: "OUTSIDE", status: "ready", x: 480, y: 430 },
+      { id: "out_cg_td", title: "OUTSIDE Code Graph", type: "OUTSIDE", status: "ready", x: 700, y: 430 }
+    ],
+    connections: [
+      { from: "sub_registry", to: "sub_validator", kind: "calls", desc: "Validates JSON arguments" },
+      { from: "sub_validator", to: "sub_sandbox_g", kind: "depends-on", desc: "Asserts path safety" },
+      { from: "sub_sandbox_g", to: "out_py_td", kind: "calls", desc: "Executes run_python" },
+      { from: "sub_sandbox_g", to: "out_fs_td", kind: "calls", desc: "Executes read/write file" },
+      { from: "sub_sandbox_g", to: "out_cg_td", kind: "calls", desc: "Executes build_graph" },
+      { from: "sub_sandbox_g", to: "sub_serializer", kind: "writes", desc: "Converts output to string for LLM" }
+    ]
+  }
+};
+
+/**
+ * STATE MANAGEMENT
+ */
+let currentMode = "h1"; // "h1" | "h2"
+let currentScope = "root"; // "root" | moduleId
+let selectedItem = null; // { type: 'module'|'feature'|'project', data: ... }
+let hoveredNodeId = null;
+let hoveredFeatureId = null;
+
+const COLOR_MAP = {
+  "depends-on": "#2dd4bf",
+  "calls": "#3b82f6",
+  "hosts": "#38bdf8",
+  "implements": "#a855f7",
+  "generates": "#f59e0b",
+  "reads": "#10b981",
+  "writes": "#f43f5e",
+  "composes": "#ec4899",
+  "heals": "#fb923c",
+  "delegates": "#38bdf8"
+};
+
+/**
+ * INIT ON LOAD
+ */
+window.addEventListener("DOMContentLoaded", () => {
+  renderSystem();
+  setupKeyboardNavigation();
+});
+
+function switchSystemMode(mode) {
+  currentMode = mode;
+  currentScope = "root";
+  selectedItem = null;
+  document.getElementById("tab-h1").classList.toggle("active", mode === "h1");
+  document.getElementById("tab-h2").classList.toggle("active", mode === "h2");
+  renderSystem();
+}
+
+function getCurrentData() {
+  const base = currentMode === "h1" ? H1_SYSTEM : H2_SYSTEM;
+  if (currentScope === "root") {
+    return base;
+  }
+  return MODULE_SUBVIEWS[currentScope] || base;
+}
+
+/**
+ * RENDER PIPELINE
+ */
+function renderSystem() {
+  const data = getCurrentData();
+  const isDrilled = currentScope !== "root";
+
+  // Update Breadcrumb & Header
+  const breadcrumbBar = document.getElementById("breadcrumb-bar");
+  if (isDrilled) {
+    breadcrumbBar.classList.add("active");
+    document.getElementById("breadcrumb-current-name").innerText = data.name;
+    document.getElementById("stage-title").innerText = data.name;
+    document.getElementById("stage-desc").innerText = data.desc;
+  } else {
+    breadcrumbBar.classList.remove("active");
+    document.getElementById("stage-title").innerText = data.name;
+    document.getElementById("stage-desc").innerText = data.desc;
+  }
+
+  // Render Legend
+  renderLegend();
+
+  // Render Bottom Feature Blocks
+  renderFeatureBlocks();
+
+  // Render Nodes & SVG Canvas
+  renderGraphCanvas(data, isDrilled);
+
+  // Default Select Project or Current Module
+  if (!selectedItem || selectedItem.type === "project") {
+    selectProject(data);
+  }
+}
+
+function renderLegend() {
+  const group = document.getElementById("legend-group");
+  group.innerHTML = "";
+
+  const label = document.createElement("span");
+  label.className = "legend-label";
+  label.innerText = "Connections:";
+  group.appendChild(label);
+
+  const kinds = [
+    { name: "depends-on", color: COLOR_MAP["depends-on"] },
+    { name: "calls", color: COLOR_MAP["calls"] },
+    { name: "hosts", color: COLOR_MAP["hosts"] },
+    { name: "implements", color: COLOR_MAP["implements"] },
+    { name: "generates", color: COLOR_MAP["generates"] },
+    { name: "reads", color: COLOR_MAP["reads"] },
+    { name: "writes", color: COLOR_MAP["writes"] },
+    { name: "composes", color: COLOR_MAP["composes"] },
+    { name: "heals", color: COLOR_MAP["heals"] }
+  ];
+
+  kinds.forEach(k => {
+    const item = document.createElement("div");
+    item.className = "legend-item";
+    item.innerHTML = `<span class="legend-dot" style="background:${k.color}"></span><span>${k.name}</span>`;
+    group.appendChild(item);
+  });
+}
+
+function renderFeatureBlocks() {
+  const container = document.getElementById("features-grid");
+  container.innerHTML = "";
+
+  const system = currentMode === "h1" ? H1_SYSTEM : H2_SYSTEM;
+  system.features.forEach(f => {
+    const pill = document.createElement("div");
+    pill.className = "feature-pill";
+    pill.id = `feat-pill-${f.id}`;
+    pill.innerHTML = `
+      <span class="feature-tag">✦ FEATURE</span>
+      <span class="feature-name">${f.name}</span>
+      <span class="feature-status">ready</span>
+    `;
+
+    pill.addEventListener("mouseenter", () => {
+      highlightFeature(f.id);
+    });
+    pill.addEventListener("mouseleave", () => {
+      resetHighlight();
+    });
+    pill.addEventListener("click", () => {
+      selectFeature(f);
+    });
+
+    container.appendChild(pill);
+  });
+}
+
+function renderGraphCanvas(data, isDrilled) {
+  const nodesLayer = document.getElementById("nodes-layer");
+  const svg = document.getElementById("graph-svg");
+  const wrapper = document.getElementById("canvas-wrapper");
+  nodesLayer.innerHTML = "";
+  svg.innerHTML = "";
+
+  const nodes = isDrilled ? data.nodes : data.tiers;
+  const connections = data.connections || [];
+
+  // Dynamic Responsive Positioning
+  const canvasW = Math.max(wrapper.clientWidth, 960);
+  const centerX = canvasW / 2;
+  const cardW = 200;
+  const cardH = 78;
+  const colGap = 48;
+  const tierYMap = { 1: 35, 2: 155, 3: 280, 4: 405, 5: 530 };
+
+  if (!isDrilled) {
+    // Group by tier and center symmetrically
+    const tierGroups = {};
+    nodes.forEach(n => {
+      const t = n.tier || 1;
+      if (!tierGroups[t]) tierGroups[t] = [];
+      tierGroups[t].push(n);
+    });
+
+    Object.keys(tierGroups).forEach(t => {
+      const group = tierGroups[t];
+      // Sort by col if available
+      group.sort((a, b) => (a.col ?? 0) - (b.col ?? 0));
+      const count = group.length;
+      const totalWidth = count * cardW + (count - 1) * colGap;
+      const startX = centerX - totalWidth / 2;
+      group.forEach((node, i) => {
+        node.x = startX + i * (cardW + colGap);
+        node.y = tierYMap[t] || (35 + (t - 1) * 125);
+      });
+    });
+  } else {
+    // For drilled views, also center nicely
+    const tierGroups = {};
+    nodes.forEach(n => {
+      const t = n.y < 120 ? 1 : (n.y < 240 ? 2 : (n.y < 360 ? 3 : 4));
+      if (!tierGroups[t]) tierGroups[t] = [];
+      tierGroups[t].push(n);
+    });
+    Object.keys(tierGroups).forEach(t => {
+      const group = tierGroups[t];
+      const count = group.length;
+      const totalWidth = count * cardW + (count - 1) * colGap;
+      const startX = centerX - totalWidth / 2;
+      group.forEach((node, i) => {
+        node.x = startX + i * (cardW + colGap);
+      });
+    });
+  }
+
+  // Update Stats in header
+  document.getElementById("stats-summary").innerText = 
+    `${nodes.length} blocks · ${connections.length} connections · ${(H1_SYSTEM.features.length)} feature links on hover`;
+
+  // Place Nodes
+  nodes.forEach(node => {
+    const card = document.createElement("div");
+    card.className = "module-card";
+    card.id = `node-${node.id}`;
+    card.style.left = `${node.x}px`;
+    card.style.top = `${node.y}px`;
+    card.style.width = `${cardW}px`;
+
+    const isOutside = node.type === "OUTSIDE";
+    if (isOutside) {
+      card.classList.add("outside-connector");
+    }
+
+    const hasSubparts = !isOutside && (MODULE_SUBVIEWS[node.id] || node.partsCount > 0);
+    const footerText = isOutside 
+      ? "external port" 
+      : (node.partsCount ? `${node.partsCount} parts` : `${(node.parts || []).length} parts`);
+
+    card.innerHTML = `
+      <div class="card-header">
+        <span class="card-type">${node.type}</span>
+        <span class="card-status">${node.status}</span>
+      </div>
+      <div class="card-title" title="${node.title}">${node.title}</div>
+      <div class="card-footer">
+        <span>${footerText}</span>
+        ${hasSubparts ? `<span class="card-drill-arrow">›</span>` : ""}
+      </div>
+    `;
+
+    // Interactivity
+    card.addEventListener("mouseenter", () => {
+      highlightNode(node.id, connections);
+    });
+    card.addEventListener("mouseleave", () => {
+      resetHighlight();
+    });
+    card.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (MODULE_SUBVIEWS[node.id]) {
+        drillDown(node.id);
+      } else {
+        selectModule(node, connections);
+      }
+    });
+
+    nodesLayer.appendChild(card);
+  });
+
+  // Calculate and Render Connections
+  renderSvgConnections(connections, nodes, cardW);
+}
+
+function renderSvgConnections(connections, nodes, cardW = 196) {
+  const svg = document.getElementById("graph-svg");
+  const nodeMap = {};
+  nodes.forEach(n => { nodeMap[n.id] = n; });
+
+  // Add Defs for Arrow Markers
+  let defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+  Object.entries(COLOR_MAP).forEach(([kind, color]) => {
+    const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+    marker.setAttribute("id", `arrow-${kind}`);
+    marker.setAttribute("viewBox", "0 0 10 10");
+    marker.setAttribute("refX", "9");
+    marker.setAttribute("refY", "5");
+    marker.setAttribute("markerWidth", "6");
+    marker.setAttribute("markerHeight", "6");
+    marker.setAttribute("orient", "auto-start-reverse");
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", "M 0 1.5 L 9 5 L 0 8.5 z");
+    path.setAttribute("fill", color);
+    marker.appendChild(path);
+    defs.appendChild(marker);
+  });
+  svg.appendChild(defs);
+
+  // Group multiple connections between same levels to give small horizontal offset (bus effect)
+  const slotCount = {};
+
+  connections.forEach((conn, index) => {
+    const src = nodeMap[conn.from];
+    const tgt = nodeMap[conn.to];
+    if (!src || !tgt) return;
+
+    const w = cardW;
+    const h = src.type === "OUTSIDE" ? 52 : 78;
+    const targetH = tgt.type === "OUTSIDE" ? 52 : 78;
+
+    // Bus slot offset
+    const key = `${conn.from}->${conn.to}`;
+    slotCount[key] = (slotCount[key] || 0) + 1;
+    const slotOffset = (slotCount[key] - 1) * 8;
+
+    const isGoingUp = src.y > tgt.y + targetH;
+    const startX = src.x + w / 2 + slotOffset;
+    const startY = isGoingUp ? src.y : src.y + h;
+
+    const endX = tgt.x + w / 2 + slotOffset;
+    const endY = isGoingUp ? tgt.y + targetH : tgt.y;
+
+    // Smooth cubic Bezier
+    const dy = Math.max(35, Math.abs(endY - startY) * 0.55);
+    const c1x = startX;
+    const c1y = isGoingUp ? startY - dy : startY + dy;
+    const c2x = endX;
+    const c2y = isGoingUp ? endY + dy : endY - dy;
+
+    const d = `M ${startX} ${startY} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${endX} ${endY}`;
+
+    const color = COLOR_MAP[conn.kind] || "#3b82f6";
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", d);
+    path.setAttribute("class", "wire-path");
+    path.setAttribute("stroke", color);
+    path.setAttribute("id", `wire-${conn.from}-${conn.to}`);
+    path.setAttribute("marker-end", `url(#arrow-${conn.kind})`);
+    
+    if (conn.kind === "composes") {
+      path.setAttribute("stroke-dasharray", "4 3");
+    }
+
+    path.addEventListener("mouseenter", () => {
+      highlightSingleEdge(conn);
+    });
+    path.addEventListener("mouseleave", () => {
+      resetHighlight();
+    });
+
+    svg.appendChild(path);
+  });
+}
+
+/**
+ * DRILL-DOWN LOGIC
+ */
+function drillDown(moduleId) {
+  currentScope = moduleId;
+  renderSystem();
+  const subview = MODULE_SUBVIEWS[moduleId];
+  if (subview) {
+    selectModule({
+      id: moduleId,
+      title: subview.name,
+      type: "MODULE",
+      status: "ready",
+      desc: subview.desc,
+      namespace: subview.namespace,
+      sources: subview.sources,
+      parts: subview.nodes.map(n => n.title)
+    }, subview.connections || []);
+  }
+}
+
+function goUp() {
+  if (currentScope !== "root") {
+    currentScope = "root";
+    renderSystem();
+  }
+}
+
+function setupKeyboardNavigation() {
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      goUp();
+    }
+  });
+}
+
+/**
+ * INTERACTION: FOCUS DIMMING & HIGHLIGHTING
+ */
+function highlightNode(nodeId, connections) {
+  hoveredNodeId = nodeId;
+  const connectedNodes = new Set([nodeId]);
+  const connectedEdges = new Set();
+
+  connections.forEach(c => {
+    if (c.from === nodeId) {
+      connectedNodes.add(c.to);
+      connectedEdges.add(`wire-${c.from}-${c.to}`);
+    } else if (c.to === nodeId) {
+      connectedNodes.add(c.from);
+      connectedEdges.add(`wire-${c.from}-${c.to}`);
+    }
+  });
+
+  // Dim cards
+  document.querySelectorAll(".module-card").forEach(card => {
+    const id = card.id.replace("node-", "");
+    card.classList.toggle("dimmed", !connectedNodes.has(id));
+  });
+
+  // Dim wires
+  document.querySelectorAll(".wire-path").forEach(wire => {
+    const isConn = connectedEdges.has(wire.id);
+    wire.classList.toggle("dimmed", !isConn);
+    wire.classList.toggle("highlighted", isConn);
+  });
+}
+
+function highlightSingleEdge(conn) {
+  document.querySelectorAll(".module-card").forEach(card => {
+    const id = card.id.replace("node-", "");
+    card.classList.toggle("dimmed", id !== conn.from && id !== conn.to);
+  });
+  document.querySelectorAll(".wire-path").forEach(wire => {
+    const isThis = wire.id === `wire-${conn.from}-${conn.to}`;
+    wire.classList.toggle("dimmed", !isThis);
+    wire.classList.toggle("highlighted", isThis);
+  });
+}
+
+function highlightFeature(featureId) {
+  hoveredFeatureId = featureId;
+  const system = currentMode === "h1" ? H1_SYSTEM : H2_SYSTEM;
+  const feat = system.features.find(f => f.id === featureId);
+  if (!feat) return;
+
+  const relevantModules = new Set(feat.modules);
+
+  // Dim cards
+  document.querySelectorAll(".module-card").forEach(card => {
+    const id = card.id.replace("node-", "");
+    card.classList.toggle("dimmed", !relevantModules.has(id));
+  });
+
+  // Dim all normal wires
+  document.querySelectorAll(".wire-path").forEach(wire => {
+    wire.classList.add("dimmed");
+  });
+
+  // Draw Dynamic Feature Wires from bottom pill to top nodes!
+  drawFeatureBridges(feat);
+}
+
+function drawFeatureBridges(feature) {
+  const svg = document.getElementById("graph-svg");
+  // Remove existing feature wires
+  document.querySelectorAll(".feature-wire").forEach(w => w.remove());
+
+  const pill = document.getElementById(`feat-pill-${feature.id}`);
+  if (!pill) return;
+  const pillRect = pill.getBoundingClientRect();
+  const canvasRect = document.getElementById("canvas-wrapper").getBoundingClientRect();
+
+  const startX = pillRect.left - canvasRect.left + pillRect.width / 2;
+  const startY = canvasRect.height - 10;
+
+  feature.modules.forEach(modId => {
+    const card = document.getElementById(`node-${modId}`);
+    if (!card) return;
+    const cardRect = card.getBoundingClientRect();
+
+    const endX = cardRect.left - canvasRect.left + cardRect.width / 2;
+    const endY = cardRect.top - canvasRect.top + cardRect.height;
+
+    const d = `M ${startX} ${startY} C ${startX} ${(startY + endY) / 2}, ${endX} ${(startY + endY) / 2}, ${endX} ${endY}`;
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", d);
+    path.setAttribute("class", "feature-wire");
+    svg.appendChild(path);
+  });
+}
+
+function resetHighlight() {
+  hoveredNodeId = null;
+  hoveredFeatureId = null;
+  document.querySelectorAll(".module-card").forEach(c => c.classList.remove("dimmed"));
+  document.querySelectorAll(".wire-path").forEach(w => {
+    w.classList.remove("dimmed");
+    w.classList.remove("highlighted");
+  });
+  document.querySelectorAll(".feature-wire").forEach(w => w.remove());
+}
+
+/**
+ * INSPECTOR SELECTION LOGIC
+ */
+function selectProject(data) {
+  selectedItem = { type: "project", data };
+  document.querySelectorAll(".module-card").forEach(c => c.classList.remove("selected"));
+
+  document.getElementById("insp-badge").innerText = `${data.kind} ${data.status}`;
+  document.getElementById("insp-title").innerText = data.name;
+  document.getElementById("insp-namespace").innerText = data.namespace;
+  document.getElementById("insp-desc").innerText = data.desc;
+
+  // Counts
+  const countsContainer = document.getElementById("insp-counts");
+  countsContainer.innerHTML = "";
+  Object.entries(data.counts || {}).forEach(([k, v]) => {
+    countsContainer.innerHTML += `
+      <div class="count-cell">
+        <span class="count-label">${k}</span>
+        <span class="count-value">${v}</span>
+      </div>
+    `;
+  });
+
+  // Sources
+  const sourcesContainer = document.getElementById("insp-sources");
+  sourcesContainer.innerHTML = "";
+  (data.sources || []).forEach(s => {
+    sourcesContainer.innerHTML += `
+      <div class="source-item">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span>${s}</span>
+      </div>
+    `;
+  });
+
+  // Parts list
+  document.getElementById("insp-parts-title").innerText = `Top-level blocks (${(data.tiers || []).length})`;
+  const partsContainer = document.getElementById("insp-parts");
+  partsContainer.innerHTML = "";
+  (data.tiers || []).forEach(t => {
+    partsContainer.innerHTML += `
+      <div class="part-row" onclick="drillDown('${t.id}')" style="cursor:pointer;">
+        <span class="part-name"><span class="part-box"></span>${t.title}</span>
+        <span class="part-status">${t.partsCount} parts ›</span>
+      </div>
+    `;
+  });
+
+  // Relations
+  populateRelations(data.connections || [], null);
+}
+
+function selectModule(node, connections) {
+  selectedItem = { type: "module", data: node };
+  document.querySelectorAll(".module-card").forEach(c => c.classList.remove("selected"));
+  const card = document.getElementById(`node-${node.id}`);
+  if (card) card.classList.add("selected");
+
+  document.getElementById("insp-badge").innerText = `MODULE ${node.status}`;
+  document.getElementById("insp-title").innerText = node.title;
+  document.getElementById("insp-namespace").innerText = node.namespace || `codeagent.${node.id}`;
+  document.getElementById("insp-desc").innerText = node.desc || "Architectural execution unit.";
+
+  // Counts
+  const countsContainer = document.getElementById("insp-counts");
+  countsContainer.innerHTML = `
+    <div class="count-cell"><span class="count-label">Parts</span><span class="count-value">${(node.parts || []).length}</span></div>
+    <div class="count-cell"><span class="count-label">Kind</span><span class="count-value">Module</span></div>
+    <div class="count-cell"><span class="count-label">Status</span><span class="count-value">${node.status}</span></div>
+    <div class="count-cell"><span class="count-label">Subviews</span><span class="count-value">${MODULE_SUBVIEWS[node.id] ? "Available" : "Leaf"}</span></div>
+  `;
+
+  // Sources
+  const sourcesContainer = document.getElementById("insp-sources");
+  sourcesContainer.innerHTML = "";
+  (node.sources || ["code_agent.py"]).forEach(s => {
+    sourcesContainer.innerHTML += `<div class="source-item"><span>${s}</span></div>`;
+  });
+
+  // Parts
+  document.getElementById("insp-parts-title").innerText = `Parts (${(node.parts || []).length})`;
+  const partsContainer = document.getElementById("insp-parts");
+  partsContainer.innerHTML = "";
+  (node.parts || []).forEach(p => {
+    partsContainer.innerHTML += `
+      <div class="part-row">
+        <span class="part-name"><span class="part-box"></span>${p}</span>
+        <span class="part-status">ready</span>
+      </div>
+    `;
+  });
+
+  // Relations for this node
+  populateRelations(connections, node.id);
+}
+
+function selectFeature(feature) {
+  selectedItem = { type: "feature", data: feature };
+  document.getElementById("insp-badge").innerText = `FEATURE ready`;
+  document.getElementById("insp-title").innerText = feature.name;
+  document.getElementById("insp-namespace").innerText = `features.codeagent.${feature.id}`;
+  document.getElementById("insp-desc").innerText = feature.desc;
+
+  // Counts
+  const countsContainer = document.getElementById("insp-counts");
+  countsContainer.innerHTML = `
+    <div class="count-cell"><span class="count-label">Spanned Modules</span><span class="count-value">${feature.modules.length}</span></div>
+    <div class="count-cell"><span class="count-label">Kind</span><span class="count-value">Feature</span></div>
+  `;
+
+  // Sources
+  const sourcesContainer = document.getElementById("insp-sources");
+  sourcesContainer.innerHTML = "";
+  feature.modules.forEach(m => {
+    sourcesContainer.innerHTML += `<div class="source-item"><span>module: ${m}</span></div>`;
+  });
+
+  // Parts / Spanned
+  document.getElementById("insp-parts-title").innerText = `Participating Modules (${feature.modules.length})`;
+  const partsContainer = document.getElementById("insp-parts");
+  partsContainer.innerHTML = "";
+  feature.modules.forEach(m => {
+    partsContainer.innerHTML += `
+      <div class="part-row">
+        <span class="part-name"><span class="part-box" style="border-color:#d946ef"></span>${m}</span>
+        <span class="part-status">participates</span>
+      </div>
+    `;
+  });
+
+  document.getElementById("insp-outgoing").innerHTML = "<div style='font-size:11px;color:#64748b;'>Cross-cutting concern spans vertically.</div>";
+  document.getElementById("insp-incoming").innerHTML = "<div style='font-size:11px;color:#64748b;'>None.</div>";
+}
+
+function populateRelations(connections, nodeId) {
+  const outgoing = nodeId ? connections.filter(c => c.from === nodeId) : connections;
+  const incoming = nodeId ? connections.filter(c => c.to === nodeId) : [];
+
+  document.getElementById("insp-outgoing-title").innerText = `Outgoing (${outgoing.length})`;
+  const outContainer = document.getElementById("insp-outgoing");
+  outContainer.innerHTML = "";
+  if (outgoing.length === 0) {
+    outContainer.innerHTML = "<div style='font-size:11px;color:#64748b;'>No outgoing connections.</div>";
+  } else {
+    outgoing.forEach(c => {
+      const color = COLOR_MAP[c.kind] || "#3b82f6";
+      outContainer.innerHTML += `
+        <div class="relation-item">
+          <div class="relation-header">
+            <span class="relation-arrow" style="color:${color}">→</span>
+            <span class="relation-kind" style="color:${color}">${c.kind}</span>
+            <span class="relation-target">to ${c.to}</span>
+          </div>
+          <div class="relation-desc">${c.desc || ""}</div>
+        </div>
+      `;
+    });
+  }
+
+  document.getElementById("insp-incoming-title").innerText = `Incoming (${incoming.length})`;
+  const inContainer = document.getElementById("insp-incoming");
+  inContainer.innerHTML = "";
+  if (incoming.length === 0) {
+    inContainer.innerHTML = "<div style='font-size:11px;color:#64748b;'>No incoming connections.</div>";
+  } else {
+    incoming.forEach(c => {
+      const color = COLOR_MAP[c.kind] || "#3b82f6";
+      inContainer.innerHTML += `
+        <div class="relation-item">
+          <div class="relation-header">
+            <span class="relation-arrow" style="color:${color}">←</span>
+            <span class="relation-kind" style="color:${color}">${c.kind}</span>
+            <span class="relation-target">from ${c.from}</span>
+          </div>
+          <div class="relation-desc">${c.desc || ""}</div>
+        </div>
+      `;
+    });
+  }
+}
+</script>
+</body>
+</html>

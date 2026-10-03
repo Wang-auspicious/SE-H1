@@ -171,6 +171,15 @@ def serve(repo=".", port=8766):
             self.send_error(404)
 
         def do_GET(self):
+            if self.path in ("/agent", "/atlas", "/visualizer", "/architecture"):
+                vis_path = Path(__file__).parent / "agent_visualizer.html"
+                if not vis_path.exists():
+                    vis_path = Path(__file__).parent.parent / "agent_visualizer.html"
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(vis_path.read_bytes())
+                return
             if self.path in ("/", "/graph.html"):
                 template = (Path(__file__).parent / "graph_view.html").read_text("utf-8")
                 payload = json.dumps(current_graph or {"name": "Code Atlas", "nodes": [], "edges": [], "stats": {}}, ensure_ascii=False).replace("<", "\\u003c")
