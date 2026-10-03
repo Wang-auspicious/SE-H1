@@ -696,7 +696,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
     cleanEdges = [];
     for (const e of edges) {
       if (e.source === undefined || e.target === undefined || e.source >= totalNodes || e.target >= totalNodes) continue;
-      const key = e.source < e.target ? `${e.source}_${e.target}` : `${e.target}_${e.source}`;
+      const key = `${e.source}:${e.target}:${e.kind || 'edge'}`;
       if (!edgeSet.has(key)) {
         edgeSet.add(key);
         cleanEdges.push(e);
@@ -891,7 +891,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
     height = window.innerHeight;
     canvas.width = Math.floor(width * dpr);
     canvas.height = Math.floor(height * dpr);
-    ctx.scale(dpr, dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if(totalNodes)fitView();else requestDraw();
   }
   window.addEventListener('resize', resize);

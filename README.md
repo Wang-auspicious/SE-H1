@@ -1,26 +1,61 @@
-# Code Agent
+# CodeAgent · 从变更到证据
 
-在原 `code_agent.py` 上改的单一 ReAct Agent：保留读文件、写文件、运行 Python，新增建图和查图。`code_graph.py` 负责图，`languages.py` 独立管理语言规则和语法提取，`graph_view.html` 负责展示。
+Homework 1 的轻量代码助手。它保留原生 LLM API 和一个很小的 ReAct 循环，支持代码图谱、文件读取/写入、Python 执行和失败回流。展示页把一次任务串成：
+
+`任务 → 决策 → 工具 → 文件/符号 → 测试结果 → 交付说明`
+
+这条“变更到证据”的记录是本项目的设计机会：代码助手通常能展示工具调用，却很少把改动和验证结果放在同一条可检查的轨道上。这里把它做成了一个可见的工程对象，便于发现缺陷、复盘和继续维护。
+
+## 运行
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-python code_agent.py
+python code_agent.py . --port 8768
 ```
 
-默认启动本地可视化服务并打开浏览器。在页面顶部输入框中填入任意 GitHub 仓库的 `.git` 链接或本地文件夹路径，点击「构建」即可自动在本地拉取、解析并渲染星系图谱。
+服务启动后会打开 `/agent`，根地址 `/` 也会重定向到同一页。`agent_visualizer.html` 是 Homework 1 的展示页；`/graph.html` 是面向源码维护的函数关系图，不作为默认入口。
 
-也可指定本地代码库或结合 Agent 使用：
+需要调用模型时设置一个 OpenAI-compatible API key：
 
 ```powershell
-python code_agent.py D:\my-repo           # 打开指定目录
-python code_agent.py . --graph --open     # 仅本地静态建图，不启服务
-python code_agent.py . "找出 CodeAgent 的调用关系"  # 调用 Agent 查代码
+$env:OPENCODE_API_KEY = "your-key"
+python code_agent.py . "修复并测试这个函数"
 ```
 
-输出在目标代码库的 `.code-graph/`：`graph.html` 是轻量至极的 Obsidian 风格 2D 代码关系图谱，去除了冗余侧边栏，全屏沉浸；支持函数/节点筛选、实时搜索定位、缩放平移、调用链邻域聚焦与 JSON 导出。`graph.json` 保存全部节点及关系。`--output` 可改输出目录；新增、修改、删除文件都会更新缓存，仅改 HTML 不重新解析源码。
+没有 API key 也可以只生成本地代码图：
 
-图只包含真实文件、类、函数，以及可静态确定的包含、导入、调用、继承关系，不生成占位节点。Tree-sitter 支持 Python、JS/TS/TSX、Go、Rust、Java、C/C++、C#、Ruby、PHP、Kotlin、Swift、Scala。外部库和无法确定的动态调用不连线，JSON 的 `call_sites` / `linked_calls` 保留实际调用覆盖统计；列表和模型查询有显示上限，完整图数据不截断。
+```powershell
+python code_agent.py . --graph --open
+```
 
-全界面统一使用 Anthropic Serif 衬线字体，保持优雅、克制、清晰的学术与工具美感。
+## 核心工具
+
+| 工具 | 作用 |
+| --- | --- |
+| `build_graph` | 用 Tree-sitter 建立真实文件、符号和关系图 |
+| `query_graph` | 只取与任务相关的邻域，收敛上下文 |
+| `read_file` | 按行读取仓库内文件，限制单次窗口 |
+| `write_file` | 在仓库边界内写入修改 |
+| `run_python` | 在超时受限的子进程中执行代码并保留输出 |
+
+运行失败会作为下一轮观察回传；达到最大步数或执行超时就停止。读写路径、敏感文件和相对路径都在工具层检查。
+
+## 代码结构
+
+- `code_agent.py`：API 客户端、工具契约、循环、服务入口。
+- `code_graph.py`：增量解析、关系解析、查询和缓存。
+- `languages.py`：语言表和 Tree-sitter 语法提取。
+- `agent_visualizer.html`：Homework 1 的架构图、证据轨道和下钻交互。
+- `graph_view.html`：源码级关系图，供维护时定位函数。
+- `DESIGN.md`：设计决策、边界和验证记录。
+
+## 验证
+
+```powershell
+python -m py_compile code_agent.py code_graph.py languages.py
+python code_agent.py . --graph
+```
+
+展示页支持 H1 单 Agent、H2 协同验证、模块下钻、链路悬停、证据轨道和 `Esc` 返回全景；页面不上传本地源码。

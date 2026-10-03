@@ -1,1984 +1,1120 @@
 <!doctype html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CodeAgent · 架构全景图谱</title>
+<title>CodeAgent · 工程证据图谱</title>
 <style>
-/* 1. Anthropic Serif 字体族引入与回退栈 */
-@font-face {
-  font-family: "Anthropic Serif";
-  src: local("Anthropic Serif"), url("https://cdn.prod.website-files.com/67ce28cfec624e2b733f8a52/69971a1551eb6cda0d656e8a_AnthropicSerif-Roman-Web.woff2") format("woff2");
-  font-weight: 300 800;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Anthropic Serif";
-  src: url("https://cdn.prod.website-files.com/67ce28cfec624e2b733f8a52/69971a15a9fb8c1107a3570e_AnthropicSerif-Italic-Web.woff2") format("woff2");
-  font-weight: 300 800;
-  font-style: italic;
-  font-display: swap;
-}
-
 :root {
-  /* 暗色调主题变量 (Dark Mode - 默认) */
-  --bg-main: #0d1117;
-  --bg-sidebar: #0d1117;
-  --bg-card: #161b22;
-  --bg-card-hover: #1c2128;
-  --border-subtle: #21262d;
-  --border-card: #30363d;
-  --border-active: #38bdf8;
-  --card-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
-  --card-hover-shadow: 0 0 16px rgba(56, 189, 248, 0.22), 0 8px 24px rgba(0, 0, 0, 0.6);
-  
-  --text-primary: #f0f6fc;
-  --text-secondary: #8b949e;
-  --text-muted: #6e7681;
-  --text-link: #58a6ff;
-  --accent-warm: #d29922;
-
-  /* 连线语义颜色 */
-  --c-depends: #38bdf8;    /* 依赖: 天青 */
-  --c-hosts: #2dd4bf;      /* 宿主: 湖绿 */
-  --c-calls: #58a6ff;      /* 调用: 亮蓝 */
-  --c-implements: #bc8cff; /* 实现: 丁香紫 */
-  --c-generates: #d29922;  /* 生成: 金黄 */
-  --c-reads: #3fb950;      /* 读取: 翠绿 */
-  --c-writes: #f85149;     /* 写入: 暖红 */
-  --c-composes: #db61a2;   /* 组合: 浅粉紫 */
-  --c-heals: #f0883e;      /* 自愈: 暖橙 */
-  --c-feature: #d2a8ff;    /* 特性高亮紫 */
-
-  --font-serif: "Anthropic Serif", "Noto Serif SC", "Source Han Serif SC", "Songti SC", SimSun, Georgia, serif;
-  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --ink: #e8edf0;
+  --ink-soft: #91a0a8;
+  --ink-faint: #5d6c73;
+  --bg: #0a0e10;
+  --panel: #12191c;
+  --panel-raised: #172024;
+  --line: #263239;
+  --line-bright: #3a4a53;
+  --green: #65d890;
+  --blue: #76a9e8;
+  --teal: #64d5bd;
+  --violet: #c875df;
+  --amber: #d7ae69;
+  --coral: #df8089;
+  --purple-panel: #211725;
+  --purple-line: #713c7b;
+  --sans: "IBM Plex Sans", "Noto Sans SC", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", "Cascadia Code", Consolas, monospace;
 }
 
-/* 2. Anthropic Claude 暖色调纸张主题 (Warm Mode) */
-html[data-theme="warm"] {
-  --bg-main: #fcfaf7;
-  --bg-sidebar: #fbf9f5;
-  --bg-card: #ffffff;
-  --bg-card-hover: #ffffff;
-  --border-subtle: #e8e4db;
-  --border-card: #e8e4db;
-  --border-active: #c85a32;
-  --card-shadow: 0 3px 12px rgba(43, 46, 43, 0.05);
-  --card-hover-shadow: 0 0 0 1px #c85a32, 0 8px 20px rgba(200, 90, 50, 0.12);
-
-  --text-primary: #2b2e2b;
-  --text-secondary: #656a65;
-  --text-muted: #9ba09a;
-  --text-link: #c85a32;
-  --accent-warm: #c85a32;
-
-  --c-depends: #0d9488;
-  --c-hosts: #0284c7;
-  --c-calls: #2563eb;
-  --c-implements: #7c3aed;
-  --c-generates: #d97706;
-  --c-reads: #059669;
-  --c-writes: #dc2626;
-  --c-composes: #db2777;
-  --c-heals: #ea580c;
-  --c-feature: #c85a32;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body {
-  width: 100%;
-  height: 100%;
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; }
+body {
   overflow: hidden;
-  background-color: var(--bg-main);
-  color: var(--text-primary);
-  font-family: var(--font-serif);
-  user-select: none;
+  color: var(--ink);
+  background: var(--bg);
+  font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.4s ease, color 0.4s ease;
+}
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+body::before {
+  opacity: .09;
+  background:
+    radial-gradient(circle at 16% 12%, rgba(95, 146, 166, .13), transparent 36%),
+    radial-gradient(circle at 82% 70%, rgba(155, 79, 177, .08), transparent 34%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0, rgba(255,255,255,.018) 1px, transparent 1px, transparent 4px);
+  mix-blend-mode: screen;
+}
+body::after {
+  opacity: .035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
+  mix-blend-mode: soft-light;
 }
 
+button { font: inherit; }
 #app {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 374px;
   width: 100vw;
   height: 100vh;
-  display: flex;
-  overflow: hidden;
-  position: relative;
 }
-
-/* 3. 圆形水波纹扩散光圈遮罩 (Circular Ripple) */
-.theme-ripple-overlay {
-  position: fixed;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 9999;
-  transform: translate(-50%, -50%) scale(0);
-  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease;
-  mix-blend-mode: normal;
-}
-
-/* 左侧主画布区域 */
 .main-stage {
-  flex: 1;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(280px, 1fr) auto;
   overflow: hidden;
-  border-right: 1px solid var(--border-subtle);
+  border-right: 1px solid #222d32;
 }
-
-/* 顶部精炼导航栏 */
 .top-header {
-  padding: 18px 30px 12px 30px;
-  background: var(--bg-main);
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  border-bottom: 1px solid var(--border-subtle);
-  transition: background 0.4s ease, border-color 0.4s ease;
+  position: relative;
+  z-index: 4;
+  padding: 18px 28px 12px;
+  border-bottom: 1px solid rgba(164, 188, 198, .08);
 }
-
-.header-top-row {
+.header-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 18px;
 }
-
-.title-box {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-}
-
-.project-heading {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.015em;
-  color: var(--text-primary);
-}
-
-.project-subheading {
-  font-size: 13px;
-  color: var(--text-secondary);
-  font-style: italic;
-}
-
-/* 右上角工具按钮区 */
-.header-actions {
+.brand {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
-
-.theme-switch-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  color: var(--text-secondary);
-  font-family: var(--font-serif);
-  font-size: 12px;
-  font-weight: 600;
-  padding: 5px 12px;
-  border-radius: 9999px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.brand h1 {
+  margin: 0;
+  color: #f5f8f9;
+  font-size: 21px;
+  line-height: 1.1;
+  letter-spacing: -.035em;
 }
-.theme-switch-btn:hover {
-  border-color: var(--border-active);
-  color: var(--text-primary);
-  transform: translateY(-1px);
-}
-.theme-icon {
-  width: 14px;
-  height: 14px;
-}
-
-.mode-pills-box {
-  display: flex;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: 6px;
-  padding: 2px;
-  gap: 2px;
-}
-.mode-pill-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  font-family: var(--font-serif);
-  font-size: 12px;
-  padding: 3px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.mode-pill-btn.active {
-  background: var(--border-subtle);
-  color: var(--text-primary);
-  font-weight: 700;
-}
-
-/* 顶部精简指标与连线图例 */
-.header-info-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 11.5px;
-  color: var(--text-secondary);
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.stats-summary-text {
-  font-family: var(--font-serif);
-  color: var(--text-secondary);
-}
-
-.legend-flow {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.legend-caption-label {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-right: 2px;
-}
-
-.legend-capsule {
+.status-pill,
+.card-status {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
-  color: var(--text-secondary);
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  padding: 2px 8px;
-  border-radius: 9999px;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
-}
-.legend-capsule:hover {
-  border-color: var(--border-active);
-  color: var(--text-primary);
-}
-.legend-capsule .arrow-icon {
-  font-weight: bold;
-}
-.legend-capsule .count-tag {
-  color: var(--text-muted);
-  font-family: var(--font-mono);
+  height: 20px;
+  padding: 0 8px;
+  border: 1px solid rgba(63, 186, 119, .42);
+  border-radius: 999px;
+  color: var(--green);
+  background: rgba(23, 93, 61, .22);
+  font-family: var(--mono);
   font-size: 10px;
-}
-
-.hint-action-text {
-  color: var(--text-muted);
-  font-size: 11px;
-  font-style: italic;
-}
-
-/* 下钻面包屑返回栏 */
-.breadcrumb-container {
-  display: none;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  padding: 6px 30px;
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
-}
-.breadcrumb-container.active {
-  display: flex;
-}
-.btn-up-level {
-  background: transparent;
-  border: 1px solid var(--border-card);
-  color: var(--text-primary);
-  font-family: var(--font-serif);
-  padding: 2px 10px;
-  border-radius: 4px;
-  font-size: 11px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.15s;
-}
-.btn-up-level:hover {
-  background: var(--border-subtle);
-}
-
-/* 画布舞台 */
-.canvas-container {
-  flex: 1;
-  position: relative;
-  overflow: auto;
-  cursor: default;
-}
-
-#graph-svg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 2;
-  overflow: visible;
-}
-
-.nodes-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 3;
-  pointer-events: none;
-}
-
-/* 核心模块卡片 (Strict 3-Column Architectural Card) */
-.module-card {
-  position: absolute;
-  width: 216px;
-  height: 76px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: 8px;
-  padding: 9px 13px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  cursor: pointer;
-  pointer-events: auto;
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 0.25s ease,
-              border-color 0.2s ease,
-              box-shadow 0.2s ease,
-              background 0.2s ease;
-  box-shadow: var(--card-shadow);
-}
-
-.module-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--border-active);
-  background: var(--bg-card-hover);
-  box-shadow: var(--card-hover-shadow);
-}
-
-.module-card.selected {
-  border-color: var(--border-active);
-  background: var(--bg-card-hover);
-  box-shadow: 0 0 0 1px var(--border-active), var(--card-hover-shadow);
-}
-
-.module-card.dimmed {
-  opacity: 0.12 !important;
-  pointer-events: none;
-}
-
-.module-card.outside-connector {
-  border-style: dashed;
-  background: rgba(128, 128, 128, 0.05);
-  height: 52px;
-}
-.module-card.outside-connector .card-title-text {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.card-top-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.card-type-label {
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  text-transform: uppercase;
-}
-
-.card-title-text {
-  font-size: 14.5px;
-  font-weight: 700;
-  color: var(--text-primary);
+  letter-spacing: .02em;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  letter-spacing: -0.01em;
-  margin: 1px 0;
 }
-
-.card-bottom-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-.card-parts-indicator {
-  font-family: var(--font-serif);
-}
-.card-arrow-icon {
-  color: var(--text-muted);
-  font-size: 13px;
-  font-family: var(--font-serif);
-  transition: transform 0.15s ease, color 0.15s ease;
-}
-.module-card:hover .card-arrow-icon {
-  color: var(--border-active);
-  transform: translateX(2px);
-}
-
-/* 底部特性矩阵面板 */
-.bottom-features-panel {
-  padding: 12px 30px 16px 30px;
-  background: var(--bg-main);
-  border-top: 1px solid var(--border-subtle);
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  transition: background 0.4s ease, border-color 0.4s ease;
-}
-
-.features-panel-header {
-  font-size: 11.5px;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.features-panel-header strong {
-  color: var(--text-primary);
-  font-weight: 700;
-}
-
-.features-grid-matrix {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 10px;
-}
-
-.feature-cell-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: 6px;
-  padding: 6px 12px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-width: 138px;
-  height: 48px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  pointer-events: auto;
-  box-shadow: var(--card-shadow);
-}
-.feature-cell-card:hover {
-  border-color: var(--c-feature);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(210, 168, 255, 0.15);
-}
-.feature-cell-card.selected,
-.feature-cell-card.active {
-  border-color: var(--c-feature);
-  background: rgba(210, 168, 255, 0.08);
-  box-shadow: 0 0 14px rgba(210, 168, 255, 0.3);
-}
-.feature-cell-card.dimmed {
-  opacity: 0.12 !important;
-}
-
-.feat-tag-text {
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-}
-.feat-name-text {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-/* 右侧属性抽屉 (1:1 杂志风精炼排版) */
-.inspector-panel {
-  width: 380px;
-  height: 100%;
-  background: var(--bg-sidebar);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  z-index: 25;
-  padding: 24px 24px;
-  gap: 18px;
-  transition: background 0.4s ease;
-}
-
-.insp-kind-tag {
-  display: inline-block;
-  font-size: 10.5px;
-  font-weight: 700;
-  font-family: var(--font-mono);
-  color: var(--accent-warm);
-  letter-spacing: 0.05em;
-  margin-bottom: 4px;
-  text-transform: uppercase;
-}
-
-.insp-main-title {
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.015em;
-  color: var(--text-primary);
-  margin-bottom: 3px;
-}
-
-.insp-namespace-line {
-  font-size: 12px;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  margin-bottom: 12px;
-}
-
-.insp-desc-text {
-  font-size: 13px;
-  line-height: 1.7;
-  color: var(--text-primary);
-}
-.insp-desc-text code {
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  color: var(--text-link);
-  background: rgba(128, 128, 128, 0.1);
-  padding: 1px 4px;
-  border-radius: 3px;
-}
-
-.insp-block-heading {
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  margin-bottom: 8px;
-  border-bottom: 1px solid var(--border-subtle);
-  padding-bottom: 4px;
-}
-
-/* 统计表 */
-.counts-list-box {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 12.5px;
-}
-.count-kv-line {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.count-kv-line .label {
-  color: var(--text-secondary);
-}
-.count-kv-line .val {
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-weight: 700;
-}
-
-/* 源码列表 */
-.sources-list-box {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  font-size: 12px;
-  font-family: var(--font-mono);
-}
-.source-file-row {
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: color 0.15s;
-}
-.source-file-row:hover {
-  color: var(--text-link);
-  text-decoration: underline;
-}
-
-/* 内部构件可点击钻取清单 */
-.parts-table-box {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 12.5px;
-}
-.part-interactive-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: var(--text-primary);
-  padding: 4px 6px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.part-interactive-row:hover {
-  background: var(--bg-card);
-  color: var(--text-link);
-}
-.part-left-label {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-.bullet-icon {
+.status-pill::before,
+.card-status::before {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--text-muted);
+  background: currentColor;
+  box-shadow: 0 0 9px currentColor;
+  content: "";
 }
-
-/* 关系链条清单 */
-.relations-list-box {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.mode-switch {
+  display: inline-flex;
+  flex: 0 0 auto;
+  padding: 3px;
+  border: 1px solid #26333a;
+  border-radius: 8px;
+  background: rgba(18, 25, 28, .9);
 }
-.relation-card-row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 12px;
-  padding: 4px 0;
+.mode-switch button {
+  border: 0;
+  border-radius: 5px;
+  padding: 5px 10px;
+  color: var(--ink-faint);
+  background: transparent;
+  font-size: 11px;
   cursor: pointer;
+  transition: color .2s ease, background .2s ease, box-shadow .2s ease;
 }
-.rel-head-row {
+.mode-switch button:hover { color: var(--ink); }
+.mode-switch button.active {
+  color: #eef3f5;
+  background: #243039;
+  box-shadow: inset 0 0 0 1px #40515b, 0 0 16px rgba(94, 164, 205, .08);
+}
+.stage-desc {
+  max-width: 1000px;
+  margin: 10px 0 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.header-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  margin-top: 10px;
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+.metric-row { display: inline-flex; gap: 5px; align-items: center; }
+.metric-row strong { color: var(--ink-soft); font-family: var(--mono); font-weight: 500; }
+.stage-steps { display: inline-flex; gap: 5px; align-items: center; }
+.stage-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+.stage-step::after { content: "→"; color: #405058; }
+.stage-step:last-child::after { content: ""; }
+.stage-step.done { color: var(--green); }
+.stage-step.done::before {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+  content: "";
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 11px;
+}
+.legend-label,
+.hint {
+  color: var(--ink-faint);
+  font-size: 10px;
+}
+.legend-label { margin-right: 2px; font-family: var(--mono); }
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid #27353c;
+  border-radius: 999px;
+  color: var(--ink-soft);
+  background: rgba(20, 29, 33, .72);
+  font-size: 10px;
+  cursor: default;
+  transition: border-color .18s ease, color .18s ease, background .18s ease;
+}
+.legend-item:hover { color: var(--ink); border-color: var(--line-bright); background: #1a2429; }
+.legend-dot { width: 6px; height: 6px; border-radius: 50%; }
+.hint { margin-top: 9px; font-style: italic; }
+
+.breadcrumb {
   display: flex;
   align-items: center;
-  gap: 6px;
-}
-.rel-kind-tag {
-  font-weight: 700;
-}
-.rel-target-tag {
-  color: var(--text-link);
-  font-weight: 600;
-}
-.rel-target-tag:hover {
-  text-decoration: underline;
-}
-.rel-note-desc {
-  color: var(--text-secondary);
-  font-size: 11.5px;
-  padding-left: 14px;
-}
-
-.timestamp-footer-note {
+  gap: 8px;
+  height: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 28px;
+  border-bottom: 0 solid rgba(164, 188, 198, .08);
+  color: var(--ink-soft);
   font-size: 11px;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  margin-top: 10px;
+  visibility: hidden;
+  transition: height .2s ease, min-height .2s ease, padding .2s ease, border-width .2s ease;
 }
-
-/* 连线与总线回路 */
-.wire-curve-path {
-  fill: none;
-  stroke-width: 1.4;
-  opacity: 0.72;
-  transition: opacity 0.25s ease, stroke-width 0.2s ease, filter 0.2s ease;
-  pointer-events: stroke;
+.breadcrumb.visible {
+  height: 32px;
+  min-height: 32px;
+  padding: 6px 28px;
+  border-bottom-width: 1px;
+  visibility: visible;
 }
-.wire-curve-path:hover {
-  stroke-width: 2.5;
-  opacity: 1 !important;
+.breadcrumb button {
+  border: 1px solid #34444c;
+  border-radius: 5px;
+  padding: 3px 8px;
+  color: var(--ink);
+  background: transparent;
   cursor: pointer;
 }
-.wire-curve-path.dimmed {
-  opacity: 0.08 !important;
-}
-.wire-curve-path.highlighted {
-  opacity: 1 !important;
-  stroke-width: 2.2;
-}
+.breadcrumb button:hover { border-color: var(--blue); color: var(--blue); }
+.breadcrumb .scope { color: #e6eef0; font-weight: 600; }
+.breadcrumb .key { margin-left: auto; color: var(--ink-faint); font-family: var(--mono); font-size: 10px; }
 
-.wire-channel-badge {
+.canvas-container {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    linear-gradient(rgba(27, 40, 46, .23) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(27, 40, 46, .23) 1px, transparent 1px),
+    radial-gradient(circle at 50% 44%, rgba(36, 62, 70, .12), transparent 58%);
+  background-size: 36px 36px, 36px 36px, auto;
+}
+.canvas-container::after {
+  position: absolute;
+  inset: 0;
   pointer-events: none;
-  transition: opacity 0.25s ease;
+  background: linear-gradient(180deg, rgba(8, 12, 14, .18), transparent 28%, transparent 72%, rgba(8, 12, 14, .36));
+  content: "";
 }
-.wire-channel-badge.dimmed {
-  opacity: 0.08 !important;
+.graph-surface {
+  position: absolute;
+  inset: 14px 20px 12px;
+  min-height: 0;
 }
+#graph-svg,
+#nodes-container { position: absolute; inset: 0; width: 100%; height: 100%; }
+#graph-svg { z-index: 1; overflow: visible; pointer-events: none; }
+#nodes-container { z-index: 2; pointer-events: none; }
+.module-card {
+  position: absolute;
+  width: var(--card-width, 210px);
+  height: var(--card-height, 78px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 12px;
+  overflow: hidden;
+  border: 1px solid #2e3c43;
+  border-radius: 9px;
+  color: var(--ink);
+  background: linear-gradient(145deg, rgba(24, 34, 38, .98), rgba(16, 24, 27, .98));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025), 0 12px 28px rgba(0,0,0,.16);
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(8px) scale(.985);
+  animation: card-in .55s cubic-bezier(.2,.75,.25,1) forwards;
+  animation-delay: var(--delay, 0ms);
+  transition: opacity .25s ease, transform .22s ease, border-color .2s ease, box-shadow .2s ease, filter .2s ease;
+}
+.module-card::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg, rgba(120,180,210,.055), transparent 43%);
+  content: "";
+}
+.module-card:hover,
+.module-card.selected {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 1px rgba(118,169,232,.2), 0 0 26px rgba(73, 131, 176, .16), 0 14px 30px rgba(0,0,0,.3);
+  transform: translateY(-3px) scale(1.012);
+}
+.module-card.selected { border-color: var(--violet); }
+.module-card.port {
+  border-style: dashed;
+  background: rgba(20, 27, 30, .66);
+}
+.module-card.dimmed,
+.feature-card.dimmed { opacity: .16 !important; filter: saturate(.35); }
+.card-head,
+.card-foot { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.card-eyebrow {
+  color: #74838b;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.card-title {
+  position: relative;
+  z-index: 1;
+  margin: 4px 0 1px;
+  overflow: hidden;
+  color: #f0f4f5;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card-foot { color: #74838b; font-size: 11px; }
+.card-arrow { color: #72858d; font-size: 16px; transition: transform .2s ease, color .2s ease; }
+.module-card:hover .card-arrow { color: var(--blue); transform: translateX(3px); }
+.card-status { height: 16px; padding: 0 6px; font-size: 8px; }
 
-.feature-flow-curve {
+.wire {
   fill: none;
-  stroke: var(--c-composes);
-  stroke-width: 2;
-  stroke-dasharray: 4 3;
-  animation: pulseFlow 1.6s linear infinite;
-  opacity: 0.95;
+  stroke-width: 1.8;
+  opacity: .52;
+  pointer-events: stroke;
+  stroke-linecap: round;
+  stroke-dasharray: 4 5;
+  stroke-dashoffset: 0;
+  animation: wire-in .9s ease forwards, wire-flow 4s linear infinite;
+  animation-delay: var(--delay, 0ms), calc(var(--delay, 0ms) + .9s);
+  transition: opacity .22s ease, stroke-width .22s ease, filter .22s ease;
 }
-@keyframes pulseFlow {
-  from { stroke-dashoffset: 28; }
-  to { stroke-dashoffset: 0; }
-}
+.wire.solid { stroke-dasharray: none; }
+.wire.dotted { stroke-dasharray: 1 5; }
+.wire:hover,
+.wire.highlighted { opacity: 1; stroke-width: 3; filter: drop-shadow(0 0 4px currentColor); }
+.wire.dimmed { opacity: .055; }
+.wire-badge { pointer-events: none; }
+.wire-badge circle { fill: #131b1e; stroke: #3b4c55; }
+.wire-badge text { fill: #9eafb6; font: 10px var(--mono); text-anchor: middle; dominant-baseline: central; }
+.feature-bridge { fill: none; stroke: var(--violet); stroke-width: 1.6; stroke-dasharray: 4 5; opacity: .92; animation: wire-flow 1.4s linear infinite; }
 
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-card); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+.edge-popover {
+  position: absolute;
+  z-index: 5;
+  display: none;
+  width: 260px;
+  padding: 10px 11px;
+  border: 1px solid #3b4d56;
+  border-radius: 8px;
+  color: var(--ink-soft);
+  background: rgba(8, 13, 15, .96);
+  box-shadow: 0 16px 32px rgba(0,0,0,.42);
+  font-size: 11px;
+  line-height: 1.45;
+  pointer-events: none;
+}
+.edge-popover.visible { display: block; animation: pop-in .16s ease both; }
+.edge-popover strong { display: block; margin-bottom: 4px; color: var(--ink); font-size: 12px; }
+.edge-popover .edge-kind { font-family: var(--mono); font-size: 10px; }
+
+.features-panel {
+  position: relative;
+  z-index: 4;
+  min-height: 124px;
+  max-height: 222px;
+  overflow: auto;
+  padding: 10px 28px 16px;
+  border-top: 1px solid rgba(164, 188, 198, .1);
+  background: rgba(9, 13, 15, .82);
+}
+.features-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-bottom: 9px;
+  color: var(--ink-faint);
+  font-size: 10px;
+}
+.features-heading strong { color: var(--ink-soft); font-size: 12px; font-weight: 600; }
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 7px;
+}
+.feature-card {
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 8px 11px;
+  border: 1px solid var(--purple-line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: linear-gradient(145deg, rgba(35, 22, 39, .95), rgba(25, 18, 29, .95));
+  cursor: pointer;
+  pointer-events: auto;
+  transition: opacity .2s ease, border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+}
+.feature-card:hover,
+.feature-card.selected {
+  border-color: var(--violet);
+  box-shadow: 0 0 18px rgba(196, 102, 215, .16);
+  transform: translateY(-2px);
+}
+.feature-card .card-eyebrow { color: #a47bab; }
+.feature-card .card-title { margin: 4px 0 0; font-size: 13px; }
+.feature-card .card-foot { color: #a079a6; font-family: var(--mono); font-size: 9px; }
+
+.inspector-panel {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 23px 16px 20px;
+  background: #12191c;
+}
+.inspector-panel > * { max-width: 342px; }
+.inspector-badge {
+  margin-bottom: 8px;
+  color: var(--green);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.inspector-title {
+  margin: 0;
+  color: #f1f5f6;
+  font-size: 25px;
+  line-height: 1.1;
+  letter-spacing: -.04em;
+}
+.inspector-namespace {
+  margin-top: 5px;
+  color: #6f7d84;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.inspector-desc {
+  margin: 15px 0 0;
+  color: #c5ced1;
+  font-size: 13px;
+  line-height: 1.62;
+}
+.inspector-desc code { color: var(--blue); font-family: var(--mono); font-size: 11px; }
+.inspector-block { margin-top: 20px; }
+.inspector-block h2 {
+  margin: 0 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #27343a;
+  color: #74838a;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.evidence-track { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
+.evidence-step {
+  position: relative;
+  min-height: 44px;
+  padding: 6px 4px 5px;
+  border: 1px solid #2a383e;
+  border-radius: 5px;
+  color: #718088;
+  background: #172125;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 9px;
+}
+.evidence-step small { display: block; margin-top: 4px; font-size: 8px; }
+.evidence-step::before {
+  display: block;
+  width: 6px;
+  height: 6px;
+  margin: 0 auto 5px;
+  border-radius: 50%;
+  background: #53636a;
+  content: "";
+}
+.evidence-step.active { border-color: #518b70; color: var(--green); background: rgba(36, 76, 58, .34); }
+.evidence-step.active::before { background: var(--green); box-shadow: 0 0 9px var(--green); }
+.metric-list,
+.source-list,
+.part-list,
+.relation-list { display: grid; gap: 6px; }
+.metric-line { display: flex; justify-content: space-between; gap: 12px; color: #8e9ca2; font-size: 12px; }
+.metric-line strong { color: #e5ebed; font-family: var(--mono); font-size: 11px; font-weight: 500; }
+.source-row { color: #bbc7ca; font-family: var(--mono); font-size: 11px; }
+.source-row:hover { color: var(--blue); }
+.part-row,
+.relation-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 9px;
+  padding: 5px 6px;
+  border-radius: 5px;
+  color: #c4cdd0;
+  font-size: 11px;
+}
+.part-row { width: 100%; border: 0; background: transparent; cursor: pointer; text-align: left; }
+.part-row:hover { color: var(--blue); background: #19262b; }
+.part-row span:last-child,
+.relation-row span:last-child { color: #6c7b82; font-family: var(--mono); font-size: 9px; text-align: right; }
+.relation-row { display: block; padding: 5px 0; border-bottom: 1px solid rgba(57,75,83,.45); }
+.relation-row strong { display: block; font-family: var(--mono); font-size: 10px; font-weight: 500; }
+.relation-row small { display: block; margin-top: 3px; color: #718087; font-size: 10px; line-height: 1.4; }
+.inspector-footer { margin-top: 24px; color: #4e5d64; font-family: var(--mono); font-size: 10px; line-height: 1.5; }
+
+@keyframes card-in { to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes wire-in { from { stroke-dashoffset: 1000; opacity: 0; } to { stroke-dashoffset: 0; opacity: .52; } }
+@keyframes wire-flow { to { stroke-dashoffset: -36; } }
+@keyframes pop-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 980px) {
+  #app { grid-template-columns: minmax(0, 1fr) 320px; }
+  .top-header { padding-inline: 18px; }
+  .features-panel { padding-inline: 18px; }
+  .graph-surface { inset-inline: 12px; }
+  .inspector-panel { padding-inline: 13px; }
+  .inspector-title { font-size: 21px; }
+}
+@media (max-width: 740px) {
+  body { overflow: auto; }
+  #app { display: block; height: auto; min-height: 100vh; }
+  .main-stage { min-height: 760px; border-right: 0; }
+  .inspector-panel { min-height: 420px; border-top: 1px solid #253239; }
+  .header-top { align-items: flex-start; flex-direction: column; }
+  .mode-switch { align-self: stretch; }
+  .mode-switch button { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
 </style>
 </head>
 <body>
-
 <div id="app">
-  <!-- 左侧画布主舞台 -->
-  <div class="main-stage">
-    
-    <!-- 顶部精炼概览栏 -->
+  <main class="main-stage">
     <header class="top-header">
-      <div class="header-top-row">
-        <div class="title-box">
-          <span class="project-heading" id="stage-title">CodeAgent 代码助手</span>
-          <span class="project-subheading" id="stage-desc">轻量自愈代码助手 · 软件工程分层架构与执行链路图谱</span>
+      <div class="header-top">
+        <div class="brand">
+          <h1 id="stage-title">CodeAgent</h1>
+          <span class="status-pill">READY</span>
         </div>
-        
-        <div class="header-actions">
-          <!-- 暗色/暖色圆形扩散切换按钮 -->
-          <button class="theme-switch-btn" id="theme-btn" onclick="toggleThemeWithRipple(event)">
-            <svg class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-            <span id="theme-btn-label">暖色模式 (Claude)</span>
-          </button>
-
-          <!-- H1 / H2 模式切换 -->
-          <div class="mode-pills-box">
-            <button class="mode-pill-btn active" id="btn-mode-h1" onclick="setSystemMode('h1')">H1: 单 Agent</button>
-            <button class="mode-pill-btn" id="btn-mode-h2" onclick="setSystemMode('h2')">H2: 多 Agent 协同</button>
-          </div>
+        <div class="mode-switch" aria-label="architecture mode">
+          <button id="btn-h1" class="active" type="button">H1 · 单 Agent</button>
+          <button id="btn-h2" type="button">H2 · 协同验证</button>
         </div>
       </div>
-
-      <div class="header-info-row">
-        <span class="stats-summary-text" id="stats-summary">
-          11 个核心模块 · 189 条通信链路 · 14 项业务特性
-        </span>
-
-        <div class="legend-flow" id="connections-legend">
-          <!-- 动态注入简明图例 -->
+      <p class="stage-desc" id="stage-desc">把一次编码任务变成一条可检查的工程证据链：任务、决策、工具、修改、验证和复盘留在同一张图里。</p>
+      <div class="header-meta">
+        <span class="metric-row" id="summary-metrics"><strong>9</strong> 个模块 · <strong>5</strong> 个工具 · <strong>8</strong> 步上限</span>
+        <div class="stage-steps" aria-label="evidence stages">
+          <span class="stage-step done">Plan</span>
+          <span class="stage-step done">Build</span>
+          <span class="stage-step done">Verify</span>
+          <span class="stage-step done">Review</span>
+          <span class="stage-step done">Learn</span>
         </div>
-
-        <span class="hint-action-text">点击任意模块下钻查看内部实现 · 按 Esc 返回全局</span>
       </div>
+      <div class="legend" id="legend"></div>
+      <div class="hint">悬停查看邻接链路 · 点击模块进入内部实现 · Esc 返回全景</div>
     </header>
-
-    <!-- 下钻层级面包屑返回栏 -->
-    <div class="breadcrumb-container" id="breadcrumb-bar">
-      <button class="btn-up-level" onclick="goUp()">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
-        <span>返回顶层全景</span>
-      </button>
-      <span style="color:var(--text-muted);">/</span>
-      <span style="color:var(--text-primary);font-weight:700;" id="breadcrumb-module-name">模块</span>
-      <span style="margin-left:auto;color:var(--text-muted);font-size:11px;">支持键盘快捷键 [Esc] 回退</span>
+    <div class="breadcrumb" id="breadcrumb">
+      <button id="back-button" type="button">← 返回全景</button>
+      <span>/</span>
+      <span class="scope" id="scope-name"></span>
+      <span class="key">Esc</span>
     </div>
-
-    <!-- 图谱画布区域 -->
-    <div class="canvas-container" id="canvas-container">
-      <svg id="graph-svg"></svg>
-      <div class="nodes-container" id="nodes-container"></div>
-    </div>
-
-    <!-- 底部特性矩阵面板 -->
-    <div class="bottom-features-panel">
-      <div class="features-panel-header">
-        <strong>业务特性矩阵 (Features)</strong>
-        <span>· 悬停或点击高亮跨层协同模块链路</span>
+    <section class="canvas-container" id="canvas-container" aria-label="architecture graph">
+      <div class="graph-surface" id="graph-surface">
+        <svg id="graph-svg" aria-hidden="true"></svg>
+        <div id="nodes-container"></div>
       </div>
-      <div class="features-grid-matrix" id="features-grid">
-        <!-- 动态渲染 14 项特性 -->
-      </div>
-    </div>
-  </div>
-
-  <!-- 右侧属性抽屉 (1:1 中文杂志风排版) -->
+      <div class="edge-popover" id="edge-popover"></div>
+    </section>
+    <section class="features-panel">
+      <div class="features-heading"><strong>证据轨道</strong><span>Proof trail · 任务如何变成可信的改动</span></div>
+      <div class="features-grid" id="features-grid"></div>
+    </section>
+  </main>
   <aside class="inspector-panel" id="inspector-panel">
-    <div>
-      <div class="insp-kind-tag" id="insp-badge">项目架构 (Project)</div>
-      <div class="insp-main-title" id="insp-title">CodeAgent</div>
-      <div class="insp-namespace-line" id="insp-namespace">se.codeagent.core</div>
-      <div class="insp-desc-text" id="insp-desc">
-        CodeAgent 是一个基于原生 Python 与 ReAct 架构构建的轻量自愈代码开发助手。全系统由客户端交互、验证通道、桌面宿主、操作契约、网络传输、代码执行器、工件存储、账号会话、多模型适配层及核心运行时构成。
-        <br><br>
-        通过「读取文件 -> 编写代码 -> 运行测试 -> 捕获报错 -> 自主反思修复」形成完整的软件工程自愈开发闭环。
-      </div>
-    </div>
-
-    <!-- 结构统计 -->
-    <div>
-      <div class="insp-block-heading">架构指标统计 (Metrics)</div>
-      <div class="counts-list-box" id="insp-counts">
-        <!-- 动态键值对 -->
-      </div>
-    </div>
-
-    <!-- 源码文件索引 -->
-    <div id="section-sources">
-      <div class="insp-block-heading">对应源码文件 (Sources)</div>
-      <div class="sources-list-box" id="insp-sources">
-        <!-- 源码路径 -->
-      </div>
-    </div>
-
-    <!-- 内部构件清单 (全卡片均支持下钻) -->
-    <div id="section-parts" style="display:none;">
-      <div class="insp-block-heading" id="insp-parts-title">内部子构件清单</div>
-      <div class="parts-table-box" id="insp-parts">
-        <!-- 子构件清单 -->
-      </div>
-    </div>
-
-    <!-- 下游调用关系 -->
-    <div id="section-outgoing">
-      <div class="insp-block-heading" id="insp-outgoing-title">下游调用输出 (Outgoing)</div>
-      <div class="relations-list-box" id="insp-outgoing">
-        <!-- 关系卡片 -->
-      </div>
-    </div>
-
-    <!-- 上游依赖关系 -->
-    <div id="section-incoming">
-      <div class="insp-block-heading" id="insp-incoming-title">上游依赖输入 (Incoming)</div>
-      <div class="relations-list-box" id="insp-incoming">
-        <!-- 关系卡片 -->
-      </div>
-    </div>
-
-    <div class="timestamp-footer-note" id="insp-timestamp">
-      软件工程 PSP2 规范 · 生成时间 2026-10-02T19:14:41Z
-    </div>
+    <div class="inspector-badge" id="inspector-badge">PROJECT · READY</div>
+    <h2 class="inspector-title" id="inspector-title">CodeAgent</h2>
+    <div class="inspector-namespace" id="inspector-namespace">se.codeagent</div>
+    <div class="inspector-desc" id="inspector-desc"></div>
+    <section class="inspector-block">
+      <h2>evidence ledger</h2>
+      <div class="evidence-track" id="evidence-track"></div>
+    </section>
+    <section class="inspector-block">
+      <h2>measures</h2>
+      <div class="metric-list" id="metric-list"></div>
+    </section>
+    <section class="inspector-block">
+      <h2>sources</h2>
+      <div class="source-list" id="source-list"></div>
+    </section>
+    <section class="inspector-block" id="parts-block">
+      <h2 id="parts-heading">parts</h2>
+      <div class="part-list" id="part-list"></div>
+    </section>
+    <section class="inspector-block" id="relations-block">
+      <h2>relations</h2>
+      <div class="relation-list" id="relation-list"></div>
+    </section>
+    <div class="inspector-footer">local evidence view · no source is uploaded · generated from the checked-out project</div>
   </aside>
 </div>
-
 <script>
-/**
- * 1. 核心架构数据体系 (H1 单 Agent 11 模块 + H2 多 Agent)
- */
-const H1_DATA = {
-  id: "codeagent_root",
-  name: "CodeAgent 代码助手",
-  namespace: "se.codeagent.core",
-  kind: "项目总览",
-  desc: "CodeAgent 是一个基于原生 Python 与 ReAct 架构构建的轻量自愈代码助手。全系统由客户端交互、验证通道、桌面宿主、操作契约、网络传输、代码执行器、工件存储、账号会话、多模型适配层及核心运行时构成。<br><br>通过「读取代码 -> 本地测试 -> 捕获报错 -> 自主反思 -> 补丁修复」构建完整的软件工程自愈开发闭环。",
-  sources: [
-    "code_agent.py",
-    "code_graph.py",
-    "languages.py",
-    "DESIGN.md",
-    "README.md"
+"use strict";
+
+const COLORS = {
+  "调用": "#76a9e8",
+  "依赖": "#64d5bd",
+  "读取": "#65d890",
+  "写入": "#df8089",
+  "验证": "#d7ae69",
+  "修复": "#c875df",
+  "输出": "#a98fe5"
+};
+const EVIDENCE = [
+  { name: "Plan", detail: "任务拆解" },
+  { name: "Build", detail: "工具动作" },
+  { name: "Verify", detail: "运行结果" },
+  { name: "Review", detail: "缺陷记录" },
+  { name: "Learn", detail: "下次基线" }
+];
+
+const H1 = {
+  title: "CodeAgent",
+  namespace: "se.codeagent",
+  description: "一个保持原生、可追溯的代码助手。它把用户任务送进 ReAct 循环，再把每次工具调用、文件改动和运行结果收回到一条证据链里。",
+  metrics: { "架构模块": "9 个", "工具入口": "5 个", "最大循环": "8 步", "单次超时": "30 秒", "读取窗口": "200 行" },
+  sources: ["code_agent.py", "code_graph.py", "languages.py", "agent_visualizer.html"],
+  nodes: [
+    { id: "input", eyebrow: "入口", title: "任务入口", subtitle: "main() · CLI", x: .22, y: .08, parts: ["命令行参数", "任务提示", "仓库根目录"] },
+    { id: "model", eyebrow: "推理", title: "模型适配", subtitle: "OpenAI-compatible", x: .78, y: .08, parts: ["模型选择", "上下文消息", "响应解析"] },
+    { id: "tools", eyebrow: "契约", title: "工具注册表", subtitle: "schemas · tools", x: .17, y: .32, parts: ["build_graph", "query_graph", "read_file", "write_file", "run_python"] },
+    { id: "agent", eyebrow: "核心", title: "ReAct 循环", subtitle: "CodeAgent.run()", x: .50, y: .32, parts: ["决策", "工具调用", "观察", "停止条件"] },
+    { id: "workspace", eyebrow: "边界", title: "工作区守卫", subtitle: "path() · excluded()", x: .83, y: .32, parts: ["路径约束", "敏感文件过滤", "相对路径解析"] },
+    { id: "runner", eyebrow: "验证", title: "执行与测试", subtitle: "run_python()", x: .18, y: .58, parts: ["子进程", "30 秒超时", "stdout / stderr"] },
+    { id: "graph", eyebrow: "结构", title: "代码图谱", subtitle: "CodeGraph", x: .50, y: .58, parts: ["Tree-sitter", "缓存摘要", "关系查询"] },
+    { id: "output", eyebrow: "交付", title: "解释与结果", subtitle: "serve() · report", x: .82, y: .58, parts: ["最终回答", "图谱 HTML", "JSON 记录"] },
+    { id: "ledger", eyebrow: "证据", title: "工程证据账本", subtitle: "step · time · defect", x: .50, y: .83, parts: ["步骤与耗时", "失败→修复", "验证结论"] }
   ],
-  counts: {
-    "顶层架构模块": "11 个",
-    "内部子构件总数": "58 项",
-    "通信交互链路": "24 条",
-    "跨层业务特性": "14 项"
-  },
-  // 严格三列对称布局网格
-  tiers: [
-    // Tier 1: 客户端与验证通道
-    {
-      id: "client",
-      title: "客户端 (Client)",
-      type: "交互层",
-      partsCount: 7,
-      desc: "用户终端交互界面，提供 CLI 命令行交互与本地 HTTP 可视化服务桥接。",
-      namespace: "codeagent.client",
-      sources: ["code_agent.py:main()", "code_agent.py:serve()"],
-      tier: 1, col: "t1_left"
-    },
-    {
-      id: "proof_lanes",
-      title: "验证通道 (Proof Lanes)",
-      type: "度量层",
-      partsCount: 2,
-      desc: "PSP0 至 PSP2 软件工程质量审计通道，持续追踪 Token 消耗、执行耗时与自愈步数。",
-      namespace: "codeagent.proof_lanes",
-      sources: ["code_agent.py:token_usage", "DESIGN.md:PSP2"],
-      tier: 1, col: "t1_right"
-    },
-
-    // Tier 2: 严格三列 (左: 设计规范, 中: 桌面宿主, 右: 操作契约)
-    {
-      id: "design_system",
-      title: "设计规范 (Design System)",
-      type: "展示层",
-      partsCount: 2,
-      desc: "视觉设计规范、Anthropic 衬线排版体系与暗暖双色主题样式库。",
-      namespace: "codeagent.design",
-      sources: ["agent_visualizer.html", "DESIGN.md"],
-      tier: 2, col: 0
-    },
-    {
-      id: "desktop_host",
-      title: "桌面宿主 (Desktop Host)",
-      type: "控制层",
-      partsCount: 11,
-      desc: "桌面宿主协调中心，统筹本地开发环境、自动化测试驱动、会话状态与系统诊断。",
-      namespace: "codeagent.desktop",
-      sources: ["code_agent.py:CodeAgent", "code_agent.py:main()"],
-      tier: 2, col: 1
-    },
-    {
-      id: "operation_contract",
-      title: "操作契约 (Contract)",
-      type: "契约层",
-      partsCount: 2,
-      desc: "工具交互协议契约，严格基于 JSON Schema 校验参数与函数调用规格。",
-      namespace: "codeagent.contract",
-      sources: ["code_agent.py:schemas", "code_agent.py:SYSTEM_PROMPT"],
-      tier: 2, col: 2
-    },
-
-    // Tier 3: 严格三列 (左: 网络传输, 中: 代码执行器)
-    {
-      id: "web_transport",
-      title: "网络传输 (Web Transport)",
-      type: "通信层",
-      partsCount: 3,
-      desc: "本地 HTTP / WebSocket 协议栈，实现前端界面与 Python 代理进程的双向通信。",
-      namespace: "codeagent.transport",
-      sources: ["code_agent.py:serve()"],
-      tier: 3, col: 0
-    },
-    {
-      id: "code_runner",
-      title: "自愈执行引擎 (Code Runner)",
-      type: "执行层",
-      partsCount: 5,
-      desc: "代码沙箱执行器与自愈中枢：捕获 Traceback 异常堆栈，自主驱动反思并验证补丁代码。",
-      namespace: "codeagent.code_runner",
-      sources: ["code_agent.py:run_python()", "DESIGN.md:Self-Healing"],
-      tier: 3, col: 1
-    },
-
-    // Tier 4: 严格三列 (左: 工件存储, 中: 账号会话)
-    {
-      id: "deployment_store",
-      title: "工件存储 (Deployment Store)",
-      type: "存储层",
-      partsCount: 4,
-      desc: "代码工作区文件管理、Tree-sitter 依赖图谱缓存与 SHA256 增量检查点。",
-      namespace: "codeagent.store",
-      sources: ["code_graph.py", "code_agent.py:write_file()"],
-      tier: 4, col: 0
-    },
-    {
-      id: "account_session",
-      title: "会话鉴权 (Account Session)",
-      type: "安全层",
-      partsCount: 9,
-      desc: "模型 API 秘钥鉴权、环境变量托管与 .env 敏感凭证防泄漏脱敏机制。",
-      namespace: "codeagent.account",
-      sources: ["code_agent.py:api_key()"],
-      tier: 4, col: 1
-    },
-
-    // Tier 5: 中轴主干 (模型适配层)
-    {
-      id: "model_adapters",
-      title: "模型适配层 (Model Adapters)",
-      type: "模型层",
-      partsCount: 12,
-      desc: "大语言模型统一网关，兼容 OpenAI / DeepSeek 协议，处理 Function Calling 与滑动上下文。",
-      namespace: "codeagent.adapters",
-      sources: ["code_agent.py:OpenAI", "code_agent.py:client"],
-      tier: 5, col: 1
-    },
-
-    // Tier 6: 底座基石 (核心运行时)
-    {
-      id: "runtime",
-      title: "核心运行时 (Runtime)",
-      type: "核心底座",
-      partsCount: 13,
-      desc: "ReAct 状态机主循环驱动引擎，负责进程信号响应、超时熔断与安全边界控制。",
-      namespace: "codeagent.runtime",
-      sources: ["code_agent.py:CodeAgent.run()", "sys.executable"],
-      tier: 6, col: 1
-    }
+  edges: [
+    { from: "input", to: "agent", kind: "调用", count: 1, desc: "把自然语言任务送入循环" },
+    { from: "model", to: "agent", kind: "调用", count: 1, desc: "返回决策或工具调用" },
+    { from: "agent", to: "tools", kind: "依赖", count: 5, desc: "按契约选择一个本地动作" },
+    { from: "agent", to: "workspace", kind: "依赖", count: 2, desc: "所有路径先经过工作区约束" },
+    { from: "tools", to: "runner", kind: "验证", count: 1, desc: "运行代码并捕获退出状态" },
+    { from: "workspace", to: "runner", kind: "读取", count: 1, desc: "只把允许的文件交给执行器" },
+    { from: "runner", to: "ledger", kind: "写入", count: 1, desc: "记录失败、修复和测试结果" },
+    { from: "graph", to: "ledger", kind: "读取", count: 1, desc: "把真实符号关系加入证据" },
+    { from: "agent", to: "graph", kind: "调用", count: 2, desc: "先建图，再用关系查询缩小上下文" },
+    { from: "ledger", to: "output", kind: "输出", count: 1, desc: "将改动与证据一起交付" },
+    { from: "agent", to: "output", kind: "输出", count: 1, desc: "生成简短可复核的结果说明" }
   ],
-
-  connections: [
-    { from: "client", to: "desktop_host", kind: "调用 (calls)", count: 3, desc: "终端发起编码任务至控制层" },
-    { from: "proof_lanes", to: "desktop_host", kind: "读取 (reads)", count: 2, desc: "持续审计 Token 消耗与迭代步数" },
-    { from: "desktop_host", to: "operation_contract", kind: "实现 (implements)", count: 2, desc: "约束工具调用参数规范" },
-    { from: "desktop_host", to: "web_transport", kind: "宿主 (hosts)", count: 2, desc: "启动本地可视化 HTTP 服务" },
-    { from: "desktop_host", to: "code_runner", kind: "调用 (calls)", count: 2, desc: "分发代码运行与自愈测试指令" },
-    { from: "desktop_host", to: "account_session", kind: "依赖 (depends-on)", count: 4, desc: "加载 API 密钥与环境变量" },
-    { from: "desktop_host", to: "model_adapters", kind: "调用 (calls)", count: 8, desc: "向 LLM 发送推理与工具调用决策" },
-    { from: "desktop_host", to: "runtime", kind: "依赖 (depends-on)", count: 2, desc: "基于底座状态机驱动主循环" },
-
-    { from: "operation_contract", to: "code_runner", kind: "生成 (generates)", count: 1, desc: "提供工具执行标准输入模式" },
-    { from: "code_runner", to: "runtime", kind: "依赖 (depends-on)", count: 2, desc: "在宿主子进程中安全沙箱运行" },
-
-    { from: "web_transport", to: "deployment_store", kind: "写入 (writes)", count: 1, desc: "保存并刷新图谱 JSON 缓存" },
-    { from: "web_transport", to: "account_session", kind: "调用 (calls)", count: 3, desc: "验证远程调用接口身份" },
-    { from: "deployment_store", to: "model_adapters", kind: "读取 (reads)", count: 1, desc: "读取上下文代码片段供模型参考" },
-    
-    { from: "account_session", to: "model_adapters", kind: "调用 (calls)", count: 1, desc: "注入校验后的 API Token" },
-    { from: "account_session", to: "runtime", kind: "依赖 (depends-on)", count: 5, desc: "维持会话上下文生命周期" },
-
-    { from: "model_adapters", to: "runtime", kind: "实现 (implements)", count: 9, desc: "将思考与动作接入 ReAct 状态机" }
-  ],
-
-  // 14 项完整业务特性 (中文精炼)
   features: [
-    { id: "account", name: "会话鉴权", modules: ["account_session", "desktop_host"], desc: "模型 API 秘钥解析、本地存储托管与安全鉴权。" },
-    { id: "apps", name: "应用宿主", modules: ["desktop_host", "client"], desc: "本地 CLI 命令交互与浏览器图谱自动拉起。" },
-    { id: "chat", name: "对话推理", modules: ["client", "model_adapters", "runtime"], desc: "ReAct 核心意图解析与工具调用决策流。" },
-    { id: "cloud_choice", name: "多模型中继", modules: ["model_adapters", "desktop_host"], desc: "支持 DeepSeek、OpenAI、Qwen 等多端大模型自由切换。" },
-    { id: "code", name: "代码自愈", modules: ["code_runner", "desktop_host", "runtime"], desc: "运行测试 -> 捕获 Traceback -> 反思推理 -> 代码热修补闭环。" },
-    { id: "design_system", name: "设计规范", modules: ["design_system", "client"], desc: "Anthropic 衬线体、双色主题水波纹切换与高精度总线布局。" },
-    { id: "events", name: "事件广播", modules: ["web_transport", "runtime"], desc: "执行状态、日志更新与图谱重建事件实时同步。" },
-    { id: "files", name: "文件沙箱", modules: ["deployment_store", "code_runner"], desc: "防路径穿透读写、单次 200 行分页读取与安全写入保卫。" },
-    { id: "grants", name: "执行权限", modules: ["account_session", "desktop_host"], desc: "子进程执行边界与只读工作区保护机制。" },
-    { id: "history", name: "上下文滑动", modules: ["runtime", "deployment_store"], desc: "动态修剪历史对话轮次，防止超过模型 Token 预算上限。" },
-    { id: "integrations", name: "外部工具", modules: ["web_transport", "model_adapters"], desc: "标准 Function Calling 协议下的自定义函数扩展。" },
-    { id: "schedules", name: "熔断守护", modules: ["runtime", "code_runner"], desc: "最大步数限制（Max Steps）与子进程 30 秒超时强制中断。" },
-    { id: "secrets", name: "秘钥脱敏", modules: ["desktop_host", "runtime", "account_session"], desc: "绝对禁止将 .env、auth.json 等敏感私密信息载入模型上下文。" },
-    { id: "values", name: "契约校验", modules: ["operation_contract", "client"], desc: "工具传参前置 JSON Schema 强类型约束。" }
+    { id: "trace", tag: "THESIS", name: "变更到证据", detail: "任务 → 改动 → 测试", modules: ["input", "agent", "runner", "ledger"], description: "把一次代码修改的来路和去向放在同一条轨道上，老师可以顺着证据检查结论。" },
+    { id: "context", tag: "CORE", name: "上下文收敛", detail: "图谱先行", modules: ["graph", "agent", "model"], description: "先在本地找到相关文件和符号，再把最小证据交给模型，减少无关上下文。" },
+    { id: "guard", tag: "SAFETY", name: "工作区边界", detail: "路径可证明", modules: ["workspace", "tools"], description: "读写和执行都经过仓库边界检查，敏感文件不会被带进上下文。" },
+    { id: "verify", tag: "QUALITY", name: "可重复验证", detail: "退出码 + 输出", modules: ["runner", "ledger"], description: "每次动作都留下退出码、标准输出和错误输出，让“修好了”有证据。" },
+    { id: "repair", tag: "LOOP", name: "错误回流", detail: "观察 → 再决策", modules: ["runner", "agent", "model"], description: "失败不是终点，运行反馈会回到下一轮决策，直到成功或触发步数上限。" },
+    { id: "handoff", tag: "DELIVERY", name: "可读交付", detail: "图谱 + 结论", modules: ["output", "ledger"], description: "结果同时包含代码关系、验证记录和简短解释，方便继续维护。" }
   ]
 };
 
-/**
- * 2. 全量 11 个模块的完整下钻子视图 (解决 2part 卡片点不开问题)
- */
-const ALL_SUBVIEWS = {
-  // 1. 验证通道 (2 parts)
-  "proof_lanes": {
-    name: "验证通道 (Proof Lanes)",
-    namespace: "codeagent.proof_lanes",
-    desc: "PSP 个人软件工程度量通道，用于量化代码生成成本与自愈效率。",
-    sources: ["code_agent.py:token_usage", "DESIGN.md:PSP2"],
-    counts: { "子构件": 2, "外部端口": 2 },
-    nodes: [
-      { id: "sub_pl_engine", title: "形式化契约引擎", type: "构件", col: 0, row: 0 },
-      { id: "sub_pl_audit", title: "质量度量通道", type: "构件", col: 1, row: 0 },
-      { id: "out_pl_host", title: "外部接口: 桌面宿主", type: "外部端口", col: 0, row: 1 },
-      { id: "out_pl_rt", title: "外部接口: 核心运行时", type: "外部端口", col: 1, row: 1 }
-    ],
-    connections: [
-      { from: "sub_pl_engine", to: "sub_pl_audit", kind: "调用 (calls)", count: 1, desc: "传递测试验证结果与耗时指标" },
-      { from: "sub_pl_audit", to: "out_pl_host", kind: "读取 (reads)", count: 1, desc: "向桌面宿主提交 PSP 质量报告" }
-    ]
-  },
+const H2 = {
+  title: "CodeAgent · 协同验证",
+  namespace: "se.codeagent.handoff",
+  description: "把同一条证据链拆给几个职责单一的角色：规划、执行、审阅和记录。它是 H1 的可扩展演示，核心工具契约保持不变。",
+  metrics: { "协同角色": "4 个", "共享账本": "1 份", "交接边界": "3 处", "最大循环": "8 步", "工具入口": "5 个" },
+  sources: ["code_agent.py", "agent_visualizer.html"],
+  nodes: [
+    { id: "h2_planner", eyebrow: "PLAN", title: "任务规划", subtitle: "scope · estimate", x: .18, y: .18, parts: ["拆解目标", "估计范围", "验收条件"] },
+    { id: "h2_executor", eyebrow: "BUILD", title: "工具执行", subtitle: "read · write · run", x: .50, y: .18, parts: ["读取", "修改", "执行"] },
+    { id: "h2_reviewer", eyebrow: "REVIEW", title: "结果审阅", subtitle: "diff · defect", x: .82, y: .18, parts: ["检查差异", "记录缺陷", "决定回流"] },
+    { id: "h2_memory", eyebrow: "MEMORY", title: "上下文记忆", subtitle: "graph · notes", x: .30, y: .54, parts: ["关系查询", "短上下文", "历史摘要"] },
+    { id: "h2_ledger", eyebrow: "PROOF", title: "共享证据账本", subtitle: "one source of truth", x: .70, y: .54, parts: ["时间线", "测试结果", "学习基线"] },
+    { id: "h2_result", eyebrow: "DELIVERY", title: "交付说明", subtitle: "result · next step", x: .50, y: .82, parts: ["结论", "风险", "下一步"] }
+  ],
+  edges: [
+    { from: "h2_planner", to: "h2_executor", kind: "调用", count: 1, desc: "把可验收任务交给执行角色" },
+    { from: "h2_executor", to: "h2_reviewer", kind: "验证", count: 1, desc: "把实际输出交给审阅角色" },
+    { from: "h2_reviewer", to: "h2_executor", kind: "修复", count: 1, desc: "失败时带着缺陷回流" },
+    { from: "h2_executor", to: "h2_memory", kind: "写入", count: 1, desc: "保存本次改动涉及的符号" },
+    { from: "h2_memory", to: "h2_planner", kind: "读取", count: 1, desc: "为下一轮计划提供最小上下文" },
+    { from: "h2_reviewer", to: "h2_ledger", kind: "写入", count: 1, desc: "记录测试结果与缺陷位置" },
+    { from: "h2_ledger", to: "h2_result", kind: "输出", count: 1, desc: "生成可复核的交付说明" },
+    { from: "h2_planner", to: "h2_ledger", kind: "依赖", count: 1, desc: "记录估计与实际的差异" }
+  ],
+  features: H1.features
+};
 
-  // 2. 设计系统 (2 parts)
-  "design_system": {
-    name: "设计系统 (Design System)",
-    namespace: "codeagent.design",
-    desc: "定义界面的排版法则、Anthropic 衬线字体栈与双色主题切换体系。",
-    sources: ["agent_visualizer.html", "DESIGN.md"],
-    counts: { "子构件": 2, "外部端口": 2 },
-    nodes: [
-      { id: "sub_ds_tokens", title: "色彩与字形规范", type: "构件", col: 0, row: 0 },
-      { id: "sub_ds_lib", title: "原子组件库", type: "构件", col: 1, row: 0 },
-      { id: "out_ds_client", title: "外部接口: 客户端", type: "外部端口", col: 0, row: 1 },
-      { id: "out_ds_host", title: "外部接口: 桌面宿主", type: "外部端口", col: 1, row: 1 }
-    ],
-    connections: [
-      { from: "sub_ds_tokens", to: "sub_ds_lib", kind: "实现 (implements)", count: 1, desc: "注入 Anthropic 衬线设计标定" },
-      { from: "sub_ds_lib", to: "out_ds_client", kind: "组合 (composes)", count: 1, desc: "提供图谱组件样式支持" }
-    ]
-  },
-
-  // 3. 操作契约 (2 parts)
-  "operation_contract": {
-    name: "操作契约 (Contract)",
-    namespace: "codeagent.contract",
-    desc: "定义工具调用的结构契约，拦截不合规的模型调用参数。",
-    sources: ["code_agent.py:schemas"],
-    counts: { "子构件": 2, "外部端口": 2 },
-    nodes: [
-      { id: "sub_oc_schema", title: "工具契约规范 (Schema)", type: "构件", col: 0, row: 0 },
-      { id: "sub_oc_validator", title: "参数校验器", type: "构件", col: 1, row: 0 },
-      { id: "out_oc_runner", title: "外部接口: 代码执行器", type: "外部端口", col: 0, row: 1 },
-      { id: "out_oc_host", title: "外部接口: 桌面宿主", type: "外部端口", col: 1, row: 1 }
-    ],
-    connections: [
-      { from: "sub_oc_schema", to: "sub_oc_validator", kind: "实现 (implements)", count: 1, desc: "编译 JSON Schema 标准字典" },
-      { from: "sub_oc_validator", to: "out_oc_runner", kind: "生成 (generates)", count: 1, desc: "向执行器输出已校验调用命令" }
-    ]
-  },
-
-  // 4. 客户端 (7 parts)
-  "client": {
-    name: "客户端 (Client)",
-    namespace: "codeagent.client",
-    desc: "交互终端外壳，统一组织 CLI 交互回路与本地可视化呈现服务。",
-    sources: ["code_agent.py:main()", "code_agent.py:serve()"],
-    counts: { "子构件": 4, "外部端口": 2 },
-    nodes: [
-      { id: "sub_cl_cli", title: "终端命令行解析", type: "构件", col: 0, row: 0 },
-      { id: "sub_cl_repl", title: "多轮交互循环", type: "构件", col: 1, row: 0 },
-      { id: "sub_cl_web", title: "本地可视化服务", type: "构件", col: 0, row: 1 },
-      { id: "sub_cl_bridge", title: "浏览器自动唤醒", type: "构件", col: 1, row: 1 },
-      { id: "out_cl_host", title: "外部接口: 桌面宿主", type: "外部端口", col: 0, row: 2 },
-      { id: "out_cl_trans", title: "外部接口: 网络传输", type: "外部端口", col: 1, row: 2 }
-    ],
-    connections: [
-      { from: "sub_cl_cli", to: "sub_cl_repl", kind: "调用 (calls)", count: 1, desc: "初始化对话循环" },
-      { from: "sub_cl_web", to: "sub_cl_bridge", kind: "生成 (generates)", count: 1, desc: "启动浏览器展示页面" },
-      { from: "sub_cl_repl", to: "out_cl_host", kind: "调用 (calls)", count: 1, desc: "将用户目标分发至控制宿主" }
-    ]
-  },
-
-  // 5. 桌面宿主 (11 parts)
-  "desktop_host": {
-    name: "桌面宿主 (Desktop Host)",
-    namespace: "codeagent.desktop",
-    desc: "核心编排宿主，统领自愈状态追踪、账号会话鉴权与模型调用控制。",
-    sources: ["code_agent.py:CodeAgent"],
-    counts: { "子构件": 6, "外部端口": 3 },
-    nodes: [
-      { id: "sub_dh_facade", title: "调度总线中心", type: "构件", col: 0, row: 0 },
-      { id: "sub_dh_diag", title: "系统健康诊断", type: "构件", col: 1, row: 0 },
-      { id: "sub_dh_cmd", title: "命令路由器", type: "构件", col: 0, row: 1 },
-      { id: "sub_dh_vault", title: "秘钥保险库", type: "构件", col: 1, row: 1 },
-      { id: "out_dh_runner", title: "外部接口: 代码执行器", type: "外部端口", col: 0, row: 2 },
-      { id: "out_dh_adapter", title: "外部接口: 模型适配层", type: "外部端口", col: 1, row: 2 }
-    ],
-    connections: [
-      { from: "sub_dh_cmd", to: "sub_dh_facade", kind: "调用 (calls)", count: 1, desc: "路由至调度中心" },
-      { from: "sub_dh_facade", to: "out_dh_adapter", kind: "调用 (calls)", count: 1, desc: "请求模型生成代码" },
-      { from: "sub_dh_facade", to: "out_dh_runner", kind: "调用 (calls)", count: 1, desc: "触发沙箱测试执行" }
-    ]
-  },
-
-  // 6. 网络传输 (3 parts)
-  "web_transport": {
-    name: "网络传输 (Web Transport)",
-    namespace: "codeagent.transport",
-    desc: "轻量 HTTP / WS 服务器，实现图谱静态资源传输与状态双向同步。",
-    sources: ["code_agent.py:serve()"],
-    counts: { "子构件": 3, "外部端口": 2 },
-    nodes: [
-      { id: "sub_wt_server", title: "简易 HTTP 伺服器", type: "构件", col: 0, row: 0 },
-      { id: "sub_wt_mux", title: "路由多路复用", type: "构件", col: 1, row: 0 },
-      { id: "sub_wt_sync", title: "图谱实时同步器", type: "构件", col: 0, row: 1 },
-      { id: "out_wt_store", title: "外部接口: 工件存储", type: "外部端口", col: 1, row: 1 }
-    ],
-    connections: [
-      { from: "sub_wt_server", to: "sub_wt_mux", kind: "调用 (calls)", count: 1, desc: "派发 HTTP 请求" },
-      { from: "sub_wt_mux", to: "sub_wt_sync", kind: "调用 (calls)", count: 1, desc: "刷新图谱 JSON" },
-      { from: "sub_wt_sync", to: "out_wt_store", kind: "写入 (writes)", count: 1, desc: "同步缓存数据" }
-    ]
-  },
-
-  // 7. 自愈代码执行器 (5 parts)
-  "code_runner": {
-    name: "自愈执行引擎 (Code Runner)",
-    namespace: "codeagent.code_runner",
-    desc: "PSP2 自愈闭环核心：在安全子进程中测试代码，捕获报错并驱动自我修复。",
-    sources: ["code_agent.py:run_python()", "DESIGN.md:Self-Healing"],
-    counts: { "子构件": 4, "外部端口": 2 },
-    nodes: [
-      { id: "sub_cr_spawn", title: "子进程沙箱执行器", type: "构件", col: 0, row: 0 },
-      { id: "sub_cr_guard", title: "30s 熔断守护阀", type: "构件", col: 1, row: 0 },
-      { id: "sub_cr_sniff", title: "Traceback 错误嗅探", type: "构件", col: 0, row: 1 },
-      { id: "sub_cr_patch", title: "补丁回归验证器", type: "构件", col: 1, row: 1 },
-      { id: "out_cr_rt", title: "外部接口: 核心运行时", type: "外部端口", col: 0, row: 2 },
-      { id: "out_cr_llm", title: "外部接口: 模型适配层", type: "外部端口", col: 1, row: 2 }
-    ],
-    connections: [
-      { from: "sub_cr_spawn", to: "sub_cr_guard", kind: "依赖 (depends-on)", count: 1, desc: "超时自动终止进程" },
-      { from: "sub_cr_spawn", to: "sub_cr_sniff", kind: "调用 (calls)", count: 1, desc: "拦截异常退出的 Traceback" },
-      { from: "sub_cr_sniff", to: "out_cr_llm", kind: "调用 (calls)", count: 1, desc: "回传报错引导反思补丁" },
-      { from: "sub_cr_patch", to: "sub_cr_spawn", kind: "自愈修复 (heals)", count: 1, desc: "二次验证确认修复" }
-    ]
-  },
-
-  // 8. 工件存储 (4 parts)
-  "deployment_store": {
-    name: "工件存储 (Deployment Store)",
-    namespace: "codeagent.store",
-    desc: "维护本地源码文件系统、Tree-sitter 依赖索引与缓存持久化。",
-    sources: ["code_graph.py", "languages.py"],
-    counts: { "子构件": 3, "外部端口": 2 },
-    nodes: [
-      { id: "sub_ds_fs", title: "安全原子文件读写", type: "构件", col: 0, row: 0 },
-      { id: "sub_ds_ast", title: "Tree-sitter 依赖图", type: "构件", col: 1, row: 0 },
-      { id: "sub_ds_sha", title: "SHA256 增量缓存", type: "构件", col: 0, row: 1 },
-      { id: "out_ds_runner", title: "外部接口: 代码执行器", type: "外部端口", col: 1, row: 1 }
-    ],
-    connections: [
-      { from: "sub_ds_fs", to: "sub_ds_sha", kind: "读取 (reads)", count: 1, desc: "校验源码摘要防止重复解析" },
-      { from: "sub_ds_ast", to: "sub_ds_sha", kind: "写入 (writes)", count: 1, desc: "保存 graph.json 缓存" }
-    ]
-  },
-
-  // 9. 会话鉴权 (9 parts)
-  "account_session": {
-    name: "会话鉴权 (Account Session)",
-    namespace: "codeagent.account",
-    desc: "托管模型 API 秘钥，实施敏感数据拦截保护与环境配置文件解析。",
-    sources: ["code_agent.py:api_key()"],
-    counts: { "子构件": 4, "外部端口": 2 },
-    nodes: [
-      { id: "sub_as_env", title: "环境变量扫描器", type: "构件", col: 0, row: 0 },
-      { id: "sub_as_mask", title: "敏感信息脱敏器", type: "构件", col: 1, row: 0 },
-      { id: "sub_as_token", title: "Token 凭据托管", type: "构件", col: 0, row: 1 },
-      { id: "sub_as_quota", title: "配额消耗防护", type: "构件", col: 1, row: 1 },
-      { id: "out_as_llm", title: "外部接口: 模型适配层", type: "外部端口", col: 0, row: 2 },
-      { id: "out_as_rt", title: "外部接口: 核心运行时", type: "外部端口", col: 1, row: 2 }
-    ],
-    connections: [
-      { from: "sub_as_env", to: "sub_as_token", kind: "读取 (reads)", count: 1, desc: "解析本地 API 密钥" },
-      { from: "sub_as_token", to: "sub_as_mask", kind: "依赖 (depends-on)", count: 1, desc: "防止秘钥泄漏至上下文" },
-      { from: "sub_as_token", to: "out_as_llm", kind: "调用 (calls)", count: 1, desc: "为 API 请求注入 Authorization" }
-    ]
-  },
-
-  // 10. 模型适配层 (12 parts)
-  "model_adapters": {
-    name: "模型适配层 (Model Adapters)",
-    namespace: "codeagent.adapters",
-    desc: "统一接入 OpenAI、DeepSeek 等大模型接口，实现流式传输与函数调用解析。",
-    sources: ["code_agent.py:OpenAI"],
-    counts: { "子构件": 4, "外部端口": 2 },
-    nodes: [
-      { id: "sub_ma_openai", title: "OpenAI 协议客户端", type: "构件", col: 0, row: 0 },
-      { id: "sub_ma_schema", title: "函数调用参数解析", type: "构件", col: 1, row: 0 },
-      { id: "sub_ma_window", title: "滑动上下文窗口", type: "构件", col: 0, row: 1 },
-      { id: "sub_ma_meter", title: "Token 消耗计量", type: "构件", col: 1, row: 1 },
-      { id: "out_ma_rt", title: "外部接口: 核心运行时", type: "外部端口", col: 0, row: 2 },
-      { id: "out_ma_host", title: "外部接口: 桌面宿主", type: "外部端口", col: 1, row: 2 }
-    ],
-    connections: [
-      { from: "sub_ma_openai", to: "sub_ma_schema", kind: "调用 (calls)", count: 1, desc: "提取 tool_calls 参数结构" },
-      { from: "sub_ma_openai", to: "sub_ma_meter", kind: "读取 (reads)", count: 1, desc: "累加 prompt 与 completion token" },
-      { from: "sub_ma_schema", to: "out_ma_rt", kind: "调用 (calls)", count: 1, desc: "回传动作至 ReAct 状态机" }
-    ]
-  },
-
-  // 11. 核心运行时 (13 parts)
-  "runtime": {
-    name: "核心运行时 (Runtime)",
-    namespace: "codeagent.runtime",
-    desc: "智能体大脑驱动层，负责 Thought-Action-Observation 状态转换与防死循环保护。",
+const SUBVIEWS = {
+  agent: {
+    title: "ReAct 循环",
+    namespace: "se.codeagent.loop",
+    description: "循环只做三件事：向模型请求下一步、执行一个经过契约约束的工具、把真实结果作为观察回传。成功、停止和异常都有明确出口。",
     sources: ["code_agent.py:CodeAgent.run()"],
-    counts: { "子构件": 4, "外部端口": 2 },
+    metrics: { "工具回合": "≤ 8", "消息角色": "3 种", "失败出口": "可重试" },
     nodes: [
-      { id: "sub_rt_react", title: "ReAct 状态转换机", type: "构件", col: 0, row: 0 },
-      { id: "sub_rt_loop", title: "观察-反思主循环", type: "构件", col: 1, row: 0 },
-      { id: "sub_rt_fuse", title: "最大步数安全熔断", type: "构件", col: 0, row: 1 },
-      { id: "sub_rt_sig", title: "进程中断信号捕获", type: "构件", col: 1, row: 1 },
-      { id: "out_rt_host", title: "外部接口: 桌面宿主", type: "外部端口", col: 0, row: 2 },
-      { id: "out_rt_runner", title: "外部接口: 代码执行器", type: "外部端口", col: 1, row: 2 }
+      { id: "agent_decide", eyebrow: "THOUGHT", title: "决策", subtitle: "chat.completions", x: .25, y: .25, parts: ["system prompt", "任务上下文"] },
+      { id: "agent_action", eyebrow: "ACTION", title: "工具动作", subtitle: "tool_calls", x: .75, y: .25, parts: ["名称", "JSON 参数"] },
+      { id: "agent_observe", eyebrow: "OBSERVE", title: "真实观察", subtitle: "tool result", x: .25, y: .65, parts: ["退出码", "stdout / stderr"] },
+      { id: "agent_stop", eyebrow: "STOP", title: "停止条件", subtitle: "stop · max_steps", x: .75, y: .65, parts: ["完成", "熔断"] }
     ],
-    connections: [
-      { from: "sub_rt_react", to: "sub_rt_loop", kind: "调用 (calls)", count: 1, desc: "驱动单步推理" },
-      { from: "sub_rt_loop", to: "sub_rt_fuse", kind: "依赖 (depends-on)", count: 1, desc: "步数超限触发保护" },
-      { from: "sub_rt_loop", to: "out_rt_runner", kind: "调用 (calls)", count: 1, desc: "下发工具动作" }
+    edges: [
+      { from: "agent_decide", to: "agent_action", kind: "调用", count: 1, desc: "模型选择工具并返回参数" },
+      { from: "agent_action", to: "agent_observe", kind: "验证", count: 1, desc: "工具执行产生真实结果" },
+      { from: "agent_observe", to: "agent_decide", kind: "读取", count: 1, desc: "观察进入下一轮上下文" },
+      { from: "agent_observe", to: "agent_stop", kind: "输出", count: 1, desc: "成功或达到安全边界" }
+    ]
+  },
+  runner: {
+    title: "执行与测试",
+    namespace: "se.codeagent.runner",
+    description: "执行器把代码放进独立子进程，固定超时并保留两路输出。这样每个修复动作都能回到可复核的测试证据。",
+    sources: ["code_agent.py:run_python()"],
+    metrics: { "执行方式": "子进程", "超时": "30 秒", "保留输出": "6,000 + 3,000 字符" },
+    nodes: [
+      { id: "run_input", eyebrow: "INPUT", title: "代码或文件", subtitle: "code_or_file", x: .25, y: .26, parts: ["文件路径", "单行代码"] },
+      { id: "run_process", eyebrow: "PROCESS", title: "受限进程", subtitle: "subprocess.run()", x: .75, y: .26, parts: ["cwd", "timeout"] },
+      { id: "run_result", eyebrow: "RESULT", title: "退出结果", subtitle: "returncode", x: .25, y: .68, parts: ["stdout", "stderr"] },
+      { id: "run_ledger", eyebrow: "PROOF", title: "证据记录", subtitle: "ledger event", x: .75, y: .68, parts: ["失败位置", "修复依据"] }
+    ],
+    edges: [
+      { from: "run_input", to: "run_process", kind: "调用", count: 1, desc: "选择文件模式或 -c 模式" },
+      { from: "run_process", to: "run_result", kind: "验证", count: 1, desc: "捕获退出码和输出" },
+      { from: "run_result", to: "run_ledger", kind: "写入", count: 1, desc: "保存一次可复核运行" }
     ]
   }
 };
 
-/**
- * 3. 页面状态与切换控制器
- */
-let currentMode = "h1";
-let currentScope = "root";
-let selectedItem = null;
-let hoveredNodeId = null;
-let hoveredFeatureId = null;
+let state = { mode: "h1", scope: null, selected: null, highlight: null };
+const $ = (selector) => document.querySelector(selector);
+const svgNS = "http://www.w3.org/2000/svg";
 
-const CONNECTION_META = {
-  "依赖 (depends-on)": { color: "var(--c-depends)", count: 15, arrow: "→", style: "solid" },
-  "宿主 (hosts)":      { color: "var(--c-hosts)", count: 4,  arrow: "→", style: "solid" },
-  "调用 (calls)":      { color: "var(--c-calls)", count: 15, arrow: "→", style: "solid" },
-  "实现 (implements)": { color: "var(--c-implements)", count: 13, arrow: "→", style: "solid" },
-  "生成 (generates)":  { color: "var(--c-generates)", count: 3,  arrow: "⇢", style: "dashed" },
-  "读取 (reads)":      { color: "var(--c-reads)", count: 2,  arrow: "⇢", style: "dotted" },
-  "写入 (writes)":     { color: "var(--c-writes)", count: 4,  arrow: "→", style: "solid" },
-  "组合 (composes)":   { color: "var(--c-composes)", count: 44, arrow: "⇢", style: "dashed" },
-  "自愈修复 (heals)":  { color: "var(--c-heals)", count: 2,  arrow: "→", style: "solid" }
-};
+function activeData() {
+  if (state.scope) return SUBVIEWS[state.scope] || (state.mode === "h2" ? H2 : H1);
+  return state.mode === "h2" ? H2 : H1;
+}
+function nodeById(id, data) { return (data.nodes || []).find((node) => node.id === id); }
+function colorFor(kind) { return COLORS[kind] || COLORS["调用"]; }
 
-window.addEventListener("DOMContentLoaded", () => {
-  renderLegend();
-  renderSystem();
-  setupKeyboard();
-});
-
-/**
- * 4. 极致丝滑的圆形波纹扩散暗暖切换动效
- */
-function toggleThemeWithRipple(event) {
-  const html = document.documentElement;
-  const isDark = html.getAttribute("data-theme") === "dark";
-  const newTheme = isDark ? "warm" : "dark";
-
-  // 获取按钮中心坐标
-  const rect = event.currentTarget.getBoundingClientRect();
-  const clickX = rect.left + rect.width / 2;
-  const clickY = rect.top + rect.height / 2;
-
-  // 计算扩散至全屏所需最大半径
-  const maxR = Math.hypot(
-    Math.max(clickX, window.innerWidth - clickX),
-    Math.max(clickY, window.innerHeight - clickY)
-  );
-
-  // 创建动态光圈遮罩
-  const ripple = document.createElement("div");
-  ripple.className = "theme-ripple-overlay";
-  ripple.style.left = `${clickX}px`;
-  ripple.style.top = `${clickY}px`;
-  ripple.style.width = `${maxR * 2}px`;
-  ripple.style.height = `${maxR * 2}px`;
-  ripple.style.backgroundColor = isDark ? "#fcfaf7" : "#0d1117";
-
-  document.body.appendChild(ripple);
-
-  // 触发扩散动画
-  requestAnimationFrame(() => {
-    ripple.style.transform = "translate(-50%, -50%) scale(1)";
-    setTimeout(() => {
-      html.setAttribute("data-theme", newTheme);
-      document.getElementById("theme-btn-label").innerText = 
-        newTheme === "warm" ? "暗黑模式 (OLED)" : "暖色模式 (Claude)";
-      renderSystem();
-
-      ripple.style.opacity = "0";
-      setTimeout(() => ripple.remove(), 400);
-    }, 320);
+function renderLegend(data) {
+  const kinds = [];
+  (data.edges || []).forEach((edge) => { if (!kinds.includes(edge.kind)) kinds.push(edge.kind); });
+  $("#legend").innerHTML = '<span class="legend-label">LINKS</span>' + kinds.map((kind) => {
+    return '<span class="legend-item" data-kind="' + kind + '"><i class="legend-dot" style="background:' +
+      colorFor(kind) + '"></i>' + kind + "</span>";
+  }).join("");
+  $("#legend").querySelectorAll(".legend-item").forEach((item) => {
+    item.addEventListener("mouseenter", () => highlightKind(item.dataset.kind));
+    item.addEventListener("mouseleave", clearHighlight);
   });
 }
 
-function setSystemMode(mode) {
-  currentMode = mode;
-  currentScope = "root";
-  selectedItem = null;
-  document.getElementById("btn-mode-h1").classList.toggle("active", mode === "h1");
-  document.getElementById("btn-mode-h2").classList.toggle("active", mode === "h2");
-  renderSystem();
+function renderGraph(data) {
+  const container = $("#nodes-container");
+  const svg = $("#graph-svg");
+  container.innerHTML = "";
+  svg.innerHTML = "";
+  (data.nodes || []).forEach((node, index) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "module-card" + (node.type === "port" ? " port" : "");
+    card.id = "node-" + node.id;
+    card.style.left = (node.x * 100) + "%";
+    card.style.top = (node.y * 100) + "%";
+    card.style.setProperty("--delay", (index * 55) + "ms");
+    card.innerHTML =
+      '<span class="card-head"><span class="card-eyebrow">' + node.eyebrow +
+      '</span><span class="card-status">READY</span></span><span class="card-title">' +
+      node.title + '</span><span class="card-foot"><span>' + node.subtitle +
+      '</span><span class="card-arrow">' + (node.parts && node.parts.length ? "›" : "") + "</span></span>";
+    card.addEventListener("mouseenter", () => highlightNode(node.id));
+    card.addEventListener("mouseleave", clearHighlight);
+    card.addEventListener("click", () => {
+      if (state.scope === null && SUBVIEWS[node.id]) drillDown(node.id);
+      else selectItem({ type: "module", node: node, data: data });
+    });
+    container.appendChild(card);
+  });
+  requestAnimationFrame(() => drawEdges(data));
 }
 
-function renderLegend() {
-  const container = document.getElementById("connections-legend");
-  container.innerHTML = `<span class="legend-caption-label">链路</span>`;
+function cardMetrics() {
+  const surface = $("#graph-surface");
+  const width = surface.clientWidth;
+  const height = surface.clientHeight;
+  const cardWidth = Math.min(220, Math.max(142, width * .215));
+  const cardHeight = Math.min(80, Math.max(68, height * .18));
+  surface.style.setProperty("--card-width", cardWidth + "px");
+  surface.style.setProperty("--card-height", cardHeight + "px");
+  return { width: width, height: height, cardWidth: cardWidth, cardHeight: cardHeight };
+}
 
-  Object.entries(CONNECTION_META).forEach(([kind, meta]) => {
-    const capsule = document.createElement("span");
-    capsule.className = "legend-capsule";
-    capsule.innerHTML = `
-      <span class="arrow-icon" style="color:${meta.color};">${meta.arrow}</span>
-      <span>${kind.split(" ")[0]}</span>
-      <span class="count-tag">${meta.count}</span>
-    `;
-    capsule.addEventListener("mouseenter", () => highlightConnectionKind(kind));
-    capsule.addEventListener("mouseleave", resetHighlight);
-    container.appendChild(capsule);
+function marker(defs, kind) {
+  const id = "arrow-" + kind;
+  const mark = document.createElementNS(svgNS, "marker");
+  mark.id = id;
+  mark.setAttribute("viewBox", "0 0 10 10");
+  mark.setAttribute("refX", "8");
+  mark.setAttribute("refY", "5");
+  mark.setAttribute("markerWidth", "5");
+  mark.setAttribute("markerHeight", "5");
+  mark.setAttribute("orient", "auto");
+  const path = document.createElementNS(svgNS, "path");
+  path.setAttribute("d", "M 0 1 L 9 5 L 0 9 z");
+  path.setAttribute("fill", colorFor(kind));
+  mark.appendChild(path);
+  defs.appendChild(mark);
+  return id;
+}
+
+function drawEdges(data) {
+  const svg = $("#graph-svg");
+  const metrics = cardMetrics();
+  (data.nodes || []).forEach((node) => {
+    const card = $("#node-" + node.id);
+    if (!card) return;
+    card.style.left = (node.x * metrics.width - metrics.cardWidth / 2) + "px";
+    card.style.top = (node.y * metrics.height) + "px";
+  });
+  svg.setAttribute("viewBox", "0 0 " + metrics.width + " " + metrics.height);
+  const defs = document.createElementNS(svgNS, "defs");
+  const markers = {};
+  (data.edges || []).forEach((edge) => { markers[edge.kind] = markers[edge.kind] || marker(defs, edge.kind); });
+  svg.appendChild(defs);
+  const index = {};
+  (data.nodes || []).forEach((node) => { index[node.id] = node; });
+  (data.edges || []).forEach((edge, edgeIndex) => {
+    const source = index[edge.from];
+    const target = index[edge.to];
+    if (!source || !target) return;
+    const sx = source.x * metrics.width + metrics.cardWidth / 2;
+    const tx = target.x * metrics.width + metrics.cardWidth / 2;
+    const down = target.y >= source.y;
+    const sy = source.y * metrics.height + (down ? metrics.cardHeight : 0);
+    const ty = target.y * metrics.height + (down ? 0 : metrics.cardHeight);
+    const bend = Math.max(24, Math.abs(ty - sy) * .48);
+    const d = "M " + sx + " " + sy + " C " + sx + " " + (down ? sy + bend : sy - bend) +
+      ", " + tx + " " + (down ? ty - bend : ty + bend) + ", " + tx + " " + ty;
+    const path = document.createElementNS(svgNS, "path");
+    path.id = "edge-" + edgeIndex;
+    path.classList.add("wire");
+    if (edge.kind === "依赖") path.classList.add("solid");
+    if (edge.kind === "读取") path.classList.add("dotted");
+    path.style.setProperty("--delay", (edgeIndex * 75) + "ms");
+    path.setAttribute("d", d);
+    path.setAttribute("stroke", colorFor(edge.kind));
+    path.setAttribute("marker-end", "url(#" + markers[edge.kind] + ")");
+    path.addEventListener("mouseenter", (event) => showEdge(edge, event));
+    path.addEventListener("mouseleave", hideEdge);
+    svg.appendChild(path);
+    if (edge.count > 1) {
+      const badge = document.createElementNS(svgNS, "g");
+      badge.classList.add("wire-badge");
+      const circle = document.createElementNS(svgNS, "circle");
+      const label = document.createElementNS(svgNS, "text");
+      const mx = (sx + tx) / 2;
+      const my = (sy + ty) / 2;
+      circle.setAttribute("cx", mx);
+      circle.setAttribute("cy", my);
+      circle.setAttribute("r", "8");
+      label.setAttribute("x", mx);
+      label.setAttribute("y", my);
+      label.textContent = edge.count;
+      badge.appendChild(circle);
+      badge.appendChild(label);
+      svg.appendChild(badge);
+    }
   });
 }
 
-function getCurrentData() {
-  if (currentScope === "root") return H1_DATA;
-  return ALL_SUBVIEWS[currentScope] || H1_DATA;
+function showEdge(edge, event) {
+  const popover = $("#edge-popover");
+  const surface = $("#graph-surface").getBoundingClientRect();
+  const x = Math.min(surface.width - 270, Math.max(8, event.clientX - surface.left + 12));
+  const y = Math.min(surface.height - 86, Math.max(8, event.clientY - surface.top + 12));
+  popover.style.left = x + "px";
+  popover.style.top = y + "px";
+  popover.innerHTML = "<strong>" + edge.from + " → " + edge.to + "</strong>" +
+    '<span class="edge-kind" style="color:' + colorFor(edge.kind) + '">' + edge.kind +
+    (edge.count > 1 ? " × " + edge.count : "") + "</span><div>" + edge.desc + "</div>";
+  popover.classList.add("visible");
+}
+function hideEdge() { $("#edge-popover").classList.remove("visible"); }
+
+function setDim(predicate) {
+  const data = activeData();
+  $("#nodes-container").querySelectorAll(".module-card").forEach((card) => {
+    card.classList.toggle("dimmed", !predicate(card.id.slice(5)));
+  });
+  $("#graph-svg").querySelectorAll(".wire").forEach((wire) => {
+    const link = (data.edges || [])[Number(wire.id.slice(5))];
+    const active = Boolean(link && predicate(link.from, link.to));
+    wire.classList.toggle("dimmed", !active);
+    wire.classList.toggle("highlighted", active);
+  });
+}
+function highlightNode(id) {
+  state.highlight = { type: "node", id: id };
+  setDim((from, to) => from === id || to === id);
+}
+function highlightKind(kind) {
+  state.highlight = { type: "kind", kind: kind };
+  setDim((from, to) => activeData().edges.some((edge) => edge.kind === kind && edge.from === from && edge.to === to));
+}
+function highlightFeature(id) {
+  const feature = H1.features.find((item) => item.id === id);
+  if (!feature) return;
+  state.highlight = { type: "feature", id: id };
+  const available = new Set(activeData().nodes.map((node) => node.id));
+  const modules = new Set(feature.modules.filter((module) => available.has(module)));
+  if (!modules.size) {
+    clearHighlight();
+    return;
+  }
+  setDim((from, to) => modules.has(from) || modules.has(to));
+  drawFeatureBridges({ modules: Array.from(modules), id: feature.id });
+}
+function clearHighlight() {
+  state.highlight = null;
+  $("#nodes-container").querySelectorAll(".module-card").forEach((card) => card.classList.remove("dimmed"));
+  $("#graph-svg").querySelectorAll(".wire").forEach((wire) => wire.classList.remove("dimmed", "highlighted"));
+  $("#graph-svg").querySelectorAll(".feature-bridge").forEach((path) => path.remove());
+  hideEdge();
+}
+function drawFeatureBridges(feature) {
+  $("#graph-svg").querySelectorAll(".feature-bridge").forEach((path) => path.remove());
+  const data = activeData();
+  const metrics = cardMetrics();
+  feature.modules.forEach((id) => {
+    const node = nodeById(id, data);
+    const start = $("#features-grid").querySelector('[data-feature="' + feature.id + '"]');
+    if (!node || !start) return;
+    const startRect = start.getBoundingClientRect();
+    const surfaceRect = $("#graph-surface").getBoundingClientRect();
+    const x1 = startRect.left + startRect.width / 2 - surfaceRect.left;
+    const y1 = metrics.height - 2;
+    const x2 = node.x * metrics.width + metrics.cardWidth / 2;
+    const y2 = node.y * metrics.height + metrics.cardHeight;
+    const mid = (y1 + y2) / 2;
+    const path = document.createElementNS(svgNS, "path");
+    path.classList.add("feature-bridge");
+    path.setAttribute("d", "M " + x1 + " " + y1 + " C " + x1 + " " + mid + ", " + x2 + " " + mid + ", " + x2 + " " + y2);
+    $("#graph-svg").appendChild(path);
+  });
 }
 
-/**
- * 5. 渲染系统总管
- */
-function renderSystem() {
-  const data = getCurrentData();
-  const isDrilled = currentScope !== "root";
-
-  // 面包屑控制
-  const breadcrumb = document.getElementById("breadcrumb-bar");
-  if (isDrilled) {
-    breadcrumb.classList.add("active");
-    document.getElementById("breadcrumb-module-name").innerText = data.name;
-    document.getElementById("stage-title").innerText = data.name;
-    document.getElementById("stage-desc").innerText = data.desc.replace(/<[^>]+>/g, "");
-  } else {
-    breadcrumb.classList.remove("active");
-    document.getElementById("stage-title").innerText = data.name;
-    document.getElementById("stage-desc").innerText = data.desc.replace(/<[^>]+>/g, "");
-  }
-
-  // 渲染底部特性矩阵
-  renderFeatures(H1_DATA.features);
-
-  // 渲染严谨三列图谱
-  renderStructuredTopology(data, isDrilled);
-
-  // 默认选中
-  if (!selectedItem || selectedItem.type === "project") {
-    selectProject(data);
-  }
-}
-
-function renderFeatures(features) {
-  const grid = document.getElementById("features-grid");
+function renderFeatures(data) {
+  const grid = $("#features-grid");
   grid.innerHTML = "";
-
-  features.forEach(f => {
-    const card = document.createElement("div");
-    card.className = "feature-cell-card";
-    card.id = `feat-card-${f.id}`;
-    card.innerHTML = `
-      <span class="feat-tag-text">✦ 特性</span>
-      <span class="feat-name-text">${f.name}</span>
-    `;
-
-    card.addEventListener("mouseenter", () => highlightFeature(f.id));
-    card.addEventListener("mouseleave", resetHighlight);
-    card.addEventListener("click", () => selectFeature(f));
+  (data.features || []).forEach((feature) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "feature-card";
+    card.dataset.feature = feature.id;
+    card.innerHTML = '<span class="card-head"><span class="card-eyebrow">' + feature.tag +
+      '</span><span class="card-status">READY</span></span><span class="card-title">' +
+      feature.name + '</span><span class="card-foot">' + feature.detail + "</span>";
+    card.addEventListener("mouseenter", () => highlightFeature(feature.id));
+    card.addEventListener("mouseleave", clearHighlight);
+    card.addEventListener("click", () => selectItem({ type: "feature", feature: feature, data: data }));
     grid.appendChild(card);
   });
 }
+function renderEvidence(activeIndex) {
+  $("#evidence-track").innerHTML = EVIDENCE.map((item, index) => {
+    return '<div class="evidence-step ' + (index <= activeIndex ? "active" : "") + '">' +
+      item.name + "<small>" + item.detail + "</small></div>";
+  }).join("");
+}
+function metricLines(metrics) {
+  return Object.entries(metrics || {}).map(([key, value]) => {
+    return '<div class="metric-line"><span>' + key + '</span><strong>' + value + "</strong></div>";
+  }).join("");
+}
+function relationLines(item, data) {
+  const id = item && item.node ? item.node.id : "";
+  if (!id) return '<div class="relation-row"><small>选择模块后显示相邻链路。</small></div>';
+  const edges = (data.edges || []).filter((edge) => edge.from === id || edge.to === id);
+  if (!edges.length) return '<div class="relation-row"><small>当前层级没有其他链路。</small></div>';
+  return edges.map((edge) => {
+    const direction = edge.from === id ? "→ " + edge.to : "← " + edge.from;
+    return '<div class="relation-row"><strong style="color:' + colorFor(edge.kind) + '">' +
+      direction + " · " + edge.kind + "</strong><small>" + edge.desc + "</small></div>";
+  }).join("");
+}
 
-/**
- * 6. 严谨三列工程对齐与平行总线走线算法 (解决布局混乱核心)
- */
-function renderStructuredTopology(data, isDrilled) {
-  const container = document.getElementById("nodes-container");
-  const svg = document.getElementById("graph-svg");
-  const canvas = document.getElementById("canvas-container");
-  container.innerHTML = "";
-  svg.innerHTML = "";
-
-  const nodes = isDrilled ? data.nodes : data.tiers;
-  const connections = data.connections || [];
-
-  const canvasW = Math.max(canvas.clientWidth, 960);
-  const centerX = canvasW / 2;
-  const cardW = 216;
-  const cardH = 76;
-  const colGap = 56; // 严格留出 56px 的竖向总线走线通道
-
-  // 严谨锁定三列中心 X 轴线
-  const col1_X = centerX - cardW / 2;         // 中间主干轴
-  const col0_X = col1_X - cardW - colGap;     // 左翼轴
-  const col2_X = col1_X + cardW + colGap;     // 右翼轴
-
-  // 严谨锁定六大层级 Y 标高
-  const tierYMap = { 1: 26, 2: 130, 3: 234, 4: 338, 5: 442, 6: 546 };
-
-  if (!isDrilled) {
-    nodes.forEach(node => {
-      const t = node.tier;
-      node.y = tierYMap[t] || 26;
-
-      if (t === 1) {
-        // 顶部两节点以中轴为准对称分布
-        const halfSpan = (cardW + colGap / 2);
-        node.x = node.col === "t1_left" ? centerX - halfSpan : centerX + colGap / 4;
-      } else if (node.col === 0) {
-        node.x = col0_X;
-      } else if (node.col === 1) {
-        node.x = col1_X;
-      } else if (node.col === 2) {
-        node.x = col2_X;
-      }
+function renderInspector(selection) {
+  const data = activeData();
+  const root = !selection || selection.type === "project";
+  const node = selection && selection.node;
+  const feature = selection && selection.feature;
+  const target = root ? data : feature || node;
+  $("#inspector-badge").textContent = root ? "PROJECT · READY" : feature ? "FEATURE · READY" : "MODULE · READY";
+  $("#inspector-title").textContent = target.title || target.name || data.title;
+  $("#inspector-namespace").textContent = target.namespace || (feature ? "proof." + feature.id : data.namespace);
+  $("#inspector-desc").textContent = target.description || target.desc || data.description;
+  const metrics = root ? data.metrics : feature ? { "参与模块": feature.modules.length + " 个", "关系类型": "横切关注点" } : {
+    "内部构件": (node.parts || []).length + " 个",
+    "层级": node.eyebrow,
+    "下钻": SUBVIEWS[node.id] ? "可展开" : "叶子节点"
+  };
+  $("#metric-list").innerHTML = metricLines(metrics);
+  $("#source-list").innerHTML = (target.sources || data.sources || []).map((source) => '<div class="source-row">' + source + "</div>").join("");
+  const parts = feature ? feature.modules.map((id) => ({ id: id, title: id })) :
+    (node ? (node.parts || []).map((title, index) => ({ id: node.id + "-" + index, title: title })) : []);
+  $("#parts-block").style.display = parts.length ? "block" : "none";
+  $("#parts-heading").textContent = feature ? "participating modules" : "internal parts";
+  $("#part-list").innerHTML = parts.map((part) => '<button class="part-row" type="button" data-part="' +
+    part.id + '"><span>' + part.title + '</span><span>inspect ›</span></button>').join("");
+  $("#part-list").querySelectorAll("[data-part]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!feature) return;
+      const partNode = nodeById(button.dataset.part, data) || nodeById(button.dataset.part, H1);
+      if (partNode) selectItem({ type: "module", node: partNode, data: data });
     });
-  } else {
-    // 子构件两列严谨排布
-    const subCol0 = centerX - cardW - 20;
-    const subCol1 = centerX + 20;
-    nodes.forEach(node => {
-      node.x = node.col === 0 ? subCol0 : subCol1;
-      node.y = 40 + (node.row || 0) * 110;
-    });
+  });
+  $("#relations-block").style.display = root || feature ? "none" : "block";
+  $("#relation-list").innerHTML = relationLines(selection, data);
+  renderEvidence(root ? 4 : feature ? 3 : 2);
+}
+
+function selectItem(selection) {
+  state.selected = selection;
+  $("#nodes-container").querySelectorAll(".module-card").forEach((card) => card.classList.remove("selected"));
+  $("#features-grid").querySelectorAll(".feature-card").forEach((card) => card.classList.remove("selected"));
+  if (selection && selection.node) {
+    const card = $("#node-" + selection.node.id);
+    if (card) card.classList.add("selected");
   }
-
-  // 渲染节点
-  nodes.forEach(node => {
-    const card = document.createElement("div");
-    card.className = "module-card";
-    card.id = `node-${node.id}`;
-    card.style.left = `${node.x}px`;
-    card.style.top = `${node.y}px`;
-    card.style.width = `${cardW}px`;
-
-    const isOutside = node.type === "外部端口";
-    if (isOutside) card.classList.add("outside-connector");
-
-    const partsCount = node.partsCount || 0;
-    // 任何具备子构件的模块（包括 2 parts）均支持下钻！
-    const canDrill = !isOutside && (ALL_SUBVIEWS[node.id] !== undefined);
-
-    card.innerHTML = `
-      <div class="card-top-meta">
-        <span class="card-type-label">${node.type}</span>
-      </div>
-      <div class="card-title-text" title="${node.title}">${node.title}</div>
-      <div class="card-bottom-bar">
-        <span class="card-parts-indicator">${isOutside ? "接口桩" : `${partsCount} 个内部构件`}</span>
-        ${canDrill ? `<span class="card-arrow-icon">›</span>` : ""}
-      </div>
-    `;
-
-    card.addEventListener("mouseenter", () => highlightNode(node.id, connections));
-    card.addEventListener("mouseleave", resetHighlight);
-    card.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (canDrill) {
-        drillDown(node.id);
-      } else {
-        selectModule(node, connections);
-      }
-    });
-
-    container.appendChild(card);
-  });
-
-  // 绘制平行总线走线
-  drawStructuredBuses(connections, nodes, cardW);
-}
-
-function drawStructuredBuses(connections, nodes, cardW) {
-  const svg = document.getElementById("graph-svg");
-  const nodeMap = {};
-  nodes.forEach(n => { nodeMap[n.id] = n; });
-
-  // SVG 箭头定义
-  let defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-  Object.entries(CONNECTION_META).forEach(([kind, meta]) => {
-    const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
-    marker.setAttribute("id", `arrow-${kind.split(" ")[1].replace(/[()]/g, "")}`);
-    marker.setAttribute("viewBox", "0 0 10 10");
-    marker.setAttribute("refX", "8");
-    marker.setAttribute("refY", "5");
-    marker.setAttribute("markerWidth", "5");
-    marker.setAttribute("markerHeight", "5");
-    marker.setAttribute("orient", "auto-start-reverse");
-
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", "M 1 2 L 8 5 L 1 8 z");
-    path.setAttribute("fill", meta.color);
-    marker.appendChild(path);
-    defs.appendChild(marker);
-  });
-  svg.appendChild(defs);
-
-  // 平行车道偏移分配
-  const laneTracker = {};
-
-  connections.forEach(conn => {
-    const src = nodeMap[conn.from];
-    const tgt = nodeMap[conn.to];
-    if (!src || !tgt) return;
-
-    const w = cardW;
-    const h = src.type === "外部端口" ? 52 : 76;
-    const targetH = tgt.type === "外部端口" ? 52 : 76;
-
-    const key = `${conn.from}->${conn.to}`;
-    laneTracker[key] = (laneTracker[key] || 0) + 1;
-    const offset = (laneTracker[key] - 1) * 8;
-
-    const isGoingUp = src.y > tgt.y + targetH;
-    const startX = src.x + w / 2 + offset;
-    const startY = isGoingUp ? src.y : src.y + h;
-
-    const endX = tgt.x + w / 2 + offset;
-    const endY = isGoingUp ? tgt.y + targetH : tgt.y;
-
-    const dy = Math.max(30, Math.abs(endY - startY) * 0.55);
-    const c1x = startX;
-    const c1y = isGoingUp ? startY - dy : startY + dy;
-    const c2x = endX;
-    const c2y = isGoingUp ? endY + dy : endY - dy;
-
-    const d = `M ${startX} ${startY} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${endX} ${endY}`;
-    const meta = CONNECTION_META[conn.kind] || { color: "var(--c-calls)" };
-    const markerId = conn.kind.split(" ")[1].replace(/[()]/g, "");
-
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", d);
-    path.setAttribute("class", "wire-curve-path");
-    path.setAttribute("stroke", meta.color);
-    path.setAttribute("id", `wire-${conn.from}-${conn.to}`);
-    path.setAttribute("marker-end", `url(#arrow-${markerId})`);
-
-    if (conn.kind.includes("composes") || conn.kind.includes("generates")) {
-      path.setAttribute("stroke-dasharray", "4 3");
-    } else if (conn.kind.includes("reads")) {
-      path.setAttribute("stroke-dasharray", "2 3");
-    }
-
-    path.addEventListener("mouseenter", () => highlightSingleWire(conn));
-    path.addEventListener("mouseleave", resetHighlight);
-    svg.appendChild(path);
-
-    // 导线信道密度徽章 (2), (4)
-    if (conn.count && conn.count > 1) {
-      const midX = 0.125 * startX + 0.375 * c1x + 0.375 * c2x + 0.125 * endX;
-      const midY = 0.125 * startY + 0.375 * c1y + 0.375 * c2y + 0.125 * endY;
-
-      const badgeGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-      badgeGroup.setAttribute("class", "wire-channel-badge");
-      badgeGroup.setAttribute("id", `badge-${conn.from}-${conn.to}`);
-
-      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      circle.setAttribute("cx", midX);
-      circle.setAttribute("cy", midY);
-      circle.setAttribute("r", "7");
-      circle.setAttribute("fill", "var(--bg-card)");
-      circle.setAttribute("stroke", "var(--border-card)");
-      circle.setAttribute("stroke-width", "1");
-
-      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      text.setAttribute("x", midX);
-      text.setAttribute("y", midY + 3);
-      text.setAttribute("fill", "var(--text-secondary)");
-      text.setAttribute("font-size", "9");
-      text.setAttribute("font-family", "var(--font-mono)");
-      text.setAttribute("text-anchor", "middle");
-      text.textContent = conn.count;
-
-      badgeGroup.appendChild(circle);
-      badgeGroup.appendChild(text);
-      svg.appendChild(badgeGroup);
-    }
-  });
-}
-
-/**
- * 7. 聚焦暗化与高亮逻辑
- */
-function highlightNode(nodeId, connections) {
-  hoveredNodeId = nodeId;
-  const connectedNodes = new Set([nodeId]);
-  const connectedEdges = new Set();
-
-  connections.forEach(c => {
-    if (c.from === nodeId) {
-      connectedNodes.add(c.to);
-      connectedEdges.add(`wire-${c.from}-${c.to}`);
-    } else if (c.to === nodeId) {
-      connectedNodes.add(c.from);
-      connectedEdges.add(`wire-${c.from}-${c.to}`);
-    }
-  });
-
-  document.querySelectorAll(".module-card").forEach(c => {
-    const id = c.id.replace("node-", "");
-    c.classList.toggle("dimmed", !connectedNodes.has(id));
-  });
-  document.querySelectorAll(".wire-curve-path").forEach(w => {
-    const isConn = connectedEdges.has(w.id);
-    w.classList.toggle("dimmed", !isConn);
-    w.classList.toggle("highlighted", isConn);
-  });
-  document.querySelectorAll(".wire-channel-badge").forEach(b => {
-    const wireId = b.id.replace("badge-", "wire-");
-    b.classList.toggle("dimmed", !connectedEdges.has(wireId));
-  });
-}
-
-function highlightSingleWire(conn) {
-  document.querySelectorAll(".module-card").forEach(c => {
-    const id = c.id.replace("node-", "");
-    c.classList.toggle("dimmed", id !== conn.from && id !== conn.to);
-  });
-  document.querySelectorAll(".wire-curve-path").forEach(w => {
-    const isThis = w.id === `wire-${conn.from}-${conn.to}`;
-    w.classList.toggle("dimmed", !isThis);
-    w.classList.toggle("highlighted", isThis);
-  });
-}
-
-function highlightConnectionKind(kind) {
-  const markerKey = kind.split(" ")[1].replace(/[()]/g, "");
-  document.querySelectorAll(".wire-curve-path").forEach(w => {
-    const marker = w.getAttribute("marker-end") || "";
-    const isMatch = marker.includes(markerKey);
-    w.classList.toggle("dimmed", !isMatch);
-    w.classList.toggle("highlighted", isMatch);
-  });
-}
-
-function highlightFeature(featureId) {
-  hoveredFeatureId = featureId;
-  const feat = H1_DATA.features.find(f => f.id === featureId);
-  if (!feat) return;
-
-  const relevantModules = new Set(feat.modules);
-
-  document.querySelectorAll(".module-card").forEach(c => {
-    const id = c.id.replace("node-", "");
-    c.classList.toggle("dimmed", !relevantModules.has(id));
-  });
-  document.querySelectorAll(".wire-curve-path").forEach(w => w.classList.add("dimmed"));
-  document.querySelectorAll(".wire-channel-badge").forEach(b => b.classList.add("dimmed"));
-
-  // 动态升起粉紫色流动弧线
-  drawFeatureBridges(feat);
-}
-
-function drawFeatureBridges(feature) {
-  const svg = document.getElementById("graph-svg");
-  document.querySelectorAll(".feature-flow-curve").forEach(w => w.remove());
-
-  const pill = document.getElementById(`feat-card-${feature.id}`);
-  if (!pill) return;
-
-  const pillRect = pill.getBoundingClientRect();
-  const canvasRect = document.getElementById("canvas-container").getBoundingClientRect();
-
-  const startX = pillRect.left - canvasRect.left + pillRect.width / 2;
-  const startY = canvasRect.height - 10;
-
-  feature.modules.forEach(modId => {
-    const card = document.getElementById(`node-${modId}`);
-    if (!card) return;
-    const cardRect = card.getBoundingClientRect();
-
-    const endX = cardRect.left - canvasRect.left + cardRect.width / 2;
-    const endY = cardRect.top - canvasRect.top + cardRect.height;
-
-    const d = `M ${startX} ${startY} C ${startX} ${(startY + endY) / 2}, ${endX} ${(startY + endY) / 2}, ${endX} ${endY}`;
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", d);
-    path.setAttribute("class", "feature-flow-curve");
-    path.setAttribute("stroke", "var(--c-composes)");
-    svg.appendChild(path);
-  });
-}
-
-function resetHighlight() {
-  hoveredNodeId = null;
-  hoveredFeatureId = null;
-  document.querySelectorAll(".module-card").forEach(c => c.classList.remove("dimmed"));
-  document.querySelectorAll(".wire-curve-path").forEach(w => {
-    w.classList.remove("dimmed");
-    w.classList.remove("highlighted");
-  });
-  document.querySelectorAll(".wire-channel-badge").forEach(b => b.classList.remove("dimmed"));
-  document.querySelectorAll(".feature-flow-curve").forEach(w => w.remove());
-}
-
-/**
- * 8. 下钻与层级跳转 (任意卡片均可展开)
- */
-function drillDown(moduleId) {
-  currentScope = moduleId;
-  renderSystem();
-  const sub = ALL_SUBVIEWS[moduleId];
-  if (sub) {
-    selectModule({
-      id: moduleId,
-      title: sub.name,
-      type: "模块规格",
-      desc: sub.desc,
-      namespace: sub.namespace,
-      sources: sub.sources,
-      parts: sub.nodes.filter(n => n.type !== "外部端口").map(n => n.title)
-    }, sub.connections || []);
+  if (selection && selection.feature) {
+    const card = $("#features-grid").querySelector('[data-feature="' + selection.feature.id + '"]');
+    if (card) card.classList.add("selected");
   }
+  renderInspector(selection);
 }
-
+function drillDown(id) {
+  if (!SUBVIEWS[id]) return;
+  state.scope = id;
+  state.selected = { type: "project" };
+  render();
+}
 function goUp() {
-  if (currentScope !== "root") {
-    currentScope = "root";
-    renderSystem();
-  }
+  state.scope = null;
+  state.selected = null;
+  render();
+}
+function render() {
+  const data = activeData();
+  const root = state.scope === null;
+  $("#stage-title").textContent = data.title;
+  $("#stage-desc").textContent = data.description;
+  $("#summary-metrics").innerHTML = Object.entries(data.metrics).slice(0, 3).map(([key, value]) =>
+    "<strong>" + value + "</strong> " + key).join(" · ");
+  $("#breadcrumb").classList.toggle("visible", !root);
+  $("#scope-name").textContent = root ? "" : data.title;
+  renderLegend(data);
+  renderGraph(data);
+  renderFeatures(root ? data : H1);
+  renderInspector(state.selected || { type: "project" });
 }
 
-function setupKeyboard() {
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") goUp();
-  });
-}
-
-/**
- * 9. 右侧抽屉排版填充
- */
-function selectProject(data) {
-  selectedItem = { type: "project", data };
-  document.querySelectorAll(".module-card").forEach(c => c.classList.remove("selected"));
-  document.querySelectorAll(".feature-cell-card").forEach(c => c.classList.remove("selected"));
-
-  document.getElementById("insp-badge").innerText = `项目总览 (Project)`;
-  document.getElementById("insp-title").innerText = data.name;
-  document.getElementById("insp-namespace").innerText = data.namespace;
-  document.getElementById("insp-desc").innerHTML = data.desc;
-
-  const counts = document.getElementById("insp-counts");
-  counts.innerHTML = "";
-  Object.entries(data.counts || {}).forEach(([k, v]) => {
-    counts.innerHTML += `
-      <div class="count-kv-line">
-        <span class="label">${k}</span>
-        <span class="val">${v}</span>
-      </div>
-    `;
-  });
-
-  const sources = document.getElementById("insp-sources");
-  sources.innerHTML = "";
-  (data.sources || []).forEach(s => {
-    sources.innerHTML += `<div class="source-file-row">${s}</div>`;
-  });
-
-  document.getElementById("section-parts").style.display = "none";
-  document.getElementById("section-outgoing").style.display = "none";
-  document.getElementById("section-incoming").style.display = "none";
-}
-
-function selectModule(node, connections) {
-  selectedItem = { type: "module", data: node };
-  document.querySelectorAll(".module-card").forEach(c => c.classList.remove("selected"));
-  document.querySelectorAll(".feature-cell-card").forEach(c => c.classList.remove("selected"));
-
-  const card = document.getElementById(`node-${node.id}`);
-  if (card) card.classList.add("selected");
-
-  document.getElementById("insp-badge").innerText = `模块规格 (Module)`;
-  document.getElementById("insp-title").innerText = node.title;
-  document.getElementById("insp-namespace").innerText = node.namespace || `codeagent.${node.id}`;
-  document.getElementById("insp-desc").innerHTML = node.desc || "核心架构组件。";
-
-  const sub = ALL_SUBVIEWS[node.id];
-  const parts = sub ? sub.nodes.filter(n => n.type !== "外部端口") : [];
-
-  const counts = document.getElementById("insp-counts");
-  counts.innerHTML = `
-    <div class="count-kv-line"><span class="label">内部构件数量</span><span class="val">${parts.length} 个</span></div>
-    <div class="count-kv-line"><span class="label">所属层级</span><span class="val">${node.type}</span></div>
-    <div class="count-kv-line"><span class="label">下钻视图支持</span><span class="val">${sub ? "可交互展开" : "叶子节点"}</span></div>
-  `;
-
-  const sources = document.getElementById("insp-sources");
-  sources.innerHTML = "";
-  (node.sources || ["code_agent.py"]).forEach(s => {
-    sources.innerHTML += `<div class="source-file-row">${s}</div>`;
-  });
-
-  // 内部构件
-  const partsSection = document.getElementById("section-parts");
-  partsSection.style.display = "block";
-  document.getElementById("insp-parts-title").innerText = `内部子构件 (${parts.length})`;
-  const partsTable = document.getElementById("insp-parts");
-  partsTable.innerHTML = "";
-  parts.forEach(p => {
-    partsTable.innerHTML += `
-      <div class="part-interactive-row" onclick="drillDown('${node.id}')">
-        <span class="part-left-label"><span class="bullet-icon"></span>${p.title}</span>
-        <span style="font-size:11px;color:var(--text-muted);">查看 ›</span>
-      </div>
-    `;
-  });
-
-  populateRelations(connections, node.id);
-  document.getElementById("section-outgoing").style.display = "block";
-  document.getElementById("section-incoming").style.display = "block";
-}
-
-function selectFeature(feature) {
-  selectedItem = { type: "feature", data: feature };
-  document.querySelectorAll(".module-card").forEach(c => c.classList.remove("selected"));
-  document.querySelectorAll(".feature-cell-card").forEach(c => c.classList.remove("selected"));
-
-  const card = document.getElementById(`feat-card-${feature.id}`);
-  if (card) card.classList.add("selected");
-
-  document.getElementById("insp-badge").innerText = `业务特性 (Feature)`;
-  document.getElementById("insp-title").innerText = feature.name;
-  document.getElementById("insp-namespace").innerText = `features.codeagent.${feature.id}`;
-  document.getElementById("insp-desc").innerHTML = feature.desc;
-
-  const counts = document.getElementById("insp-counts");
-  counts.innerHTML = `
-    <div class="count-kv-line"><span class="label">跨越模块数</span><span class="val">${feature.modules.length} 个</span></div>
-    <div class="count-kv-line"><span class="label">特性类型</span><span class="val">横切关注点</span></div>
-  `;
-
-  const sources = document.getElementById("insp-sources");
-  sources.innerHTML = "";
-  feature.modules.forEach(m => {
-    sources.innerHTML += `<div class="source-file-row">模块: ${m}</div>`;
-  });
-
-  const partsSection = document.getElementById("section-parts");
-  partsSection.style.display = "block";
-  document.getElementById("insp-parts-title").innerText = `协同参与模块 (${feature.modules.length})`;
-  const partsTable = document.getElementById("insp-parts");
-  partsTable.innerHTML = "";
-  feature.modules.forEach(m => {
-    partsTable.innerHTML += `
-      <div class="part-interactive-row" onclick="drillDown('${m}')">
-        <span class="part-left-label"><span class="bullet-icon" style="background:var(--c-composes)"></span>${m}</span>
-        <span style="font-size:11px;color:var(--text-link);">深入模块 ›</span>
-      </div>
-    `;
-  });
-
-  document.getElementById("section-outgoing").style.display = "none";
-  document.getElementById("section-incoming").style.display = "none";
-}
-
-function populateRelations(connections, nodeId) {
-  const outgoing = nodeId ? connections.filter(c => c.from === nodeId) : [];
-  const incoming = nodeId ? connections.filter(c => c.to === nodeId) : [];
-
-  document.getElementById("insp-outgoing-title").innerText = `下游调用输出 (${outgoing.length})`;
-  const outContainer = document.getElementById("insp-outgoing");
-  outContainer.innerHTML = "";
-  if (outgoing.length === 0) {
-    outContainer.innerHTML = "<div style='color:var(--text-muted);font-size:11.5px;'>无输出链路。</div>";
-  } else {
-    outgoing.forEach(c => {
-      const meta = CONNECTION_META[c.kind] || { color: "var(--c-calls)" };
-      outContainer.innerHTML += `
-        <div class="relation-card-row">
-          <div class="rel-head-row">
-            <span class="rel-kind-tag" style="color:${meta.color};">${c.kind}</span>
-            <span class="rel-target-tag">目标: ${c.to}</span>
-          </div>
-          <div class="rel-note-desc">${c.desc || ""}</div>
-        </div>
-      `;
-    });
-  }
-
-  document.getElementById("insp-incoming-title").innerText = `上游依赖输入 (${incoming.length})`;
-  const inContainer = document.getElementById("insp-incoming");
-  inContainer.innerHTML = "";
-  if (incoming.length === 0) {
-    inContainer.innerHTML = "<div style='color:var(--text-muted);font-size:11.5px;'>无输入链路。</div>";
-  } else {
-    incoming.forEach(c => {
-      const meta = CONNECTION_META[c.kind] || { color: "var(--c-calls)" };
-      inContainer.innerHTML += `
-        <div class="relation-card-row">
-          <div class="rel-head-row">
-            <span class="rel-kind-tag" style="color:${meta.color};">← ${c.kind}</span>
-            <span class="rel-target-tag">来源: ${c.from}</span>
-          </div>
-          <div class="rel-note-desc">${c.desc || ""}</div>
-        </div>
-      `;
-    });
-  }
-}
+$("#btn-h1").addEventListener("click", () => {
+  state.mode = "h1";
+  state.scope = null;
+  state.selected = null;
+  $("#btn-h1").classList.add("active");
+  $("#btn-h2").classList.remove("active");
+  render();
+});
+$("#btn-h2").addEventListener("click", () => {
+  state.mode = "h2";
+  state.scope = null;
+  state.selected = null;
+  $("#btn-h2").classList.add("active");
+  $("#btn-h1").classList.remove("active");
+  render();
+});
+$("#back-button").addEventListener("click", goUp);
+window.addEventListener("keydown", (event) => { if (event.key === "Escape" && state.scope) goUp(); });
+window.addEventListener("resize", () => requestAnimationFrame(() => drawEdges(activeData())));
+window.addEventListener("DOMContentLoaded", render);
 </script>
 </body>
 </html>
