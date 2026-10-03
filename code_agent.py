@@ -7,7 +7,7 @@ import uuid
 import webbrowser
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from openai import OpenAI, APIError, APIStatusError
 from code_graph import CodeGraph, excluded
@@ -38,6 +38,54 @@ def write_file(path, content):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, "utf-8")
     return f"Wrote {len(content)} characters to {path.name}"
+
+
+def json_response(handler, payload, status=200):
+    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    handler.send_response(status)
+    handler.send_header("Content-Type", "application/json; charset=utf-8")
+    handler.send_header("Content-Length", str(len(body)))
+    handler.end_headers()
+    handler.wfile.write(body)
+
+
+def source_excerpt(graph, root, query):
+    """Return a bounded excerpt from a file present in the current graph."""
+    relative = query.get("file", [""])[0].replace("\\", "/").lstrip("/")
+    if not relative:
+        raise ValueError("file is required")
+    known = {
+        node.get("file")
+        for node in (graph or {}).get("nodes", [])
+        if node.get("kind") == "file" and node.get("file")
+    }
+    if relative not in known:
+        raise FileNotFoundError("File is not in the current graph")
+    raw_path = root / relative
+    try:
+        path = raw_path.resolve()
+    except (OSError, RuntimeError):
+        raise PermissionError("Source file is outside the repository or excluded") from None
+    if (
+        raw_path.is_symlink()
+        or not path.is_relative_to(root)
+        or excluded(path.relative_to(root))
+        or not path.is_file()
+    ):
+        raise PermissionError("Source file is outside the repository or excluded")
+    try:
+        line = int(query.get("line", ["1"])[0])
+    except (TypeError, ValueError):
+        raise ValueError("line must be an integer") from None
+    all_lines = path.read_text("utf-8", errors="replace").splitlines()
+    total = len(all_lines)
+    start = max(1, min(line, total or 1))
+    return {
+        "file": relative,
+        "start": start,
+        "lines": all_lines[start - 1 : start + 119],
+        "total": total,
+    }
 
 
 def run_python(code_or_file, cwd="."):
@@ -227,25 +275,27 @@ class CodeAgent:
 def serve(repo=".", port=8766):
     root = Path(repo).resolve() if repo else Path(".").resolve()
     current_graph = None
+    current_repo = root
+    graph_error = None
     try:
         g = CodeGraph(root)
         g.build()
         current_graph = g.graph
-    except Exception:
-        pass
+    except Exception as error:
+        graph_error = f"{type(error).__name__}: {error}"
 
     class Handler(SimpleHTTPRequestHandler):
         def do_POST(self):
-            if self.path == "/api/build":
-                length = int(self.headers.get("Content-Length", 0))
-                data = json.loads(self.rfile.read(length))
-                target = data.get("repo", ".").strip()
+            if urlsplit(self.path).path == "/api/build":
                 try:
+                    length = int(self.headers.get("Content-Length", 0))
+                    data = json.loads(self.rfile.read(length) or b"{}")
+                    target = data.get("repo", ".").strip()
                     if target.startswith(("http://", "https://", "git@")):
                         name = (
                             target.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git")
                         )
-                        dest = (Path(".repos") / name).resolve()
+                        dest = (root / ".repos" / name).resolve()
                         dest.parent.mkdir(parents=True, exist_ok=True)
                         if not dest.exists():
                             subprocess.run(
@@ -260,38 +310,66 @@ def serve(repo=".", port=8766):
                     g = CodeGraph(target)
                     g.build()
                     nonlocal current_graph
+                    nonlocal current_repo, graph_error
                     current_graph = g.graph
-                    self.send_response(200)
-                    self.send_header("Content-Type", "application/json; charset=utf-8")
-                    self.end_headers()
-                    self.wfile.write(
-                        json.dumps(g.graph, ensure_ascii=False).encode("utf-8")
-                    )
+                    current_repo = g.root
+                    graph_error = None
+                    json_response(self, g.graph)
                 except Exception as e:
-                    self.send_response(400)
-                    self.send_header("Content-Type", "application/json; charset=utf-8")
-                    self.end_headers()
-                    self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+                    graph_error = f"{type(e).__name__}: {e}"
+                    json_response(self, {"error": graph_error}, 400)
                 return
             self.send_error(404)
 
         def do_GET(self):
             request_path = urlsplit(self.path).path
+            query = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
+            if request_path == "/api/graph":
+                if current_graph is None:
+                    json_response(self, {"error": graph_error or "Graph is unavailable"}, 500)
+                else:
+                    json_response(self, current_graph)
+                return
+            if request_path == "/api/source":
+                try:
+                    json_response(self, source_excerpt(current_graph, current_repo, query))
+                except FileNotFoundError as error:
+                    json_response(self, {"error": str(error)}, 404)
+                except (PermissionError, ValueError) as error:
+                    json_response(self, {"error": str(error)}, 400)
+                except OSError as error:
+                    json_response(self, {"error": f"Cannot read source: {error}"}, 500)
+                return
             if request_path in ("/agent", "/atlas", "/visualizer", "/architecture"):
                 vis_path = Path(__file__).parent / "agent_visualizer.html"
-                if not vis_path.exists():
-                    vis_path = Path(__file__).parent.parent / "agent_visualizer.html"
+                if not vis_path.is_file():
+                    self.send_error(500, "agent_visualizer.html is missing")
+                    return
+                body = vis_path.read_bytes()
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
-                self.wfile.write(vis_path.read_bytes())
+                self.wfile.write(body)
                 return
-            if self.path == "/":
+            if request_path == "/atlas_graph.js":
+                script_path = Path(__file__).parent / "atlas_graph.js"
+                if not script_path.is_file():
+                    self.send_error(500, "atlas_graph.js is missing")
+                    return
+                body = script_path.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/javascript; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            if request_path == "/":
                 self.send_response(302)
                 self.send_header("Location", "/agent")
                 self.end_headers()
                 return
-            if self.path == "/graph.html":
+            if request_path == "/graph.html":
                 template = (Path(__file__).parent / "graph_view.html").read_text(
                     "utf-8"
                 )

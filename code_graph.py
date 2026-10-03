@@ -13,6 +13,10 @@ import languages
 from languages import LANGUAGES, EXCLUDED, parse_file
 
 
+TEMPLATE_NAME = "agent_visualizer.html"
+SCRIPT_NAME = "atlas_graph.js"
+
+
 def excluded(path):
     return bool(set(path.parts) & EXCLUDED) or path.name.startswith(".env") or path.name in {"auth.json", "credentials.json"} or path.suffix.lower() in {".pem", ".key", ".p12", ".pfx"}
 
@@ -50,9 +54,17 @@ class CodeGraph:
 
     def build(self):
         start = time.perf_counter()
-        template = Path(__file__).with_name("graph_view.html").read_text("utf-8")
-        revision = hashlib.sha256(Path(__file__).read_bytes() + Path(languages.__file__).read_bytes()).hexdigest()
-        view = hashlib.sha256(template.encode()).hexdigest()
+        template_path = Path(__file__).with_name(TEMPLATE_NAME)
+        template = template_path.read_text("utf-8")
+        script_path = template_path.with_name(SCRIPT_NAME)
+        atlas_script = script_path.read_text("utf-8") if script_path.is_file() else ""
+        revision = hashlib.sha256(
+            Path(__file__).read_bytes()
+            + Path(languages.__file__).read_bytes()
+            + template.encode()
+            + atlas_script.encode()
+        ).hexdigest()
+        view = hashlib.sha256((template + atlas_script).encode()).hexdigest()
         cache_path = self.output / "cache.json"
         try:
             saved = json.loads(cache_path.read_text("utf-8"))
@@ -82,7 +94,7 @@ class CodeGraph:
             except (OSError, ValueError, LookupError, RuntimeError) as error:
                 errors.append(dict(file=name, reason=str(error)))
         manifest = [n["file"] for n in nodes.values() if n["kind"] == "file"]
-        if not parsed and saved.get("view") == view and fresh.keys() == saved.get("files", {}).keys() and manifest == saved.get("manifest") and (self.output / "graph.html").exists():
+        if not parsed and saved.get("view") == view and fresh.keys() == saved.get("files", {}).keys() and manifest == saved.get("manifest") and (self.output / "graph.html").exists() and (self.output / SCRIPT_NAME).exists():
             try:
                 self.graph = json.loads((self.output / "graph.json").read_text("utf-8"))
                 self.graph["stats"].update(parsed_now=0, cached=reused, seconds=round(time.perf_counter() - start, 3))
@@ -173,7 +185,9 @@ class CodeGraph:
         for name, value in (("graph.json", self.graph), ("cache.json", dict(revision=revision, view=view, root=str(self.root), manifest=manifest, files=fresh))):
             (self.output / name).write_text(json.dumps(value, ensure_ascii=False, separators=(",", ":")), "utf-8")
         payload = json.dumps(self.graph, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
-        (self.output / "graph.html").write_text(template.replace("__GRAPH_DATA__", payload), "utf-8")
+        body = template.replace("__GRAPH_DATA__", payload).replace("__ATLAS_GRAPH_SCRIPT__", "")
+        (self.output / SCRIPT_NAME).write_text(atlas_script, "utf-8")
+        (self.output / "graph.html").write_text(body, "utf-8")
         return self.summary()
 
     def summary(self):

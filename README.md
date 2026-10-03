@@ -1,10 +1,6 @@
-# CodeAgent · 从变更到证据
+# CodeAgent · 本地代码图谱
 
-Homework 1 的轻量代码助手。它保留原生 LLM API 和一个很小的 ReAct 循环，支持代码图谱、文件读取/写入、Python 执行和失败回流。展示页把一次任务串成：
-
-`任务 → 决策 → 工具 → 文件/符号 → 测试结果 → 交付说明`
-
-这条“变更到证据”的记录是本项目的设计机会：代码助手通常能展示工具调用，却很少把改动和验证结果放在同一条可检查的轨道上。这里把它做成了一个可见的工程对象，便于发现缺陷、复盘和继续维护。
+Homework 1 是一个本地代码助手：它接收任务，按需调用工具，并把当前 checkout 的真实文件、符号和调用关系整理成可浏览的图。`/agent` 只读取本地图谱接口，不上传源码，也不依赖参考录屏或远程资源。
 
 ## 运行
 
@@ -15,41 +11,51 @@ pip install -r requirements.txt
 python code_agent.py . --port 8768
 ```
 
-服务启动后会打开 `/agent`，根地址 `/` 也会重定向到同一页。`agent_visualizer.html` 是 Homework 1 的展示页；`/graph.html` 是面向源码维护的函数关系图，不作为默认入口。
+服务启动后打开 `http://127.0.0.1:8768/agent`；根地址 `/` 会重定向到 `/agent`。源码关系图仍可通过 `/graph.html` 查看，作为维护用的兼容入口。
 
-需要调用模型时设置一个 OpenAI-compatible API key：
+没有模型 key 时可以只构建本地图谱：
+
+```powershell
+python code_agent.py . --graph --open
+```
+
+需要调用模型时设置 OpenAI-compatible key：
 
 ```powershell
 $env:OPENCODE_API_KEY = "your-key"
 python code_agent.py . "修复并测试这个函数"
 ```
 
-没有 API key 也可以只生成本地代码图：
+## 本地接口
 
-```powershell
-python code_agent.py . --graph --open
-```
+| 方法 | 路径 | 作用 |
+| --- | --- | --- |
+| `GET` | `/api/graph` | 返回服务当前分析仓库的图谱；构建失败时返回明确的 HTTP 错误 |
+| `GET` | `/api/source?file=code_agent.py&line=120` | 返回图谱中已知源码的最多 120 行片段 |
+| `POST` | `/api/build` | 按 `{ "repo": "..." }` 重新分析本地目录或浅克隆地址 |
 
-## 核心工具
+源码接口只接受当前图谱中的文件名，路径必须留在仓库内；凭证文件、私钥、`.env` 文件和越界或外部 symlink 均拒绝读取。
+
+## 工具
 
 | 工具 | 作用 |
 | --- | --- |
 | `build_graph` | 用 Tree-sitter 建立真实文件、符号和关系图 |
-| `query_graph` | 只取与任务相关的邻域，收敛上下文 |
-| `read_file` | 按行读取仓库内文件，限制单次窗口 |
+| `query_graph` | 查询符号及其入边、出边，限制上下文规模 |
+| `read_file` | 按行读取仓库内文件，单次最多 200 行 |
 | `write_file` | 在仓库边界内写入修改 |
-| `run_python` | 在超时受限的子进程中执行代码并保留输出 |
+| `run_python` | 在超时受限的子进程中执行 Python 并保留输出 |
 
-运行失败会作为下一轮观察回传；达到最大步数或执行超时就停止。读写路径、敏感文件和相对路径都在工具层检查。
+工具错误会回传到下一轮，步数和执行时限共同限制循环。API key 只从环境变量或本地配置读取，不写入图谱。
 
 ## 代码结构
 
-- `code_agent.py`：API 客户端、工具契约、循环、服务入口。
-- `code_graph.py`：增量解析、关系解析、查询和缓存。
-- `languages.py`：语言表和 Tree-sitter 语法提取。
-- `agent_visualizer.html`：Homework 1 的架构图、证据轨道和下钻交互。
-- `graph_view.html`：源码级关系图，供维护时定位函数。
-- `DESIGN.md`：设计决策、边界和验证记录。
+- `code_agent.py`：API 客户端、工具契约、HTTP 服务和本地边界检查。
+- `code_graph.py`：增量解析、调用关系、缓存和离线 HTML 生成。
+- `languages.py`：各语言的 Tree-sitter 提取规则。
+- `agent_visualizer.html`、`atlas_graph.js`：本地图谱的交互展示模板与确定性布局、路由逻辑。
+- `graph_view.html`：保留的旧版源码关系图入口。
+- `DESIGN.md`：架构边界和验证记录。
 
 ## 验证
 
@@ -58,4 +64,8 @@ python -m py_compile code_agent.py code_graph.py languages.py
 python code_agent.py . --graph
 ```
 
-展示页支持 H1 单 Agent、H2 协同验证、模块下钻、链路悬停、证据轨道和 `Esc` 返回全景；页面不上传本地源码。
+构建输出会写入 `.code-graph/graph.json` 和 `.code-graph/graph.html`。页面应能加载 `/api/graph`，节点悬停可查看关系，模块点击可进入局部图，`Esc` 返回全景；`/api/source` 只能返回当前图谱中的安全源码片段。
+
+## 边界
+
+静态解析无法覆盖所有动态调用，未能解析的关系会被省略并保留统计信息。`run_python` 是超时受限的本地子进程，并不等同于操作系统级沙箱；处理不可信仓库时仍应使用专用隔离环境。

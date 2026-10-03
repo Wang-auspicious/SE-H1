@@ -212,8 +212,13 @@
         position: relative;
         flex: 1 1 auto;
         min-height: 0;
-        overflow: hidden;
+        overflow: auto;
         background: var(--bg);
+        background-image:
+          linear-gradient(rgba(88, 166, 255, 0.045) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(88, 166, 255, 0.045) 1px, transparent 1px);
+        background-size: 28px 28px;
+        scrollbar-color: #3a434d #101317;
       }
       #graph-svg,
       #bridge-svg {
@@ -327,6 +332,18 @@
       .wire.highlighted {
         stroke-width: 2.5;
         opacity: 1;
+      }
+      .wire-calls {
+        stroke-dasharray: 2 7;
+        animation: wire-flow 1.7s linear infinite;
+      }
+      .wire-imports {
+        animation: wire-flow 2.8s linear infinite;
+      }
+      @keyframes wire-flow {
+        to {
+          stroke-dashoffset: -36px;
+        }
       }
       .wire.dimmed {
         opacity: 0.08 !important;
@@ -508,6 +525,34 @@
         font-size: 12px;
         line-height: 17px;
       }
+      .source-item {
+        cursor: pointer;
+        padding: 4px 6px;
+        border-radius: 5px;
+        transition:
+          background 0.18s ease,
+          color 0.18s ease;
+      }
+      .source-item:hover {
+        color: #fff;
+        background: #202830;
+      }
+      .source-preview {
+        max-height: 190px;
+        overflow: auto;
+        margin-top: 8px;
+        padding: 8px;
+        border: 1px solid rgba(48, 54, 61, 0.8);
+        border-radius: 6px;
+        background: #101419;
+        color: #9da7b1;
+        white-space: pre-wrap;
+        font:
+          10px/15px ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+      }
       .relation-item {
         padding-bottom: 6px;
         border-bottom: 1px solid rgba(48, 54, 61, 0.5);
@@ -675,6 +720,8 @@
         <section class="inspector-section">
           <h3>Sources</h3>
           <div class="source-list" id="sources"></div>
+          <pre class="source-preview" id="source-preview">
+Select a source to inspect a bounded excerpt.</pre>
         </section>
         <section class="inspector-section">
           <h3>Relations</h3>
@@ -682,773 +729,945 @@
         </section>
       </aside>
     </div>
+    <script id="graph-data" type="application/json">
+      __GRAPH_DATA__
+    </script>
+    <script src="atlas_graph.js"></script>
     <script>
       "use strict";
-      const META = {
+      const META = Object.freeze({
         calls: { color: "#58a6ff", dash: "" },
         imports: { color: "#d29922", dash: "6 4" },
         contains: { color: "#8b949e", dash: "2 4" },
-        class: { color: "#bc8cff", dash: "" },
-        file: { color: "#2dd4bf", dash: "" },
-      };
+        related: { color: "#bc8cff", dash: "2 5" },
+      });
       const state = {
         graph: null,
         atlas: null,
-        scope: "root",
+        children: new Map(),
+        features: [],
+        view: null,
+        layout: null,
+        scopeStack: [],
         selection: { type: "project" },
         hover: null,
         query: "",
       };
       const $ = (id) => document.getElementById(id);
+      const SVG_NS = "http://www.w3.org/2000/svg";
       const esc = (value) =>
         String(value ?? "").replace(
           /[&<>\"']/g,
-          (c) =>
+          (character) =>
             ({
               "&": "&amp;",
               "<": "&lt;",
               ">": "&gt;",
               '"': "&quot;",
               "'": "&#39;",
-            })[c],
+            })[character],
         );
-      function fileOf(node, byId) {
-        let current = node;
-        const seen = new Set();
-        while (current && !seen.has(current.id)) {
-          if (current.kind === "file") return current;
-          seen.add(current.id);
-          current = byId.get(current.parent);
-        }
-        return null;
+
+      function rawNode(id) {
+        return state.atlas?.rawNodes.get(Number(id));
       }
-      function normalizeGraph(graph) {
-        const nodes = Array.isArray(graph?.nodes) ? graph.nodes : [],
-          edges = Array.isArray(graph?.edges) ? graph.edges : [],
-          byId = new Map(nodes.map((n) => [n.id, n])),
-          files = nodes.filter((n) => n.kind === "file"),
-          fileFor = new Map();
-        nodes.forEach((n) => {
-          const f = fileOf(n, byId);
-          if (f) fileFor.set(n.id, f.id);
+
+      function fileIdForRaw(id) {
+        const node = rawNode(id);
+        if (!node) return undefined;
+        if (node.kind === "file") return node.id;
+        return state.atlas.ancestors(node.id).find((ancestor) => {
+          return rawNode(ancestor)?.kind === "file";
         });
-        const symbols = new Map(files.map((f) => [f.id, []]));
-        nodes
-          .filter((n) => n.kind !== "file")
-          .forEach((n) => symbols.get(fileFor.get(n.id))?.push(n));
-        const grouped = new Map();
-        edges
-          .filter((e) => e.kind !== "contains")
-          .forEach((e) => {
-            const a = fileFor.get(e.source),
-              b = fileFor.get(e.target);
-            if (a === undefined || b === undefined || a === b) return;
-            const key = `${a}|${b}|${e.kind}`,
-              item = grouped.get(key) || {
-                from: `file:${a}`,
-                to: `file:${b}`,
-                kind: e.kind,
-                count: 0,
-                raw: [],
-              };
-            item.count++;
-            item.raw.push(e);
-            grouped.set(key, item);
-          });
-        const moduleEdges = [...grouped.values()],
-          degree = new Map(files.map((f) => [f.id, 0]));
-        moduleEdges.forEach((e) => {
-          const a = Number(e.from.slice(5)),
-            b = Number(e.to.slice(5));
-          degree.set(a, (degree.get(a) || 0) + e.count);
-          degree.set(b, (degree.get(b) || 0) + e.count);
-        });
-        const orderedFiles = [...files].sort(
-            (a, b) =>
-              (degree.get(b.id) || 0) - (degree.get(a.id) || 0) ||
-              a.name.localeCompare(b.name),
-          ),
-          modules = orderedFiles.map((f) => ({
-            id: `file:${f.id}`,
-            rawId: f.id,
-            title: f.name,
-            type: "FILE",
-            status: "ready",
-            partsCount: symbols.get(f.id)?.length || 0,
-            parts: symbols.get(f.id) || [],
-            desc: `${f.file} is part of the checked-out repository. Its symbols and relations are read from the local graph.`,
-            namespace: f.file,
-            sources: [f.file],
-            degree: degree.get(f.id) || 0,
-          }));
-        const fileById = new Map(files.map((f) => [f.id, f]));
-        const feature = (id, tag, name, detail, kind, mods) => ({
+      }
+
+      function selectedViewNode() {
+        if (state.selection.type !== "node") return null;
+        return (
+          state.layout?.nodes.find((node) => node.id === state.selection.id) ||
+          state.atlas?.rawNodes.get(state.selection.id) ||
+          null
+        );
+      }
+
+      function embeddedGraph() {
+        const element = $("graph-data");
+        if (!element) return null;
+        const text = element.textContent.trim();
+        if (!text || text === "__GRAPH_DATA__") return null;
+        try {
+          const graph = JSON.parse(text);
+          return Array.isArray(graph.nodes) ? graph : null;
+        } catch {
+          return null;
+        }
+      }
+
+      function makeFeature(id, tag, name, detail, kind, modules) {
+        return {
           id,
           tag,
           name,
           detail,
           kind,
-          modules: [...new Set(mods)],
-        });
-        const features = [
-          feature(
+          modules: Array.from(new Set(modules)),
+        };
+      }
+
+      function buildFeatures(graph, atlas) {
+        const files = atlas.files;
+        const fileIds = files.map((node) => node.id);
+        const edges = Array.isArray(graph.edges) ? graph.edges : [];
+        const kindEdges = (kind) => edges.filter((edge) => edge.kind === kind);
+        const moduleIdsFor = (kind) =>
+          kindEdges(kind).flatMap((edge) => [
+            fileIdForRaw(edge.source),
+            fileIdForRaw(edge.target),
+          ]);
+        const functionCount = atlas.rawNodes.size
+          ? Array.from(atlas.rawNodes.values()).filter(
+              (node) => node.kind === "function",
+            ).length
+          : 0;
+        const agentFiles = files
+          .filter((node) => /code_agent|code_graph|languages/.test(node.label))
+          .map((node) => node.id);
+        const errors = Array.isArray(graph.errors) ? graph.errors.length : 0;
+        return [
+          makeFeature(
             "calls",
             "CALLS",
             "Call graph",
-            `${edges.filter((e) => e.kind === "calls").length} call sites`,
+            kindEdges("calls").length + " call sites",
             "calls",
-            moduleEdges
-              .filter((e) => e.kind === "calls")
-              .flatMap((e) => [e.from, e.to]),
+            moduleIdsFor("calls"),
           ),
-          feature(
+          makeFeature(
             "imports",
             "IMPORTS",
             "Imports",
-            `${edges.filter((e) => e.kind === "imports").length} imports`,
+            kindEdges("imports").length + " import links",
             "imports",
-            moduleEdges
-              .filter((e) => e.kind === "imports")
-              .flatMap((e) => [e.from, e.to]),
+            moduleIdsFor("imports"),
           ),
-          feature(
+          makeFeature(
             "symbols",
             "SYMBOLS",
             "Symbols",
-            `${nodes.filter((n) => n.kind === "function").length} functions`,
+            functionCount + " functions",
             "symbols",
-            modules.filter((m) => m.partsCount).map((m) => m.id),
+            fileIds,
           ),
-          feature(
+          makeFeature(
             "files",
             "FILES",
             "Source files",
-            `${files.length} files`,
+            files.length + " tracked files",
             "files",
-            modules.map((m) => m.id),
+            fileIds,
           ),
-          feature(
+          makeFeature(
             "agent",
             "AGENT",
             "Agent surface",
-            "local tools and server",
+            agentFiles.length + " runtime files",
             "agent",
-            modules
-              .filter((m) => /code_agent|code_graph|languages/.test(m.title))
-              .map((m) => m.id),
+            agentFiles,
           ),
-          feature(
+          makeFeature(
             "health",
             "HEALTH",
             "Parse health",
-            `${graph.errors?.length || 0} errors`,
+            errors + " parse errors",
             "health",
-            modules.filter((m) => m.partsCount).map((m) => m.id),
+            errors ? fileIds : [],
           ),
         ];
-        const subviews = {};
-        modules.forEach((module) => {
-          const local = symbols.get(module.rawId) || [],
-            localIds = new Set(local.map((n) => n.id)),
-            subNodes = local.map((n, i) => ({
-              id: `sym:${n.id}`,
-              rawId: n.id,
-              title: n.name,
-              type: (n.kind || "symbol").toUpperCase(),
-              status: "ready",
-              partsCount: 0,
-              parts: [],
-              line: n.line,
-              namespace: `${n.file}:${n.line}`,
-              desc: `${n.name} is defined in ${n.file} at line ${n.line}.`,
-              sources: [`${n.file}:${n.line}`],
-              x: 70 + (i % 4) * 220,
-              y: 42 + Math.floor(i / 4) * 126,
-            })),
-            outside = new Map(),
-            subEdges = [];
-          edges.forEach((e) => {
-            if (!localIds.has(e.source) && !localIds.has(e.target)) return;
-            if (localIds.has(e.source) && localIds.has(e.target)) {
-              subEdges.push({
-                from: `sym:${e.source}`,
-                to: `sym:${e.target}`,
-                kind: e.kind,
-                count: 1,
-                desc: `${e.kind} at line ${e.line || "?"}`,
-              });
-              return;
-            }
-            const localId = localIds.has(e.source) ? e.source : e.target,
-              externalId = localIds.has(e.source) ? e.target : e.source,
-              externalFile = fileById.get(fileFor.get(externalId));
-            if (!externalFile) return;
-            const outId = `outside:${module.rawId}:${externalFile.id}`;
-            if (!outside.has(outId))
-              outside.set(outId, {
-                id: outId,
-                title: `OUTSIDE ${externalFile.name}`,
-                type: "OUTSIDE",
-                status: "ready",
-                x: 90 + outside.size * 210,
-                y: 430,
-              });
-            subEdges.push(
-              localIds.has(e.source)
-                ? {
-                    from: `sym:${localId}`,
-                    to: outId,
-                    kind: e.kind,
-                    count: 1,
-                    desc: `leaves ${module.title}`,
-                  }
-                : {
-                    from: outId,
-                    to: `sym:${localId}`,
-                    kind: e.kind,
-                    count: 1,
-                    desc: `enters ${module.title}`,
-                  },
-            );
-          });
-          subviews[module.id] = {
-            id: module.id,
-            name: module.title,
-            title: `Inside ${module.title}`,
-            namespace: module.namespace,
-            desc: module.desc,
-            sources: module.sources,
-            nodes: [...subNodes, ...outside.values()],
-            connections: subEdges,
-            parts: local,
-          };
+      }
+
+      function activeScope() {
+        return state.scopeStack.length
+          ? state.scopeStack[state.scopeStack.length - 1]
+          : null;
+      }
+
+      function currentView() {
+        return activeScope() === null
+          ? state.atlas.projectView("files")
+          : state.atlas.scopeView(activeScope());
+      }
+
+      function currentScopeLabel() {
+        const labels = state.scopeStack.map((id) => state.atlas.label(id));
+        return labels.length ? labels.join(" / ") : "repository";
+      }
+
+      function setGraph(graph) {
+        state.graph = graph;
+        state.atlas = AtlasGraph.model(graph);
+        state.children = new Map();
+        state.atlas.rawNodes.forEach((node) => {
+          if (!state.children.has(node.id)) state.children.set(node.id, []);
+          if (node.parent !== undefined) {
+            const siblings = state.children.get(node.parent) || [];
+            siblings.push(node.id);
+            state.children.set(node.parent, siblings);
+          }
         });
-        return {
-          name: graph.name || "SE-H1",
-          stats: graph.stats || {},
-          raw: graph,
-          modules,
-          moduleEdges,
-          features,
-          subviews,
-        };
+        state.features = buildFeatures(graph, state.atlas);
+        state.scopeStack = [];
+        state.selection = { type: "project" };
+        state.view = null;
+        state.layout = null;
+        $("source-preview").textContent =
+          "Select a source to inspect a bounded excerpt.";
+        renderAll();
       }
-      function currentData() {
-        return state.scope === "root"
-          ? {
-              id: "root",
-              name: state.atlas?.name || "SE-H1",
-              title: state.atlas?.name || "SE-H1",
-              namespace: "local.checkout",
-              desc: "A live map of this checkout: files, symbols, calls, and imports stay attached to their source.",
-              tiers: state.atlas?.modules || [],
-              connections: state.atlas?.moduleEdges || [],
-              features: state.atlas?.features || [],
-              sources: state.atlas
-                ? state.atlas.modules.map((m) => m.title)
-                : [],
-            }
-          : state.atlas?.subviews[state.scope];
-      }
-      function renderLegend(data) {
-        const kinds = [...new Set((data.connections || []).map((e) => e.kind))];
+
+      function renderLegend(view) {
+        const counts = new Map();
+        view.edges.forEach((edge) => {
+          counts.set(edge.kind, (counts.get(edge.kind) || 0) + edge.count);
+        });
+        const keys = ["calls", "imports", "related"];
         $("connections-legend").innerHTML =
-          `<span class="legend-label">RELATIONS</span>` +
-          kinds
+          '<span class="legend-label">RELATIONS</span>' +
+          keys
+            .filter((kind) => counts.has(kind))
             .map((kind) => {
-              const meta = META[kind] || META.calls;
-              return `<button class="legend-pill" data-kind="${esc(kind)}"><span class="legend-swatch" style="background:${meta.color}"></span>${esc(kind)} <small>${data.connections.filter((e) => e.kind === kind).reduce((sum, e) => sum + (e.count || 1), 0)}</small></button>`;
+              const meta = META[kind] || META.related;
+              return (
+                '<button class="legend-pill" data-kind="' +
+                esc(kind) +
+                '">' +
+                '<span class="legend-swatch" style="background:' +
+                meta.color +
+                '"></span>' +
+                esc(kind) +
+                " " +
+                counts.get(kind) +
+                "</button>"
+              );
             })
             .join("");
         $("connections-legend")
-          .querySelectorAll(".legend-pill")
-          .forEach((b) => {
-            b.addEventListener("mouseenter", () =>
-              setHover({ type: "kind", kind: b.dataset.kind }),
+          .querySelectorAll("[data-kind]")
+          .forEach((button) => {
+            button.addEventListener("mouseenter", () =>
+              setHover({ type: "kind", kind: button.dataset.kind }),
             );
-            b.addEventListener("mouseleave", clearHover);
+            button.addEventListener("mouseleave", clearHover);
           });
-        const s = state.atlas?.stats || {};
+        const stats = state.atlas.stats || {};
         $("secondary-legend").innerHTML =
-          `<span class="legend-label">GRAPH</span><span class="legend-pill">${s.files || 0} files</span><span class="legend-pill">${s.nodes || 0} symbols</span><span class="legend-pill">${s.edges || 0} relations</span><span class="legend-pill">${s.errors || 0} parse errors</span>`;
+          '<span class="legend-label">GRAPH</span>' +
+          '<span class="legend-pill">' +
+          (stats.files || 0) +
+          " files</span>" +
+          '<span class="legend-pill">' +
+          (stats.nodes || 0) +
+          " symbols</span>" +
+          '<span class="legend-pill">' +
+          (stats.edges || 0) +
+          " relations</span>" +
+          '<span class="legend-pill">' +
+          (stats.errors || 0) +
+          " parse errors</span>";
       }
-      function getCardWidth() {
-        return window.innerHeight < 850
-          ? Math.min(
-              155,
-              Math.max(
-                120,
-                Math.floor(($("canvas-container").clientWidth - 80) / 5),
-              ),
-            )
-          : 180;
+
+      function columnsFor(width) {
+        const compact = window.innerHeight < 850;
+        const card = compact ? 164 : 188;
+        const gap = compact ? 22 : 30;
+        return Math.max(
+          1,
+          Math.min(5, Math.floor((width + gap) / (card + gap))),
+        );
       }
-      function layoutRoot(nodes) {
-        const width = $("canvas-container").clientWidth,
-          cardWidth = getCardWidth(),
-          cols =
-            window.innerHeight < 850
-              ? Math.min(
-                  5,
-                  Math.max(1, Math.floor((width + 18) / (cardWidth + 18))),
-                )
-              : Math.min(4, Math.max(1, nodes.length)),
-          gap = Math.max(
-            18,
-            (width - 40 - cols * cardWidth) / Math.max(1, cols - 1),
-          ),
-          start = (width - (cols * cardWidth + (cols - 1) * gap)) / 2;
-        nodes.forEach((n, i) => {
-          n.x = start + (i % cols) * (cardWidth + gap);
-          n.y =
-            32 + Math.floor(i / cols) * (window.innerHeight < 850 ? 124 : 150);
+
+      function createSvgElement(tag, attributes) {
+        const element = document.createElementNS(SVG_NS, tag);
+        Object.entries(attributes || {}).forEach(([key, value]) => {
+          element.setAttribute(key, value);
         });
+        return element;
       }
-      function renderTopology(data, drilled) {
-        const container = $("nodes-container"),
-          svg = $("graph-svg");
-        container.innerHTML = "";
-        svg.innerHTML = "";
-        const nodes = drilled ? data.nodes : data.tiers,
-          connections = data.connections || [];
-        if (!drilled) layoutRoot(nodes);
-        nodes.forEach((n) => {
-          const card = document.createElement("div");
-          card.className = `module-card${n.type === "OUTSIDE" ? " outside" : ""}`;
-          card.id = `node-${n.id}`;
-          card.style.left = `${n.x}px`;
-          card.style.top = `${n.y}px`;
-          card.style.width = `${getCardWidth()}px`;
-          card.innerHTML = `<div class="card-top"><span class="card-type">${esc(n.type)}</span><span class="mini-status">ready</span></div><div class="card-title" title="${esc(n.title)}">${esc(n.title)}</div><div class="card-bottom"><span>${n.type === "OUTSIDE" ? "external port" : `${n.partsCount || n.parts?.length || 0} symbols`}</span>${n.type !== "OUTSIDE" ? '<span class="card-arrow">›</span>' : ""}</div>`;
+
+      function renderTopology(view) {
+        const canvas = $("canvas-container");
+        const nodesContainer = $("nodes-container");
+        const graphSvg = $("graph-svg");
+        const bridgeSvg = $("bridge-svg");
+        const width = Math.max(360, canvas.clientWidth - 32);
+        state.view = view;
+        state.layout = AtlasGraph.layout(view, {
+          width,
+          columns: columnsFor(width),
+        });
+        const layout = state.layout;
+        const graphWidth = Math.max(width, layout.width);
+        const graphHeight = Math.max(190, layout.height);
+        nodesContainer.innerHTML = "";
+        graphSvg.innerHTML = "";
+        bridgeSvg.innerHTML = "";
+        canvas.querySelector(".graph-spacer")?.remove();
+        nodesContainer.style.width = graphWidth + "px";
+        nodesContainer.style.height = graphHeight + "px";
+        graphSvg.setAttribute("width", graphWidth);
+        graphSvg.setAttribute("height", graphHeight);
+        graphSvg.style.width = graphWidth + "px";
+        graphSvg.style.height = graphHeight + "px";
+        bridgeSvg.setAttribute("width", graphWidth);
+        bridgeSvg.setAttribute("height", graphHeight);
+        bridgeSvg.style.width = graphWidth + "px";
+        bridgeSvg.style.height = graphHeight + "px";
+        const spacer = document.createElement("div");
+        spacer.className = "graph-spacer";
+        spacer.style.width = graphWidth + "px";
+        spacer.style.height = graphHeight + "px";
+        canvas.prepend(spacer);
+        const defs = createSvgElement("defs");
+        Object.entries(META).forEach(([kind, meta]) => {
+          const marker = createSvgElement("marker", {
+            id: "arrow-" + kind,
+            viewBox: "0 0 10 10",
+            refX: "8",
+            refY: "5",
+            markerWidth: "5",
+            markerHeight: "5",
+            orient: "auto-start-reverse",
+          });
+          marker.appendChild(
+            createSvgElement("path", {
+              d: "M 1 2 L 8 5 L 1 8 z",
+              fill: meta.color,
+            }),
+          );
+          defs.appendChild(marker);
+        });
+        graphSvg.appendChild(defs);
+        layout.edges.forEach((edge, index) => {
+          if (!edge.path) return;
+          const meta = META[edge.kind] || META.related;
+          const path = createSvgElement("path", {
+            d: edge.path,
+            class: "wire wire-" + (META[edge.kind] ? edge.kind : "related"),
+            stroke: meta.color,
+            "marker-end":
+              "url(#arrow-" + (META[edge.kind] ? edge.kind : "related") + ")",
+          });
+          path.dataset.index = String(index);
+          path.dataset.kind = edge.kind;
+          path.dataset.from = String(edge.source);
+          path.dataset.to = String(edge.target);
+          const title = createSvgElement("title");
+          title.textContent =
+            state.atlas.label(edge.source) +
+            " → " +
+            state.atlas.label(edge.target) +
+            " · " +
+            edge.kind +
+            (edge.count > 1 ? " ×" + edge.count : "");
+          path.appendChild(title);
+          path.addEventListener("mouseenter", () =>
+            setHover({ type: "edge", index, edge }),
+          );
+          path.addEventListener("mouseleave", clearHover);
+          graphSvg.appendChild(path);
+          if (edge.count > 1 && edge.badge) {
+            const badge = createSvgElement("g", { class: "wire-badge" });
+            badge.appendChild(
+              createSvgElement("circle", {
+                cx: edge.badge.x,
+                cy: edge.badge.y,
+                r: "9",
+                fill: "#15191d",
+                stroke: meta.color,
+              }),
+            );
+            const text = createSvgElement("text", {
+              x: edge.badge.x,
+              y: edge.badge.y + 3,
+              fill: "#c9d1d9",
+              "font-size": "9",
+              "font-family": "ui-monospace,monospace",
+              "text-anchor": "middle",
+            });
+            text.textContent = String(edge.count);
+            badge.appendChild(text);
+            graphSvg.appendChild(badge);
+          }
+        });
+        layout.nodes.forEach((node) => {
+          const card = document.createElement("article");
+          const outside = Boolean(node.outside);
+          const kind = outside
+            ? "OUTSIDE"
+            : String(node.kind || "symbol").toUpperCase();
+          const detail = outside
+            ? "external boundary"
+            : node.kind === "file"
+              ? String(node.children || 0) + " symbols"
+              : (node.file || "local") + ":" + (node.line || "—");
+          card.className = "module-card" + (outside ? " outside" : "");
+          card.id = "node-" + node.id;
+          card.dataset.nodeId = String(node.id);
+          card.style.left = node.x + "px";
+          card.style.top = node.y + "px";
+          card.style.width = node.width + "px";
+          card.style.height =
+            (outside ? Math.min(node.height, 60) : node.height) + "px";
+          card.innerHTML =
+            '<div class="card-top"><span class="card-type">' +
+            esc(kind) +
+            '</span><span class="mini-status">LIVE</span></div>' +
+            '<div class="card-title" title="' +
+            esc(node.label) +
+            '">' +
+            esc(node.label) +
+            "</div>" +
+            '<div class="card-bottom"><span>' +
+            esc(detail) +
+            "</span>" +
+            (outside ? "" : '<span class="card-arrow">›</span>') +
+            "</div>";
           card.addEventListener("mouseenter", () =>
-            setHover({ type: "node", id: n.id, connections }),
+            setHover({ type: "node", id: node.id }),
           );
           card.addEventListener("mouseleave", clearHover);
           card.addEventListener("click", () => {
-            if (!drilled && state.atlas?.subviews[n.id]) drillDown(n.id);
-            else selectNode(n);
+            if (!outside && canDrill(node.id)) goInto(node.id);
+            else selectNode(node);
           });
-          container.appendChild(card);
+          nodesContainer.appendChild(card);
         });
-        drawWires(connections, nodes);
+        if (!layout.nodes.length) {
+          const empty = document.createElement("div");
+          empty.className = "empty-state";
+          empty.style.padding = "60px 32px";
+          empty.textContent = "No symbols or relations in this scope.";
+          nodesContainer.appendChild(empty);
+        }
         applyQuery();
+        if (state.selection.type === "node") {
+          const card = $("node-" + state.selection.id);
+          if (card) card.classList.add("selected");
+        }
       }
-      function drawWires(connections, nodes) {
-        const svg = $("graph-svg"),
-          map = new Map(nodes.map((n) => [n.id, n])),
-          half = getCardWidth() / 2,
-          defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-        Object.entries(META).forEach(([kind, meta]) => {
-          const marker = document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "marker",
-          );
-          marker.id = `arrow-${kind}`;
-          marker.setAttribute("viewBox", "0 0 10 10");
-          marker.setAttribute("refX", "8");
-          marker.setAttribute("refY", "5");
-          marker.setAttribute("markerWidth", "5");
-          marker.setAttribute("markerHeight", "5");
-          marker.setAttribute("orient", "auto");
-          const p = document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "path",
-          );
-          p.setAttribute("d", "M 1 2 L 8 5 L 1 8 z");
-          p.setAttribute("fill", meta.color);
-          marker.appendChild(p);
-          defs.appendChild(marker);
-        });
-        svg.appendChild(defs);
-        connections.forEach((c, index) => {
-          const s = map.get(c.from),
-            t = map.get(c.to);
-          if (!s || !t) return;
-          const count = Math.max(1, Math.min(Number(c.count) || 1, 9)),
-            meta = META[c.kind] || META.calls,
-            gap = 7;
-          for (let lane = 0; lane < count; lane++) {
-            const offset = (lane - (count - 1) / 2) * gap,
-              sx = s.x + half + offset,
-              tx = t.x + half + offset,
-              sy = s.y + (s.type === "OUTSIDE" ? 54 : 82),
-              ty = t.y,
-              down = ty >= sy,
-              y1 = down ? sy : s.y,
-              y2 = down ? ty : t.y + (t.type === "OUTSIDE" ? 54 : 82),
-              bend = Math.max(34, Math.abs(y2 - y1) * 0.55),
-              path = document.createElementNS(
-                "http://www.w3.org/2000/svg",
-                "path",
-              ),
-              c1 = down ? y1 + bend : y1 - bend,
-              c2 = down ? y2 - bend : y2 + bend;
-            path.setAttribute(
-              "d",
-              `M ${sx} ${y1} C ${sx} ${c1}, ${tx} ${c2}, ${tx} ${y2}`,
+
+      function canDrill(id) {
+        const scope = activeScope();
+        return (
+          id !== scope &&
+          state.children.has(Number(id)) &&
+          state.children.get(Number(id)).length > 0
+        );
+      }
+
+      function drawBridges(feature) {
+        const bridge = $("bridge-svg");
+        bridge.innerHTML = "";
+        if (!feature || !state.layout) return;
+        const source = $("feature-" + feature.id);
+        if (!source) return;
+        const base = bridge.getBoundingClientRect();
+        const sourceRect = source.getBoundingClientRect();
+        const targets = state.layout.nodes
+          .filter((node) => {
+            const owner = fileIdForRaw(node.id);
+            return (
+              feature.modules.indexOf(node.id) >= 0 ||
+              feature.modules.indexOf(owner) >= 0
             );
-            path.setAttribute("class", "wire");
-            path.dataset.index = index;
-            path.dataset.kind = c.kind;
-            path.dataset.from = c.from;
-            path.dataset.to = c.to;
-            path.setAttribute("stroke", meta.color);
-            path.setAttribute(
-              "marker-end",
-              `url(#arrow-${META[c.kind] ? c.kind : "calls"})`,
-            );
-            if (meta.dash) path.setAttribute("stroke-dasharray", meta.dash);
-            path.addEventListener("mouseenter", () =>
-              setHover({ type: "edge", index, connection: c }),
-            );
-            path.addEventListener("mouseleave", clearHover);
-            svg.appendChild(path);
-          }
-          if (count > 1) {
-            const y = (s.y + (s.type === "OUTSIDE" ? 54 : 82) + t.y) / 2,
-              g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-            g.classList.add("wire-badge");
-            const circle = document.createElementNS(
-              "http://www.w3.org/2000/svg",
-              "circle",
-            );
-            circle.setAttribute("cx", s.x + half);
-            circle.setAttribute("cy", y);
-            circle.setAttribute("r", "7.5");
-            circle.setAttribute("fill", "#15191d");
-            circle.setAttribute("stroke", "#30363d");
-            const text = document.createElementNS(
-              "http://www.w3.org/2000/svg",
-              "text",
-            );
-            text.setAttribute("x", s.x + half);
-            text.setAttribute("y", y + 3);
-            text.setAttribute("fill", "#8b949e");
-            text.setAttribute("font-size", "9");
-            text.setAttribute("font-family", "ui-monospace,monospace");
-            text.setAttribute("text-anchor", "middle");
-            text.textContent = count;
-            g.append(circle, text);
-            svg.appendChild(g);
-          }
+          })
+          .slice(0, 28);
+        targets.forEach((node, index) => {
+          const target = $("node-" + node.id);
+          if (!target) return;
+          const rect = target.getBoundingClientRect();
+          const x1 = sourceRect.left + sourceRect.width / 2 - base.left;
+          const y1 = sourceRect.top - base.top;
+          const x2 = rect.left + rect.width / 2 - base.left;
+          const y2 = rect.bottom - base.top;
+          const bend = Math.max(28, Math.abs(y1 - y2) * 0.3);
+          const path = createSvgElement("path", {
+            class: "feature-bridge",
+            d:
+              "M " +
+              x1 +
+              " " +
+              y1 +
+              " C " +
+              x1 +
+              " " +
+              (y1 - bend) +
+              ", " +
+              x2 +
+              " " +
+              (y2 + bend) +
+              ", " +
+              x2 +
+              " " +
+              y2,
+          });
+          path.style.animationDelay = index * -0.08 + "s";
+          bridge.appendChild(path);
         });
       }
-      function applyQuery() {
-        const q = state.query.trim().toLowerCase();
-        $("nodes-container")
-          .querySelectorAll(".module-card")
-          .forEach((card) =>
-            card.classList.toggle(
-              "dimmed",
-              Boolean(q && !card.textContent.toLowerCase().includes(q)),
-            ),
+
+      function renderFeatures() {
+        const grid = $("features-grid");
+        grid.innerHTML = "";
+        state.features.forEach((feature) => {
+          const card = document.createElement("article");
+          card.className = "feature-card";
+          card.id = "feature-" + feature.id;
+          card.innerHTML =
+            '<div class="feature-top"><span>✦ ' +
+            esc(feature.tag) +
+            "</span><span>" +
+            esc(feature.detail) +
+            "</span></div>" +
+            '<div class="feature-name">' +
+            esc(feature.name) +
+            "</div>";
+          card.addEventListener("mouseenter", () =>
+            setHover({ type: "feature", feature }),
           );
+          card.addEventListener("mouseleave", clearHover);
+          card.addEventListener("click", () => selectFeature(feature));
+          grid.appendChild(card);
+        });
+        if (state.selection.type === "feature") {
+          const selected = $("feature-" + state.selection.feature.id);
+          if (selected) selected.classList.add("selected");
+        }
       }
-      function setHover(h) {
-        state.hover = h;
+
+      function setHover(hover) {
+        state.hover = hover;
         document
-          .querySelectorAll(".module-card")
-          .forEach((c) => c.classList.remove("dimmed"));
-        document
-          .querySelectorAll(".wire")
-          .forEach((w) => w.classList.remove("dimmed", "highlighted"));
-        if (!h) return;
-        if (h.type === "feature") {
-          setFeatureHover(h.feature);
+          .querySelectorAll(".module-card,.wire")
+          .forEach((element) =>
+            element.classList.remove("dimmed", "highlighted"),
+          );
+        if (!hover) return;
+        if (hover.type === "feature") {
+          setFeatureHover(hover.feature);
           return;
         }
-        const activeNodes = new Set(),
-          activeEdges = new Set();
-        if (h.type === "node") {
-          activeNodes.add(h.id);
-          h.connections.forEach((e, i) => {
-            if (e.from === h.id || e.to === h.id) {
-              activeNodes.add(e.from);
-              activeNodes.add(e.to);
-              activeEdges.add(i);
+        const activeNodes = new Set();
+        const activeEdges = new Set();
+        if (hover.type === "node") {
+          activeNodes.add(String(hover.id));
+          state.layout.edges.forEach((edge, index) => {
+            if (edge.source === hover.id || edge.target === hover.id) {
+              activeNodes.add(String(edge.source));
+              activeNodes.add(String(edge.target));
+              activeEdges.add(index);
+            }
+          });
+        } else if (hover.type === "edge") {
+          activeNodes.add(String(hover.edge.source));
+          activeNodes.add(String(hover.edge.target));
+          activeEdges.add(hover.index);
+        } else if (hover.type === "kind") {
+          state.layout.edges.forEach((edge, index) => {
+            if (edge.kind === hover.kind) {
+              activeEdges.add(index);
+              activeNodes.add(String(edge.source));
+              activeNodes.add(String(edge.target));
             }
           });
         }
-        if (h.type === "edge") {
-          activeNodes.add(h.connection.from);
-          activeNodes.add(h.connection.to);
-          activeEdges.add(h.index);
-        }
-        if (h.type === "kind") {
-          document
-            .querySelectorAll(`.wire[data-kind="${CSS.escape(h.kind)}"]`)
-            .forEach((w) => activeEdges.add(Number(w.dataset.index)));
-          document.querySelectorAll(".wire").forEach((w) => {
-            if (activeEdges.has(Number(w.dataset.index))) {
-              activeNodes.add(w.dataset.from);
-              activeNodes.add(w.dataset.to);
-            }
-          });
-        }
-        document.querySelectorAll(".module-card").forEach((c) => {
-          if (!activeNodes.has(c.id.slice(5))) c.classList.add("dimmed");
+        document.querySelectorAll(".module-card").forEach((card) => {
+          if (!activeNodes.has(card.dataset.nodeId))
+            card.classList.add("dimmed");
         });
-        document.querySelectorAll(".wire").forEach((w) => {
-          if (!activeEdges.has(Number(w.dataset.index)))
-            w.classList.add("dimmed");
-          else if (h.type === "edge") w.classList.add("highlighted");
+        document.querySelectorAll(".wire").forEach((wire) => {
+          if (!activeEdges.has(Number(wire.dataset.index)))
+            wire.classList.add("dimmed");
+          else if (hover.type === "edge") wire.classList.add("highlighted");
         });
       }
+
+      function setFeatureHover(feature) {
+        state.hover = { type: "feature", feature };
+        document.querySelectorAll(".module-card").forEach((card) => {
+          const node = state.layout.nodes.find(
+            (item) => String(item.id) === card.dataset.nodeId,
+          );
+          const owner = node ? fileIdForRaw(node.id) : undefined;
+          const active =
+            node &&
+            (feature.modules.indexOf(node.id) >= 0 ||
+              feature.modules.indexOf(owner) >= 0);
+          card.classList.toggle("dimmed", !active);
+        });
+        document.querySelectorAll(".wire").forEach((wire) => {
+          const sourceOwner = fileIdForRaw(Number(wire.dataset.from));
+          const targetOwner = fileIdForRaw(Number(wire.dataset.to));
+          const active =
+            feature.modules.indexOf(Number(wire.dataset.from)) >= 0 ||
+            feature.modules.indexOf(Number(wire.dataset.to)) >= 0 ||
+            feature.modules.indexOf(sourceOwner) >= 0 ||
+            feature.modules.indexOf(targetOwner) >= 0;
+          wire.classList.toggle("dimmed", !active);
+        });
+        drawBridges(feature);
+      }
+
       function clearHover() {
         state.hover = null;
         document
           .querySelectorAll(".module-card,.wire")
-          .forEach((e) => e.classList.remove("dimmed", "highlighted"));
+          .forEach((element) =>
+            element.classList.remove("dimmed", "highlighted"),
+          );
         if (state.selection.type === "feature")
           setFeatureHover(state.selection.feature);
         else $("bridge-svg").innerHTML = "";
       }
-      function renderFeatures(features) {
-        const grid = $("features-grid");
-        grid.innerHTML = "";
-        features.forEach((f) => {
-          const card = document.createElement("div");
-          card.className = "feature-card";
-          card.id = `feature-${f.id}`;
-          card.innerHTML = `<div class="feature-top"><span>✦ ${esc(f.tag)}</span><span>${esc(f.detail)}</span></div><div class="feature-name">${esc(f.name)}</div>`;
-          card.addEventListener("mouseenter", () => setFeatureHover(f));
-          card.addEventListener("mouseleave", clearHover);
-          card.addEventListener("click", () => selectFeature(f));
-          grid.appendChild(card);
-        });
-        if (state.selection.type === "feature")
-          $(`feature-${state.selection.feature.id}`)?.classList.add("selected");
-      }
-      function setFeatureHover(f) {
-        state.hover = { type: "feature", feature: f };
-        const ids = new Set(f.modules);
-        document
-          .querySelectorAll(".module-card")
-          .forEach((c) =>
-            c.classList.toggle("dimmed", !ids.has(c.id.slice(5))),
+
+      function applyQuery() {
+        const query = state.query.trim().toLowerCase();
+        document.querySelectorAll(".module-card").forEach((card) => {
+          card.classList.toggle(
+            "dimmed",
+            Boolean(query && !card.textContent.toLowerCase().includes(query)),
           );
-        document
-          .querySelectorAll(".wire")
-          .forEach((w) => w.classList.add("dimmed"));
-        drawBridges(f);
-      }
-      function drawBridges(f) {
-        const svg = $("bridge-svg");
-        svg.innerHTML = "";
-        if (!f) return;
-        const base = svg.getBoundingClientRect(),
-          source = $(`feature-${f.id}`);
-        if (!source) return;
-        const sr = source.getBoundingClientRect();
-        f.modules.forEach((id) => {
-          const target = $(`node-${id}`);
-          if (!target) return;
-          const tr = target.getBoundingClientRect(),
-            x1 = sr.left + sr.width / 2 - base.left,
-            y1 = sr.top - base.top,
-            x2 = tr.left + tr.width / 2 - base.left,
-            y2 = tr.bottom - base.top,
-            bend = Math.max(28, Math.abs(y1 - y2) * 0.35),
-            p = document.createElementNS("http://www.w3.org/2000/svg", "path");
-          p.setAttribute("class", "feature-bridge");
-          p.setAttribute(
-            "d",
-            `M ${x1} ${y1} C ${x1} ${y1 - bend}, ${x2} ${y2 + bend}, ${x2} ${y2}`,
-          );
-          svg.appendChild(p);
         });
       }
-      function renderInspector(selection) {
-        const a = state.atlas,
-          d = currentData(),
-          root = selection.type === "project",
-          f = selection.type === "feature" ? selection.feature : null,
-          n = selection.type === "node" ? selection.node : null;
-        $("inspector-badge").textContent = root
+
+      function sourceEntries(selection) {
+        if (selection.type === "project") {
+          return state.atlas.files.map((node) => ({
+            file: node.label,
+            line: 1,
+            label: node.label,
+          }));
+        }
+        if (selection.type === "feature") {
+          return selection.feature.modules
+            .map((id) => state.atlas.files.find((file) => file.id === id))
+            .filter(Boolean)
+            .map((file) => ({
+              file: file.label,
+              line: 1,
+              label: file.label,
+            }));
+        }
+        const node = selectedViewNode();
+        const raw = node ? rawNode(node.id) : null;
+        if (!raw) return [];
+        return [
+          {
+            file: raw.file || "unknown",
+            line: raw.line || 1,
+            label: (raw.file || "unknown") + ":" + (raw.line || 1),
+          },
+        ];
+      }
+
+      function relationText(edge) {
+        return (
+          state.atlas.label(edge.source) +
+          " → " +
+          state.atlas.label(edge.target) +
+          " · " +
+          edge.kind +
+          (edge.count > 1 ? " ×" + edge.count : "")
+        );
+      }
+
+      function renderInspector() {
+        const selection = state.selection;
+        const view = state.view || currentView();
+        const isProject = selection.type === "project";
+        const feature = selection.type === "feature" ? selection.feature : null;
+        const selected = selection.type === "node" ? selectedViewNode() : null;
+        const raw = selected ? rawNode(selected.id) : null;
+        $("inspector-badge").textContent = isProject
           ? "PROJECT · LIVE"
-          : f
-            ? `FEATURE · ${f.tag}`
-            : `${n?.type || "SYMBOL"} · READY`;
-        $("inspector-title").textContent = root
-          ? a.name
-          : f
-            ? f.name
-            : n?.title || "Selection";
-        $("inspector-namespace").textContent = root
+          : feature
+            ? "FEATURE · " + feature.tag
+            : (selected?.kind || "SYMBOL").toUpperCase() + " · LIVE";
+        $("inspector-title").textContent = isProject
+          ? state.atlas.name
+          : feature
+            ? feature.name
+            : selected?.label || "Selection";
+        $("inspector-namespace").textContent = isProject
           ? "local.checkout"
-          : f
-            ? `view.${f.id}`
-            : n?.namespace || "local.symbol";
-        $("inspector-desc").textContent = root
-          ? d.desc
-          : f
-            ? `${f.detail}. Highlighted paths show which files participate in this concern.`
-            : n?.desc || "A symbol from the checked-out graph.";
-        const s = a.stats || {},
-          metrics = root
+          : feature
+            ? "cross-cutting." + feature.id
+            : (raw?.file || "local.scope") + (raw?.line ? ":" + raw.line : "");
+        $("inspector-desc").textContent = isProject
+          ? "A source-backed map of this checkout. Files, symbols, calls, and imports remain attached to their definitions."
+          : feature
+            ? feature.detail + ". Hover the view to trace participating files."
+            : selected?.outside
+              ? "This relation leaves the current scope. Open the connected file from the root view."
+              : "A source-backed symbol in " + currentScopeLabel() + ".";
+        const stats = state.atlas.stats || {};
+        const metrics = isProject
+          ? [
+              ["Files", stats.files || 0],
+              ["Symbols", stats.nodes || 0],
+              ["Relations", stats.edges || 0],
+              ["Functions", stats.functions || 0],
+              ["Parse errors", stats.errors || 0],
+            ]
+          : feature
             ? [
-                ["Files", s.files || 0],
-                ["Symbols", s.nodes || 0],
-                ["Relations", s.edges || 0],
-                ["Functions", s.functions || 0],
-                ["Parse errors", s.errors || 0],
+                ["Kind", "feature"],
+                ["Linked files", feature.modules.length],
+                ["Status", "live"],
               ]
-            : f
-              ? [
-                  ["Kind", "feature"],
-                  ["Linked files", f.modules.length],
-                  ["Status", "ready"],
-                ]
-              : [
-                  ["Kind", n?.type || "symbol"],
-                  ["Line", n?.line || "—"],
-                  ["Symbols in file", n?.partsCount || n?.parts?.length || 0],
-                ];
+            : [
+                ["Kind", raw?.kind || selected?.kind || "symbol"],
+                ["Line", raw?.line || "—"],
+                ["Child symbols", selected?.children || 0],
+              ];
         $("metrics").innerHTML = metrics
           .map(
-            ([k, v]) =>
-              `<div class="metric-row"><span>${esc(k)}</span><strong>${esc(v)}</strong></div>`,
+            (pair) =>
+              '<div class="metric-row"><span>' +
+              esc(pair[0]) +
+              "</span><strong>" +
+              esc(pair[1]) +
+              "</strong></div>",
           )
           .join("");
-        const sources = root
-          ? d.sources || []
-          : f
-            ? f.modules
-                .map((id) => a.modules.find((m) => m.id === id)?.title)
-                .filter(Boolean)
-            : n?.sources || [];
-        $("sources").innerHTML = sources.length
-          ? sources
-              .map((x) => `<div class="source-item">${esc(x)}</div>`)
+        const entries = sourceEntries(selection);
+        $("sources").innerHTML = entries.length
+          ? entries
+              .map(
+                (entry, index) =>
+                  '<div class="source-item" data-source-index="' +
+                  index +
+                  '">' +
+                  esc(entry.label) +
+                  "</div>",
+              )
               .join("")
-          : `<div class="empty-state">No source references</div>`;
-        const titles = new Map(a.modules.map((m) => [m.id, m.title])),
-          rel = root
-            ? a.moduleEdges
-                .slice(0, 10)
-                .map(
-                  (e) =>
-                    `${titles.get(e.from) || e.from} → ${titles.get(e.to) || e.to} · ${e.kind}`,
-                )
-            : f
-              ? f.modules.map((id) => `composes → ${id}`)
-              : (d.connections || [])
-                  .filter((e) => e.from === n?.id || e.to === n?.id)
-                  .slice(0, 12)
-                  .map((e) => `${e.kind} · ${e.from} → ${e.to}`);
-        $("relations").innerHTML = rel.length
-          ? rel
-              .map((x) => {
-                const parts = x.split(" · ");
-                return `<div class="relation-item"><span class="relation-kind">${esc(parts[0])}</span>${parts[1] ? ` · ${esc(parts.slice(1).join(" · "))}` : ""}</div>`;
-              })
+          : '<div class="empty-state">No source references</div>';
+        $("sources")
+          .querySelectorAll("[data-source-index]")
+          .forEach((element) => {
+            const entry = entries[Number(element.dataset.sourceIndex)];
+            element.addEventListener("click", () =>
+              loadSource(entry.file, entry.line),
+            );
+          });
+        const relationEdges = isProject
+          ? view.edges.slice(0, 12)
+          : selected
+            ? view.edges.filter(
+                (edge) =>
+                  edge.source === selected.id || edge.target === selected.id,
+              )
+            : view.edges.slice(0, 12);
+        $("relations").innerHTML = relationEdges.length
+          ? relationEdges
+              .slice(0, 12)
+              .map(
+                (edge) =>
+                  '<div class="relation-item"><span class="relation-kind">' +
+                  esc(edge.kind) +
+                  "</span> · " +
+                  esc(relationText(edge)) +
+                  "</div>",
+              )
               .join("")
-          : `<div class="empty-state">No direct relations</div>`;
+          : '<div class="empty-state">No direct relations in this scope</div>';
       }
-      function updateHeader(d) {
-        const s = state.atlas?.stats || {};
-        $("stage-title").textContent = state.atlas?.name || "SE-H1";
-        $("stage-desc").textContent = d.desc || "A live map of this checkout.";
+
+      async function loadSource(file, line) {
+        const preview = $("source-preview");
+        preview.textContent = "Loading " + file + ":" + line + "…";
+        try {
+          const response = await fetch(
+            "/api/source?file=" +
+              encodeURIComponent(file) +
+              "&line=" +
+              encodeURIComponent(line),
+          );
+          if (!response.ok) throw new Error("source endpoint unavailable");
+          const payload = await response.json();
+          const first = payload.start || line;
+          preview.textContent =
+            payload.file +
+            "  (" +
+            first +
+            "–" +
+            (first + payload.lines.length - 1) +
+            " / " +
+            payload.total +
+            ")\n\n" +
+            payload.lines
+              .map(
+                (text, index) =>
+                  String(first + index).padStart(4) + "  " + text,
+              )
+              .join("\n");
+        } catch (error) {
+          preview.textContent =
+            file +
+            ":" +
+            line +
+            "\n\nSource preview is available while the live agent server is running.";
+        }
+      }
+
+      function updateHeader() {
+        const stats = state.atlas.stats || {};
+        $("stage-title").textContent = state.atlas.name || "Code Atlas";
+        $("stage-status").textContent =
+          activeScope() === null ? "LIVE" : "SCOPE";
+        $("stage-desc").textContent =
+          activeScope() === null
+            ? "A source-backed map of this checkout: every visible relation comes from the local parser."
+            : "Inside " +
+              currentScopeLabel() +
+              " · local symbols, external ports, and evidence paths.";
         $("stats-summary").textContent =
-          `${s.files || 0} files · ${s.nodes || 0} symbols · ${s.edges || 0} relations · ${s.errors || 0} parse errors`;
+          (stats.files || 0) +
+          " files · " +
+          (stats.nodes || 0) +
+          " symbols · " +
+          (stats.edges || 0) +
+          " relations · " +
+          (stats.errors || 0) +
+          " parse errors";
+        $("inspector-panel").setAttribute("data-scope", currentScopeLabel());
       }
+
       function renderAll() {
         if (!state.atlas) return;
-        const d = currentData();
-        updateHeader(d);
-        renderLegend(d);
-        renderTopology(d, state.scope !== "root");
-        renderFeatures(state.atlas.features);
-        renderInspector(state.selection);
+        const view = currentView();
+        updateHeader();
+        renderLegend(view);
+        renderTopology(view);
+        renderFeatures();
+        renderInspector();
         if (state.selection.type === "feature")
-          requestAnimationFrame(() => drawBridges(state.selection.feature));
+          requestAnimationFrame(() => setFeatureHover(state.selection.feature));
       }
-      function selectNode(n) {
-        state.selection = { type: "node", node: n };
-        renderInspector(state.selection);
+
+      function selectNode(node) {
+        state.selection = { type: "node", id: Number(node.id) };
+        renderInspector();
         document
           .querySelectorAll(".module-card")
-          .forEach((c) =>
-            c.classList.toggle("selected", c.id === `node-${n.id}`),
+          .forEach((card) =>
+            card.classList.toggle(
+              "selected",
+              card.dataset.nodeId === String(node.id),
+            ),
           );
       }
-      function selectFeature(f) {
-        state.selection = { type: "feature", feature: f };
-        renderInspector(state.selection);
-        document
-          .querySelectorAll(".feature-card")
-          .forEach((c) =>
-            c.classList.toggle("selected", c.id === `feature-${f.id}`),
-          );
-        setFeatureHover(f);
+
+      function selectFeature(feature) {
+        state.selection = { type: "feature", feature };
+        renderFeatures();
+        renderInspector();
+        setFeatureHover(feature);
       }
-      function drillDown(id) {
-        if (!state.atlas?.subviews[id]) return;
+
+      function transition(callback) {
         document.body.classList.add("scene-transition");
-        $("graph-svg").innerHTML = "";
-        $("nodes-container").innerHTML = "";
-        requestAnimationFrame(() => {
-          state.scope = id;
-          state.selection = {
-            type: "node",
-            node: state.atlas.modules.find((m) => m.id === id),
-          };
-          document.body.classList.remove("scene-transition");
+        window.setTimeout(() => {
+          callback();
           renderAll();
+          requestAnimationFrame(() =>
+            document.body.classList.remove("scene-transition"),
+          );
+        }, 130);
+      }
+
+      function goInto(id) {
+        const numericId = Number(id);
+        if (!canDrill(numericId)) return selectNode({ id: numericId });
+        transition(() => {
+          state.scopeStack.push(numericId);
+          state.selection = { type: "node", id: numericId };
         });
       }
-      function goRoot() {
-        if (state.scope === "root") return;
-        document.body.classList.add("scene-transition");
-        $("graph-svg").innerHTML = "";
-        $("nodes-container").innerHTML = "";
-        requestAnimationFrame(() => {
-          state.scope = "root";
+
+      function goBack() {
+        if (!state.scopeStack.length) {
           state.selection = { type: "project" };
-          document.body.classList.remove("scene-transition");
-          renderAll();
+          renderInspector();
+          return;
+        }
+        transition(() => {
+          state.scopeStack.pop();
+          state.selection = state.scopeStack.length
+            ? {
+                type: "node",
+                id: state.scopeStack[state.scopeStack.length - 1],
+              }
+            : { type: "project" };
         });
       }
-      async function loadGraph(repo = ".") {
+
+      async function loadGraph(repo, build) {
         $("build-button").disabled = true;
-        $("stage-status").textContent = "BUILDING";
+        $("stage-status").textContent = build ? "BUILDING" : "LOADING";
         try {
-          const response = await fetch("/api/build", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ repo }),
-          });
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          state.graph = await response.json();
-          state.atlas = normalizeGraph(state.graph);
-          state.scope = "root";
-          state.selection = { type: "project" };
-          renderAll();
+          const options = build
+            ? {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ repo }),
+              }
+            : {};
+          const response = await fetch(
+            build ? "/api/build" : "/api/graph",
+            options,
+          );
+          if (!response.ok)
+            throw new Error("graph endpoint returned HTTP " + response.status);
+          setGraph(await response.json());
           $("stage-status").textContent = "LIVE";
         } catch (error) {
-          $("stage-status").textContent = "ERROR";
-          $("stage-desc").textContent = error.message;
+          const fallback = embeddedGraph();
+          if (!build && fallback) {
+            setGraph(fallback);
+            $("stage-status").textContent = "LOCAL";
+          } else {
+            $("stage-status").textContent = "ERROR";
+            $("stage-desc").textContent = error.message;
+          }
         } finally {
           $("build-button").disabled = false;
         }
       }
+
       $("build-button").addEventListener("click", () =>
-        loadGraph($("repo-input").value.trim() || "."),
+        loadGraph($("repo-input").value.trim() || ".", true),
       );
-      $("repo-input").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") loadGraph($("repo-input").value.trim() || ".");
+      $("repo-input").addEventListener("keydown", (event) => {
+        if (event.key === "Enter")
+          loadGraph($("repo-input").value.trim() || ".", true);
       });
-      $("search-input").addEventListener("input", (e) => {
-        state.query = e.target.value;
+      $("search-input").addEventListener("input", (event) => {
+        state.query = event.target.value;
         applyQuery();
       });
       window.addEventListener("resize", () => {
         if (state.atlas) renderAll();
       });
-      window.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") goRoot();
+      window.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") goBack();
       });
-      window.addEventListener("DOMContentLoaded", () => loadGraph("."));
+      function init() {
+        loadGraph(".", false);
+      }
+      if (document.readyState === "loading")
+        window.addEventListener("DOMContentLoaded", init);
+      else init();
     </script>
   </body>
 </html>
