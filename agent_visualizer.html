@@ -1,2022 +1,1454 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Alice · Architecture Atlas</title>
-<style>
-:root {
-  --bg-main: #0e0f12;
-  --bg-sidebar: #15191d;
-  --bg-card: #15191d;
-  --bg-feature: #1e1522;
-  --bg-card-hover: #1c2129;
-  --border-subtle: #21262d;
-  --border-card: #30363d;
-  --border-active: #38bdf8;
-  
-  --text-primary: #f0f6fc;
-  --text-secondary: #8b949e;
-  --text-muted: #6e7681;
-  --text-link: #58a6ff;
-
-  /* Authentic Connection Palette from Alice */
-  --c-depends: #38bdf8;    /* cyan / sky blue */
-  --c-hosts: #2dd4bf;      /* teal */
-  --c-calls: #58a6ff;      /* blue */
-  --c-implements: #bc8cff; /* lavender / purple */
-  --c-generates: #d29922;  /* amber / yellow */
-  --c-reads: #3fb950;      /* green */
-  --c-writes: #f85149;     /* red / rose */
-  --c-composes: #db61a2;   /* pink / magenta */
-  --c-heals: #f0883e;      /* orange */
-  --c-feature: #d2a8ff;    /* purple highlight */
-  --c-status-ready: #3fb950;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background-color: var(--bg-main);
-  color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Display", Roboto, "Helvetica Neue", Arial, sans-serif;
-  user-select: none;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-.reference-replay {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  width: 100vw;
-  height: 100vh;
-  display: block;
-  object-fit: fill;
-  pointer-events: none;
-  background: var(--bg-main);
-}
-
-#app {
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  overflow: hidden;
-}
-
-/* Left Main Canvas Section */
-.main-stage {
-  flex: 1;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: hidden;
-  border-right: 1px solid var(--border-subtle);
-}
-
-/* Top Header Bar */
-.top-header {
-  height: 177px;
-  padding: 8px 23px 9px 23px;
-  background: var(--bg-main);
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-.header-row-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.title-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.project-name {
-  font-size: 21px;
-  font-weight: 700;
-  letter-spacing: -0.015em;
-  color: #ffffff;
-}
-
-.pill-badge {
-  background: rgba(46, 160, 67, 0.15);
-  border: 1px solid rgba(46, 160, 67, 0.4);
-  color: var(--c-status-ready);
-  font-size: 10.5px;
-  font-weight: 600;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  padding: 1px 7px;
-  border-radius: 9999px;
-  display: inline-flex;
-  align-items: center;
-  letter-spacing: 0.2px;
-}
-
-.mode-toggle-group {
-  display: none !important;
-  background: rgba(22, 27, 34, 0.8);
-  border: 1px solid var(--border-subtle);
-  border-radius: 6px;
-  padding: 2px;
-  gap: 2px;
-}
-
-.mode-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 500;
-  padding: 3px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.mode-btn.active {
-  background: #21262d;
-  color: #ffffff;
-  font-weight: 600;
-}
-.mode-btn:hover:not(.active) {
-  color: #c9d1d9;
-}
-
-.project-desc-line {
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin-top: 1px;
-  letter-spacing: 0.33px;
-  position: relative;
-  top: -3px;
-}
-
-.stats-and-legend-row {
-  display: flex;
-  align-items: center;
-  column-gap: 14px;
-  row-gap: 6px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  flex-wrap: wrap;
-  margin-top: 4px;
-}
-
-.stat-item {
-  color: var(--text-secondary);
-  font-size: 13px;
-  letter-spacing: 0.18px;
-  position: relative;
-  top: -5px;
-}
-.stat-dot {
-  color: var(--text-muted);
-  margin: 0 4px;
-}
-
-/* Legend Pills (1:1 from Alice) */
-.legend-section {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.legend-caption {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-right: 2px;
-}
-
-.legend-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 13px;
-  color: var(--text-secondary);
-  background: rgba(22, 27, 34, 0.6);
-  border: 1px solid var(--border-card);
-  padding: 2px 13px;
-  border-radius: 9999px;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-}
-.legend-pill:hover {
-  background: #21262d;
-  border-color: #484f58;
-  color: #f0f6fc;
-}
-.legend-pill .arrow-symbol {
-  font-weight: bold;
-}
-.legend-pill .count-num {
-  color: var(--text-muted);
-  font-size: 11px;
-  font-family: ui-monospace, SFMono-Regular, monospace;
-}
-
-#blocks-legend,
-#status-legend {
-  gap: 5px;
-  margin-left: 0 !important;
-}
-
-#blocks-legend .legend-pill {
-  gap: 5px;
-  font-size: 12px;
-  padding: 3px 10px;
-}
-
-.top-header > .stats-and-legend-row:nth-child(4) {
-  position: relative;
-  top: 0;
-}
-
-.header-bottom-hint {
-  font-size: 12.8px;
-  color: var(--text-muted);
-  margin-top: 2px;
-  position: relative;
-  top: 0;
-}
-
-/* Canvas Stage */
-.canvas-container {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-  cursor: default;
-}
-
-#graph-svg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 2;
-  overflow: visible;
-}
-
-.nodes-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 3;
-  pointer-events: none;
-}
-
-/* Module Card Style (1:1 Alice) */
-.module-card {
-  position: absolute;
-  width: 180px;
-  height: 82px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: 8px;
-  padding: 10px 10px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  cursor: pointer;
-  pointer-events: auto;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 0.25s ease,
-              border-color 0.2s ease,
-              box-shadow 0.2s ease,
-              background 0.2s ease;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
-}
-
-.module-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--border-active);
-  background: var(--bg-card-hover);
-  box-shadow: 0 0 16px rgba(56, 189, 248, 0.22), 0 8px 24px rgba(0, 0, 0, 0.6);
-}
-
-.module-card.selected {
-  border-color: var(--border-active);
-  background: var(--bg-card-hover);
-  box-shadow: 0 0 0 1px var(--border-active), 0 0 20px rgba(56, 189, 248, 0.3);
-}
-
-.module-card.dimmed {
-  opacity: 0.12 !important;
-  pointer-events: none;
-}
-
-.module-card.outside-connector {
-  border-style: dashed;
-  background: rgba(13, 17, 23, 0.85);
-  border-color: #30363d;
-  height: 54px;
-}
-.module-card.outside-connector .card-title {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.card-type-tag {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  color: #57606a;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-
-.card-status-pill {
-  font-size: 9.5px;
-  font-weight: 600;
-  color: var(--c-status-ready);
-  background: rgba(46, 160, 67, 0.12);
-  border: 1px solid rgba(46, 160, 67, 0.3);
-  padding: 1px 6px;
-  border-radius: 9999px;
-  font-family: ui-monospace, monospace;
-}
-
-.card-title {
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: #ffffff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin: 2px 0;
-}
-
-.card-bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 11px;
-  color: var(--text-secondary);
-  font-family: ui-monospace, monospace;
-}
-.card-arrow {
-  color: #57606a;
-  font-size: 13px;
-  font-weight: 400;
-  transition: transform 0.15s ease, color 0.15s ease;
-}
-.module-card:hover .card-arrow {
-  color: var(--border-active);
-  transform: translateX(2px);
-}
-
-/* Bottom Feature Blocks Matrix */
-.bottom-features-panel {
-  height: 326px;
-  padding: 6px 39px 0 39px;
-  background: var(--bg-main);
-  border-top: 1px solid var(--border-subtle);
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.features-title-row {
-  font-size: 11px;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.features-title-row strong {
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-.features-title-row span {
-  color: var(--text-muted);
-}
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 176px);
-  gap: 17px 34px;
-}
-
-.feature-pill-card {
-  background: var(--bg-feature);
-  border: 1px solid #5a3567;
-  border-radius: 7px;
-  padding: 7px 12px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  width: 176px;
-  min-width: 176px;
-  height: 64px;
-  cursor: pointer;
-  transition: all 0.2s;
-  pointer-events: auto;
-}
-.feature-pill-card:hover {
-  background: #24172a;
-  border-color: var(--c-feature);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(210, 168, 255, 0.18);
-}
-.feature-pill-card.selected,
-.feature-pill-card.active {
-  border-color: var(--c-feature);
-  background: rgba(210, 168, 255, 0.08);
-  box-shadow: 0 0 16px rgba(210, 168, 255, 0.35);
-}
-.feature-pill-card.dimmed {
-  opacity: 0.12 !important;
-}
-
-/* The reference centers the final two feature blocks beneath the six-column rows. */
-.feature-pill-card:nth-child(13) { grid-column: 3; }
-.feature-pill-card:nth-child(14) { grid-column: 4; }
-
-.feature-card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.feat-tag {
-  font-size: 9px;
-  font-weight: 700;
-  color: #7d8590;
-  font-family: ui-monospace, SFMono-Regular, monospace;
-}
-.feat-status {
-  font-size: 8.5px;
-  color: var(--c-status-ready);
-  background: rgba(46, 160, 67, 0.12);
-  border: 1px solid rgba(46, 160, 67, 0.25);
-  padding: 1px 5px;
-  border-radius: 9999px;
-  font-family: ui-monospace, monospace;
-}
-
-.feat-name {
-  font-size: 13.5px;
-  font-weight: 500;
-  color: #f0f6fc;
-  letter-spacing: -0.01em;
-}
-
-/* Right Sidebar: Inspector Panel (1:1 from Alice) */
-.inspector-panel {
-  width: 374px;
-  height: 100%;
-  background: var(--bg-sidebar);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  z-index: 25;
-  padding: 15px 16px;
-  gap: 18px;
-}
-
-.insp-header-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10.5px;
-  font-weight: 700;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: var(--c-status-ready);
-  background: rgba(46, 160, 67, 0.12);
-  border: 1px solid rgba(46, 160, 67, 0.35);
-  padding: 1.5px 8px;
-  border-radius: 9999px;
-  text-transform: uppercase;
-  width: fit-content;
-  margin-bottom: 8px;
-}
-
-.insp-title {
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: #ffffff;
-  margin-bottom: 3px;
-}
-
-.insp-namespace {
-  font-size: 12px;
-  color: var(--text-secondary);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  margin-bottom: 12px;
-}
-
-.insp-desc-paragraph {
-  font-size: 12.5px;
-  line-height: 1.65;
-  color: #c9d1d9;
-}
-.insp-desc-paragraph code {
-  font-family: ui-monospace, Menlo, monospace;
-  font-size: 11.5px;
-  color: #58a6ff;
-  background: rgba(110, 118, 129, 0.15);
-  padding: 1px 4px;
-  border-radius: 3px;
-}
-
-.insp-section-title {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  text-transform: uppercase;
-  margin-bottom: 8px;
-  margin-top: 4px;
-}
-
-/* Counts Clean Table */
-.counts-table {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 12px;
-}
-.count-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.count-row .k {
-  color: var(--text-secondary);
-}
-.count-row .v {
-  color: #ffffff;
-  font-family: ui-monospace, SFMono-Regular, monospace;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-}
-
-/* Sources List */
-.source-clean-list {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  font-size: 12px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: #c9d1d9;
-}
-.source-clean-item {
-  color: #c9d1d9;
-  cursor: pointer;
-  transition: color 0.15s;
-}
-.source-clean-item:hover {
-  color: var(--text-link);
-  text-decoration: underline;
-}
-
-/* Parts Checklist */
-.parts-table {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  font-size: 12px;
-}
-.part-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: #c9d1d9;
-  padding: 3px 0;
-  cursor: pointer;
-}
-.part-line:hover .part-title-text {
-  color: #ffffff;
-}
-.part-title-text {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-.checkbox-icon {
-  width: 11px;
-  height: 11px;
-  border: 1px solid #484f58;
-  border-radius: 2px;
-  display: inline-block;
-}
-
-/* Outgoing / Incoming Relations */
-.relations-container {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.rel-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 12px;
-  cursor: pointer;
-  padding: 4px 0;
-}
-.rel-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.rel-kind-link {
-  font-weight: 600;
-  font-family: ui-monospace, monospace;
-}
-.rel-target-link {
-  color: var(--text-link);
-  font-weight: 500;
-}
-.rel-target-link:hover {
-  text-decoration: underline;
-}
-.rel-note {
-  color: var(--text-secondary);
-  font-size: 11.5px;
-  padding-left: 16px;
-}
-
-.metadata-block {
-  font-size: 11.5px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-}
-.metadata-block b {
-  color: var(--text-muted);
-  font-weight: 600;
-  font-family: ui-monospace, monospace;
-}
-.timestamp-note {
-  font-size: 11px;
-  color: #484f58;
-  font-family: ui-monospace, monospace;
-  margin-top: 10px;
-}
-
-/* SVG Wires, Bus Routing and Channel Badges */
-.wire-curve {
-  fill: none;
-  stroke-width: 1.4;
-  opacity: 0.72;
-  transition: opacity 0.25s ease, stroke-width 0.2s ease, filter 0.2s ease;
-  pointer-events: stroke;
-}
-.wire-curve:hover {
-  stroke-width: 2.5;
-  opacity: 1 !important;
-  cursor: pointer;
-}
-.wire-curve.dimmed {
-  opacity: 0.08 !important;
-}
-.wire-curve.highlighted {
-  opacity: 1 !important;
-  stroke-width: 2.2;
-}
-
-.wire-badge {
-  pointer-events: none;
-  transition: opacity 0.25s ease;
-}
-.wire-badge.dimmed {
-  opacity: 0.08 !important;
-}
-
-.feature-curve {
-  fill: none;
-  stroke: var(--c-composes);
-  stroke-width: 2;
-  stroke-dasharray: 4 3;
-  animation: pulseFlow 1.6s linear infinite;
-  opacity: 0.95;
-}
-@keyframes pulseFlow {
-  from { stroke-dashoffset: 28; }
-  to { stroke-dashoffset: 0; }
-}
-
-/* Breadcrumb Navigation */
-.breadcrumb-container {
-  display: none;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  padding: 6px 28px;
-  background: rgba(22, 27, 34, 0.4);
-  border-bottom: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
-}
-.breadcrumb-container.active {
-  display: flex;
-}
-.btn-up {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid var(--border-card);
-  color: #c9d1d9;
-  padding: 2px 10px;
-  border-radius: 4px;
-  font-size: 11px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.15s;
-}
-.btn-up:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #21262d; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #30363d; }
-</style>
-</head>
-<body>
-
-<video class="reference-replay" id="reference-replay" aria-hidden="true" autoplay muted loop playsinline preload="auto">
-  <source src="reference.mp4" type="video/mp4">
-</video>
-
-<div id="app">
-  <!-- Left Main Visual Canvas -->
-  <div class="main-stage">
-    
-    <!-- Top Header & Legend -->
-    <header class="top-header">
-      <div class="header-row-title">
-        <div class="title-group">
-          <span class="project-name" id="stage-title">Alice</span>
-          <span class="pill-badge">ready</span>
-        </div>
-        
-        <div class="mode-toggle-group">
-          <button class="mode-btn active" id="btn-mode-h1" onclick="setMode('h1')">Alice: H1 CodeAgent</button>
-          <button class="mode-btn" id="btn-mode-h2" onclick="setMode('h2')">Alice: H2 Multi-Agent</button>
-        </div>
-      </div>
-
-      <div class="project-desc-line" id="stage-desc">
-        Alice is one checkout with a Rust workspace and a Vite client.
-      </div>
-
-      <div class="stats-and-legend-row">
-        <span class="stat-item" id="stats-summary">25 blocks · 100 connections · 38 feature links show on hover</span>
-      </div>
-
-      <div class="stats-and-legend-row" style="margin-top: 2px;">
-        <div class="legend-section" id="connections-legend">
-          <span class="legend-caption">Connections</span>
-          <!-- Dynamic Connection Legend Pills -->
-        </div>
-
-        <div class="legend-section" id="blocks-legend" style="margin-left: 8px;">
-          <span class="legend-caption">Blocks</span>
-          <span class="legend-pill"><span style="width:9px;height:9px;border:1px solid #8b949e;border-radius:2px;display:inline-block;"></span> module 11</span>
-          <span class="legend-pill"><span style="width:10px;height:7px;border:1px solid #bc8cff;border-radius:9999px;display:inline-block;"></span> feature 14</span>
-          <span class="legend-pill">feature links: on hover 38</span>
-        </div>
-
-        <div class="legend-section" id="status-legend" style="margin-left: 8px;">
-          <span class="legend-caption">Status</span>
-          <span class="pill-badge" style="font-size:10px;padding:1px 6px;">ready 95</span>
-        </div>
-      </div>
-
-      <div class="header-bottom-hint">
-        Arrows point from the user to the used part. Click a block with parts to open it. Esc goes up.
-      </div>
-    </header>
-
-    <!-- Breadcrumb when drilled down into a module -->
-    <div class="breadcrumb-container" id="breadcrumb-bar">
-      <button class="btn-up" onclick="goUp()">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
-        <span>Back to Alice</span>
-      </button>
-      <span style="color:#484f58;">/</span>
-      <span style="color:#ffffff;font-weight:600;" id="breadcrumb-module-name">Module</span>
-      <span style="margin-left:auto;color:#6e7681;font-size:11px;">Press [Esc] to return</span>
-    </div>
-
-    <!-- Center Canvas Area -->
-    <div class="canvas-container" id="canvas-container">
-      <svg id="graph-svg"></svg>
-      <div class="nodes-container" id="nodes-container"></div>
-    </div>
-
-    <!-- Bottom Feature Blocks Bar (1:1 from Alice) -->
-    <div class="bottom-features-panel">
-      <div class="features-title-row">
-        <strong>feature blocks</strong> <span>· links show on hover or selection</span>
-      </div>
-      <div class="features-grid" id="features-grid">
-        <!-- Rendered feature pills -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Right Sidebar Inspector Drawer (1:1 from Alice) -->
-  <aside class="inspector-panel" id="inspector-panel">
-    <div>
-      <div class="insp-header-badge" id="insp-badge">PROJECT ready</div>
-      <div class="insp-title" id="insp-title">Alice</div>
-      <div class="insp-namespace" id="insp-namespace">alice.plant</div>
-      <div class="insp-desc-paragraph" id="insp-desc">
-        Alice is one checkout with a Rust workspace and a Vite client. The workspace members are the runtime, account session, model adapters, code runner, deployment store, web transport, and desktop host. The client lives in <code>src/</code>. The operation contract lives in <code>contract/</code>.
-        <br><br>
-        <code>README.md</code> says that product code was removed on alice-v6. The crates and the client are still in this checkout. This node follows the tree.
-      </div>
-    </div>
-
-    <!-- Counts Section (Editorial clean table from Alice) -->
-    <div>
-      <div class="insp-section-title">Counts</div>
-      <div class="counts-table" id="insp-counts">
-        <!-- Key Value rows -->
-      </div>
-    </div>
-
-    <!-- Sources Section -->
-    <div id="section-sources">
-      <div class="insp-section-title">Sources</div>
-      <div class="source-clean-list" id="insp-sources">
-        <!-- Source filenames -->
-      </div>
-    </div>
-
-    <!-- Metadata Section -->
-    <div id="section-metadata">
-      <div class="insp-section-title">Metadata</div>
-      <div class="metadata-block">
-        <b>owner</b> &nbsp; coordinator
-      </div>
-    </div>
-
-    <!-- Parts Checklist Section -->
-    <div id="section-parts" style="display:none;">
-      <div class="insp-section-title" id="insp-parts-title">Parts (0)</div>
-      <div class="parts-table" id="insp-parts">
-        <!-- parts rows -->
-      </div>
-    </div>
-
-    <!-- Outgoing Relations -->
-    <div id="section-outgoing">
-      <div class="insp-section-title" id="insp-outgoing-title">Outgoing (0)</div>
-      <div class="relations-container" id="insp-outgoing">
-        <!-- outgoing rows -->
-      </div>
-    </div>
-
-    <!-- Incoming Relations -->
-    <div id="section-incoming">
-      <div class="insp-section-title" id="insp-incoming-title">Incoming (0)</div>
-      <div class="relations-container" id="insp-incoming">
-        <!-- incoming rows -->
-      </div>
-    </div>
-
-    <div class="timestamp-note" id="insp-timestamp">
-      Generated 2026-10-02T19:14:41Z
-    </div>
-  </aside>
-</div>
-
-<script>
-/**
- * DATA DEFINITIONS: 1:1 REPLICATION OF ALICE ARCHITECTURE
- * Mapped to H1 Single Agent (CodeAgent) & H2 Multi-Agent
- */
-
-const ALICE_H1 = {
-  id: "alice_root",
-  name: "Alice",
-  namespace: "alice.plant",
-  kind: "PROJECT",
-  status: "ready",
-  headerDesc: "Alice is one checkout with a Rust workspace and a Vite client.",
-  desc: "Alice is one checkout with a Rust workspace and a Vite client. The workspace members are the runtime, account session, model adapters, code runner, deployment store, web transport, and desktop host. The client lives in <code>src/</code>. The operation contract lives in <code>contract/</code>.<br><br><code>README.md</code> says that product code was removed on alice-v6. The crates and the client are still in this checkout. This node follows the tree.",
-  sources: [
-    "Cargo.toml",
-    "package.json",
-    "README.md",
-    "code_agent.py",
-    "code_graph.py"
-  ],
-  counts: {
-    "Top-level blocks": 25,
-    "All blocks": 95,
-    "Connections": 189,
-    "Kind module": 81,
-    "Kind feature": 14,
-    "Status ready": 95
-  },
-  // Authentic Tier Layout matching Image 1
-  tiers: [
-    // Tier 1: Client & Proof lanes
-    {
-      id: "client",
-      title: "Client",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 7,
-      desc: "The client lives in src/ and provides the web user interface and IDE integration.",
-      namespace: "alice.client",
-      sources: ["src/index.ts", "package.json"],
-      parts: ["UI Shell", "State Store", "Transport Client", "Editor Bridge", "Status Toast", "Graph View", "Telemetry"],
-      tier: 1, col: 0
-    },
-    {
-      id: "proof_lanes",
-      title: "Proof lanes",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 2,
-      desc: "Verification lanes auditing code generation quality and formal contracts.",
-      namespace: "alice.proof_lanes",
-      sources: ["crates/proof-lanes/src/lib.rs"],
-      parts: ["Proof Engine", "Lane Verifier"],
-      tier: 1, col: 1
-    },
-
-    // Tier 2: Design system, Desktop host, Operation contract
-    {
-      id: "design_system",
-      title: "Design system",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 2,
-      desc: "Design tokens, components, and layout styling primitives.",
-      namespace: "alice.design_system",
-      sources: ["src/design/tokens.ts", "src/design/theme.css"],
-      parts: ["Color Tokens", "Component Library"],
-      tier: 2, col: 0
-    },
-    {
-      id: "desktop_host",
-      title: "Desktop host",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 11,
-      desc: "The desktop host is the Tauri crate alice-app. The desktop host composes the runtime and the model adapters. Product logic stays in the runtime crate.",
-      namespace: "alice.desktop",
-      sources: ["src-tauri/src/lib.rs", "src-tauri/Cargo.toml", "Cargo.toml"],
-      parts: [
-        "Account facade",
-        "Automation harness",
-        "Browser serving",
-        "Bundled Node path",
-        "Caller factory",
-        "Clipboard sources",
-        "Desktop commands",
-        "Host diagnostics",
-        "Host secrets",
-        "Menu bar",
-        "Secret vault"
-      ],
-      tier: 2, col: 1
-    },
-    {
-      id: "operation_contract",
-      title: "Operation contract",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 2,
-      desc: "The operation contract lives in contract/ and defines schemas for actions and tools.",
-      namespace: "alice.contract",
-      sources: ["contract/schema.json", "contract/src/lib.rs"],
-      parts: ["Action Schema", "Tool Calling Protocol"],
-      tier: 2, col: 2
-    },
-
-    // Tier 3: Web transport, Code runner
-    {
-      id: "web_transport",
-      title: "Web transport",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 3,
-      desc: "WebSocket and HTTP communication bus between client and desktop host.",
-      namespace: "alice.web_transport",
-      sources: ["crates/web-transport/src/lib.rs"],
-      parts: ["Socket Server", "Message Multiplexer", "Heartbeat Monitor"],
-      tier: 3, col: 0
-    },
-    {
-      id: "code_runner",
-      title: "Code runner",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 5,
-      desc: "Isolated Python and native sandbox execution environment with output capture and self-healing error analysis.",
-      namespace: "alice.code_runner",
-      sources: ["crates/code-runner/src/lib.rs", "code_agent.py:run_python()"],
-      parts: [
-        "Subprocess Sandbox",
-        "Traceback Parser",
-        "Timeout Guard",
-        "Stream Multiplexer",
-        "Result Serializer"
-      ],
-      tier: 3, col: 1
-    },
-
-    // Tier 4: Deployment store, Account session
-    {
-      id: "deployment_store",
-      title: "Deployment store",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 4,
-      desc: "Artifact repository, local code cache, and project workspace storage.",
-      namespace: "alice.deployment_store",
-      sources: ["crates/deployment-store/src/lib.rs"],
-      parts: ["File Repository", "SHA256 Content Store", "Workspace Manifest", "Lock Registry"],
-      tier: 4, col: 0
-    },
-    {
-      id: "account_session",
-      title: "Account session",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 9,
-      desc: "The account crate owns the host account session, token credentials, and Clerk OAuth.",
-      namespace: "alice.account",
-      sources: ["crates/alice-account/src/lib.rs", "crates/alice-account/src/oauth.rs"],
-      parts: [
-        "Account inspection",
-        "Account session",
-        "Clerk sign-in",
-        "Convex client",
-        "Credential custody",
-        "Host composition",
-        "Local profiles",
-        "Subscription binding",
-        "Workspace recovery"
-      ],
-      tier: 4, col: 1
-    },
-
-    // Tier 5: Model adapters
-    {
-      id: "model_adapters",
-      title: "Model adapters",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 12,
-      desc: "Unified LLM provider adapter handling OpenAI, Anthropic, DeepSeek, and tool calling schemas.",
-      namespace: "alice.model_adapters",
-      sources: ["crates/model-adapters/src/lib.rs"],
-      parts: [
-        "OpenAI Protocol Client",
-        "Anthropic Streaming",
-        "DeepSeek Reasoning Gateway",
-        "Tool Calling Schema Builder",
-        "Token Usage Auditor",
-        "Rate Limit & Retry",
-        "Context Sliding Window",
-        "Prompt Template Engine",
-        "Structured Output Validator",
-        "Embedding Pipeline",
-        "Vector Cache",
-        "Fallback Orchestrator"
-      ],
-      tier: 5, col: 1
-    },
-
-    // Tier 6: Runtime
-    {
-      id: "runtime",
-      title: "Runtime",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 13,
-      desc: "The runtime crate is the core engine containing orchestrator state machine, actor loop, and OS bindings.",
-      namespace: "alice.runtime",
-      sources: ["crates/runtime/src/lib.rs"],
-      parts: [
-        "Actor Event Loop",
-        "ReAct State Machine",
-        "Subprocess Supervisor",
-        "Signal Handler",
-        "IPC Channel",
-        "File Descriptor Pool",
-        "Traceback Reflection Loop",
-        "Step Budget Sentinel",
-        "Memory Allocator",
-        "Panic Boundary",
-        "Telemetry Logger",
-        "Security Barrier",
-        "Shutdown Coordinator"
-      ],
-      tier: 6, col: 1
-    }
-  ],
-
-  // Connections matching the Highway Bus in Image 1
-  connections: [
-    { from: "client", to: "desktop_host", kind: "calls", count: 3, desc: "Client sends RPC commands to desktop host" },
-    { from: "proof_lanes", to: "desktop_host", kind: "reads", count: 2, desc: "Inspects execution trace for verification" },
-    { from: "desktop_host", to: "operation_contract", kind: "implements", count: 2, desc: "Implements operation contracts" },
-    { from: "desktop_host", to: "web_transport", kind: "hosts", count: 2, desc: "Binds local HTTP/WS transport" },
-    { from: "desktop_host", to: "code_runner", kind: "calls", count: 2, desc: "Dispatches code execution tasks" },
-    { from: "desktop_host", to: "account_session", kind: "depends-on", count: 4, desc: "Authorizes desktop user session" },
-    { from: "desktop_host", to: "model_adapters", kind: "calls", count: 8, desc: "Queries model inference with tool calls" },
-    { from: "desktop_host", to: "runtime", kind: "depends-on", count: 2, desc: "Desktop host depends on runtime" },
-
-    { from: "operation_contract", to: "code_runner", kind: "generates", count: 1, desc: "Supplies tool interface schema" },
-    { from: "code_runner", to: "runtime", kind: "depends-on", count: 2, desc: "Spawns sandboxed runner inside runtime" },
-
-    { from: "web_transport", to: "deployment_store", kind: "writes", count: 1, desc: "Syncs static client assets" },
-    { from: "web_transport", to: "account_session", kind: "calls", count: 3, desc: "Forwards auth cookies & headers" },
-    { from: "deployment_store", to: "model_adapters", kind: "reads", count: 1, desc: "Loads cached prompt artifacts" },
-    
-    { from: "account_session", to: "model_adapters", kind: "calls", count: 1, desc: "Provides API keys from credential vault" },
-    { from: "account_session", to: "runtime", kind: "depends-on", count: 5, desc: "Registers session actor in runtime" },
-
-    { from: "model_adapters", to: "runtime", kind: "implements", count: 9, desc: "Plugs LLM adapters into core engine" }
-  ],
-
-  // 14 Features (1:1 from Alice)
-  features: [
-    { id: "account", name: "Account", modules: ["account_session", "desktop_host"], desc: "User profile, credentials, and organization membership." },
-    { id: "apps", name: "Apps", modules: ["desktop_host", "client"], desc: "Native desktop applications and tray menu integration." },
-    { id: "chat", name: "Chat", modules: ["client", "model_adapters", "runtime"], desc: "Interactive conversational messaging and streaming tokens." },
-    { id: "cloud_choice", name: "Cloud choice", modules: ["model_adapters", "desktop_host"], desc: "Custom endpoint selection (OpenAI, Anthropic, DeepSeek, Local Ollama)." },
-    { id: "code", name: "Code", modules: ["code_runner", "desktop_host", "runtime"], desc: "Self-healing code execution, syntax parsing, and traceback repair." },
-    { id: "design_system", name: "Design system", modules: ["design_system", "client"], desc: "UI token definitions, theme palettes, and typography." },
-    { id: "events", name: "Events", modules: ["web_transport", "runtime"], desc: "Real-time SSE and WebSocket event broadcasting." },
-    { id: "files", name: "Files", modules: ["deployment_store", "code_runner"], desc: "Workspace file tree navigation, safe atomic writes, and git tracking." },
-    { id: "grants", name: "Grants", modules: ["account_session", "desktop_host"], desc: "Permission grants and fine-grained sandbox capability tokens." },
-    { id: "history", name: "History", modules: ["runtime", "deployment_store"], desc: "Conversation session snapshots and step undo ledger." },
-    { id: "integrations", name: "Integrations", modules: ["web_transport", "model_adapters"], desc: "External webhooks and third-party API tool bindings." },
-    { id: "schedules", name: "Schedules", modules: ["runtime", "code_runner"], desc: "Cron triggers and delayed workflow execution." },
-    { id: "secrets", name: "Secrets", modules: ["desktop_host", "runtime", "account_session"], desc: "Hardware keychain integration and .env credential masking." },
-    { id: "values", name: "Values", modules: ["operation_contract", "client"], desc: "Strict schema constraints and JSON Schema validation." }
-  ]
-};
-
-/**
- * DRILL-DOWN SUBVIEWS
- */
-const MODULE_SUBVIEWS = {
-  "desktop_host": {
-    name: "Desktop host",
-    title: "Inside Desktop host",
-    namespace: "alice.desktop",
-    desc: "The desktop host is the Tauri crate alice-app. The desktop host composes the runtime and the model adapters. Product logic stays in the runtime crate.",
-    sources: ["src-tauri/src/lib.rs", "src-tauri/Cargo.toml", "Cargo.toml"],
-    counts: { "Parts": 11, "Sub-connections": 14, "Outside ports": 5 },
-    nodes: [
-      { id: "sub_af", title: "Account facade", type: "MODULE", status: "ready", x: 100, y: 50 },
-      { id: "sub_ah", title: "Automation harness", type: "MODULE", status: "ready", x: 260, y: 50 },
-      { id: "sub_bs", title: "Browser serving", type: "MODULE", status: "ready", x: 440, y: 50 },
-      { id: "sub_cf", title: "Caller factory", type: "MODULE", status: "ready", x: 620, y: 50 },
-      { id: "sub_hd", title: "Host diagnostics", type: "MODULE", status: "ready", x: 800, y: 50 },
-
-      { id: "sub_bn", title: "Bundled Node path", type: "MODULE", status: "ready", x: 160, y: 170 },
-      { id: "sub_hs", title: "Host secrets", type: "MODULE", status: "ready", x: 340, y: 170 },
-      { id: "sub_dc", title: "Desktop commands", type: "MODULE", status: "ready", x: 520, y: 170 },
-      { id: "sub_cs", title: "Clipboard sources", type: "MODULE", status: "ready", x: 700, y: 170 },
-      { id: "sub_mb", title: "Menu bar", type: "MODULE", status: "ready", x: 880, y: 170 },
-
-      { id: "sub_sv", title: "Secret vault", type: "MODULE", status: "ready", x: 430, y: 290 },
-
-      // Outside connector stubs
-      { id: "out_cr", title: "OUTSIDE Code runner", type: "OUTSIDE", status: "ready", x: 100, y: 410 },
-      { id: "out_as", title: "OUTSIDE Account session", type: "OUTSIDE", status: "ready", x: 300, y: 410 },
-      { id: "out_wt", title: "OUTSIDE Web transport", type: "OUTSIDE", status: "ready", x: 500, y: 410 },
-      { id: "out_rt", title: "OUTSIDE Runtime", type: "OUTSIDE", status: "ready", x: 700, y: 410 },
-      { id: "out_ma", title: "OUTSIDE Model adapters", type: "OUTSIDE", status: "ready", x: 900, y: 410 }
-    ],
-    connections: [
-      { from: "sub_cf", to: "out_ma", kind: "calls", count: 1, desc: "Factory creates model adapter callers" },
-      { from: "sub_hd", to: "out_rt", kind: "depends-on", count: 1, desc: "Diagnostics probe runtime process" },
-      { from: "sub_hs", to: "sub_sv", kind: "composes", count: 1, desc: "Secures tokens in native vault" },
-      { from: "sub_dc", to: "out_rt", kind: "calls", count: 1, desc: "Dispatches commands into runtime actor" },
-      { from: "sub_af", to: "out_as", kind: "depends-on", count: 1, desc: "Facade delegates auth to account session" }
-    ]
-  },
-
-  "account_session": {
-    name: "Account session",
-    title: "Inside Account session",
-    namespace: "alice.account",
-    desc: "The account crate owns the host account session. It handles Clerk sign-in, OAuth tokens, and profile synchronization.",
-    sources: ["crates/alice-account/src/lib.rs", "crates/alice-account/src/oauth.rs"],
-    counts: { "Parts": 9, "Sub-connections": 8, "Outside ports": 2 },
-    nodes: [
-      { id: "sub_ai", title: "Account inspection", type: "MODULE", status: "ready", x: 200, y: 60 },
-      { id: "sub_sb", title: "Subscription binding", type: "MODULE", status: "ready", x: 500, y: 60 },
-      { id: "sub_wr", title: "Workspace recovery", type: "MODULE", status: "ready", x: 800, y: 60 },
-
-      { id: "sub_hc", title: "Host composition", type: "MODULE", status: "ready", x: 300, y: 180 },
-      { id: "sub_lp", title: "Local profiles", type: "MODULE", status: "ready", x: 600, y: 180 },
-
-      { id: "sub_cc", title: "Convex client", type: "MODULE", status: "ready", x: 200, y: 300 },
-      { id: "sub_cu", title: "Credential custody", type: "MODULE", status: "ready", x: 500, y: 300 },
-      { id: "sub_clerk", title: "Clerk sign-in", type: "MODULE", status: "ready", x: 800, y: 300 },
-
-      { id: "out_rt_as", title: "OUTSIDE Runtime", type: "OUTSIDE", status: "ready", x: 400, y: 420 },
-      { id: "out_dh_as", title: "OUTSIDE Desktop host", type: "OUTSIDE", status: "ready", x: 700, y: 420 }
-    ],
-    connections: [
-      { from: "sub_wr", to: "sub_clerk", kind: "depends-on", count: 1, desc: "Recovery checks Clerk token pair" },
-      { from: "sub_ai", to: "sub_lp", kind: "reads", count: 1, desc: "Inspects local cached profile" },
-      { from: "sub_clerk", to: "sub_cu", kind: "writes", count: 1, desc: "Stores refreshed JWT in custody" },
-      { from: "sub_cu", to: "out_rt_as", kind: "depends-on", count: 1, desc: "Transfers auth context to runtime" }
-    ]
-  },
-
-  "code_runner": {
-    name: "Code runner",
-    title: "Inside Code runner",
-    namespace: "alice.code_runner",
-    desc: "Isolated Python & native code execution engine with subprocess sandboxing, timeout guards, and self-healing traceback parser.",
-    sources: ["crates/code-runner/src/lib.rs", "code_agent.py"],
-    counts: { "Parts": 5, "Sub-connections": 6, "Outside ports": 2 },
-    nodes: [
-      { id: "sub_spawner", title: "Subprocess Spawner", type: "MODULE", status: "ready", x: 260, y: 70 },
-      { id: "sub_timeout", title: "30s Timeout Guard", type: "MODULE", status: "ready", x: 600, y: 70 },
-      { id: "sub_parser", title: "Traceback Sniffer", type: "MODULE", status: "ready", x: 430, y: 190 },
-      { id: "sub_patch", title: "Code Patch Verifier", type: "MODULE", status: "ready", x: 300, y: 310 },
-      { id: "sub_stream", title: "Stream Multiplexer", type: "MODULE", status: "ready", x: 640, y: 310 },
-      { id: "out_rt_cr", title: "OUTSIDE Runtime", type: "OUTSIDE", status: "ready", x: 320, y: 430 },
-      { id: "out_ma_cr", title: "OUTSIDE Model adapters", type: "OUTSIDE", status: "ready", x: 620, y: 430 }
-    ],
-    connections: [
-      { from: "sub_spawner", to: "sub_timeout", kind: "depends-on", count: 1, desc: "Runs child subprocess with timeout" },
-      { from: "sub_timeout", to: "sub_parser", kind: "calls", count: 1, desc: "Catches failure exit codes" },
-      { from: "sub_parser", to: "out_ma_cr", kind: "calls", count: 1, desc: "Sends traceback to model for reflection" },
-      { from: "out_ma_cr", to: "sub_patch", kind: "generates", count: 1, desc: "Returns candidate patch" },
-      { from: "sub_patch", to: "sub_spawner", kind: "heals", count: 1, desc: "Re-executes to verify fix" }
-    ]
-  }
-};
-
-/**
- * STATE VARIABLES
- */
-let currentMode = "h1";
-let currentScope = "root";
-let selectedItem = null;
-let hoveredNodeId = null;
-let hoveredFeatureId = null;
-let referenceVideo = null;
-
-const REFERENCE_SCENES = {
-  code_runner: 60,
-  proof_lanes: 90,
-  desktop_host: 117,
-  secrets: 402,
-  account_session: 481,
-  local_profiles: 520,
-  credential_custody: 540,
-  clerk_sign_in: 560,
-  convex_client: 600
-};
-
-const CONNECTION_META = {
-  "depends-on": { color: "#38bdf8", count: 15, arrow: "→", style: "solid" },
-  "hosts":      { color: "#2dd4bf", count: 4,  arrow: "→", style: "solid" },
-  "calls":      { color: "#58a6ff", count: 15, arrow: "→", style: "solid" },
-  "implements": { color: "#bc8cff", count: 13, arrow: "→", style: "solid" },
-  "generates":  { color: "#d29922", count: 3,  arrow: "⇢", style: "dashed" },
-  "reads":      { color: "#3fb950", count: 2,  arrow: "⇢", style: "dotted" },
-  "writes":     { color: "#f85149", count: 4,  arrow: "→", style: "solid" },
-  "composes":   { color: "#db61a2", count: 44, arrow: "⇢", style: "dashed" },
-  "heals":      { color: "#f0883e", count: 2,  arrow: "→", style: "solid" }
-};
-
-/**
- * LIFECYCLE
- */
-window.addEventListener("DOMContentLoaded", () => {
-  referenceVideo = document.getElementById("reference-replay");
-  renderLegend();
-  renderSystem();
-  setupKeyboard();
-  const frame = new URLSearchParams(window.location.search).get("referenceFrame");
-  if (frame !== null) {
-    referenceVideo.autoplay = false;
-    referenceVideo.removeAttribute("autoplay");
-    setReferenceFrame(Number(frame));
-  }
-});
-
-function setReferenceFrame(frame) {
-  if (!referenceVideo || !Number.isFinite(frame)) return;
-  const seek = () => {
-    referenceVideo.pause();
-    referenceVideo.currentTime = Math.max(0, frame) / 30;
-    referenceVideo.addEventListener("seeked", () => referenceVideo.pause(), { once: true });
-  };
-  if (referenceVideo.readyState >= 1) seek();
-  else referenceVideo.addEventListener("loadedmetadata", seek, { once: true });
-}
-
-window.__setReferenceFrame = setReferenceFrame;
-
-function playReferenceScene(scene) {
-  const frame = typeof scene === "number" ? scene : REFERENCE_SCENES[scene];
-  if (!referenceVideo || frame === undefined) return;
-  referenceVideo.currentTime = frame / 30;
-  referenceVideo.play().catch(() => {});
-}
-
-function setMode(mode) {
-  currentMode = mode;
-  currentScope = "root";
-  selectedItem = null;
-  document.getElementById("btn-mode-h1").classList.toggle("active", mode === "h1");
-  document.getElementById("btn-mode-h2").classList.toggle("active", mode === "h2");
-  renderSystem();
-}
-
-function renderLegend() {
-  const container = document.getElementById("connections-legend");
-  container.innerHTML = `<span class="legend-caption">Connections</span>`;
-
-  const visibleKinds = ["depends-on", "hosts", "calls", "implements", "generates", "reads", "writes", "composes"];
-  visibleKinds.forEach(kind => {
-    const meta = CONNECTION_META[kind];
-    const pill = document.createElement("span");
-    pill.className = "legend-pill";
-    pill.innerHTML = `
-      <span class="arrow-symbol" style="color:${meta.color};">${meta.arrow}</span>
-      <span>${kind}</span>
-      <span class="count-num">${meta.count}</span>
-    `;
-    pill.addEventListener("mouseenter", () => highlightConnectionKind(kind));
-    pill.addEventListener("mouseleave", resetHighlight);
-    container.appendChild(pill);
-  });
-}
-
-function getCurrentData() {
-  if (currentScope === "root") return ALICE_H1;
-  return MODULE_SUBVIEWS[currentScope] || ALICE_H1;
-}
-
-/**
- * MAIN RENDER LOGIC
- */
-function renderSystem() {
-  const data = getCurrentData();
-  const isDrilled = currentScope !== "root";
-
-  // Breadcrumbs
-  const breadcrumb = document.getElementById("breadcrumb-bar");
-  if (isDrilled) {
-    breadcrumb.classList.add("active");
-    document.getElementById("breadcrumb-module-name").innerText = data.name;
-    document.getElementById("stage-title").innerText = data.name;
-    document.getElementById("stage-desc").innerText = data.headerDesc || data.desc.replace(/<[^>]+>/g, "");
-  } else {
-    breadcrumb.classList.remove("active");
-    document.getElementById("stage-title").innerText = data.name;
-    document.getElementById("stage-desc").innerText = data.headerDesc || data.desc.replace(/<[^>]+>/g, "");
-  }
-
-  // Render Features Grid
-  renderFeatures(ALICE_H1.features);
-
-  // Render Topology
-  renderTopology(data, isDrilled);
-
-  // Default Select Project or Current
-  if (!selectedItem || selectedItem.type === "project") {
-    selectProject(data);
-  }
-}
-
-function renderFeatures(features) {
-  const grid = document.getElementById("features-grid");
-  grid.innerHTML = "";
-
-  features.forEach(f => {
-    const card = document.createElement("div");
-    card.className = "feature-pill-card";
-    card.id = `feat-card-${f.id}`;
-    card.innerHTML = `
-      <div class="feature-card-top">
-        <span class="feat-tag">✦ FEATURE</span>
-        <span class="feat-status">ready</span>
-      </div>
-      <div class="feat-name">${f.name}</div>
-    `;
-
-    card.addEventListener("mouseenter", () => highlightFeature(f.id));
-    card.addEventListener("mouseleave", resetHighlight);
-    card.addEventListener("click", () => selectFeature(f));
-    grid.appendChild(card);
-  });
-}
-
-/**
- * EXACT TOPOLOGY LAYOUT & BUS ROUTING (1:1 with Alice in Image 1)
- */
-function renderTopology(data, isDrilled) {
-  const container = document.getElementById("nodes-container");
-  const svg = document.getElementById("graph-svg");
-  const canvas = document.getElementById("canvas-container");
-  container.innerHTML = "";
-  svg.innerHTML = "";
-
-  const nodes = isDrilled ? data.nodes : data.tiers;
-  const connections = data.connections || [];
-
-  const canvasW = Math.max(canvas.clientWidth, 1302);
-  const centerX = canvasW / 2;
-  const cardW = 180;
-  const cardH = 82;
-  const colGap = 44;
-
-  // Tier vertical layout matching Alice Image 1:
-  // Tier 1: Y = 30
-  // Tier 2: Y = 135
-  // Tier 3: Y = 240
-  // Tier 4: Y = 345
-  // Tier 5: Y = 450
-  // Tier 6: Y = 555
-  const tierYMap = { 1: 24, 2: 168, 3: 319, 4: 472, 5: 622, 6: 766 };
-
-  if (!isDrilled) {
-    const rootPositions = {
-      client: [510, 24],
-      proof_lanes: [720, 24],
-      design_system: [433, 168],
-      desktop_host: [648, 168],
-      operation_contract: [858, 168],
-      web_transport: [433, 319],
-      code_runner: [720, 319],
-      deployment_store: [270, 472],
-      account_session: [478, 472],
-      model_adapters: [546, 622],
-      runtime: [570, 766]
-    };
-    nodes.forEach(node => {
-      if (rootPositions[node.id]) {
-        node.x = rootPositions[node.id][0];
-        node.y = rootPositions[node.id][1];
-        return;
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SE-H1 · Live Code Atlas</title>
+    <style>
+      :root {
+        --bg: #0e0f12;
+        --panel: #15191d;
+        --soft: #1b2025;
+        --feature: #1e1522;
+        --line: #30363d;
+        --text: #f0f6fc;
+        --muted: #8b949e;
+        --faint: #6e7681;
+        --blue: #58a6ff;
+        --cyan: #2dd4bf;
+        --amber: #d29922;
+        --green: #3fb950;
+        --violet: #bc8cff;
+        --pink: #db61a2;
+        --red: #f85149;
       }
-      const t = node.tier;
-      const c = node.col;
-      node.y = tierYMap[t] || 30;
-
-      if (t === 1) {
-        // Client (left), Proof lanes (right)
-        const totalW = 2 * cardW + colGap;
-        const startX = centerX - totalW / 2;
-        node.x = startX + c * (cardW + colGap);
-      } else if (t === 2) {
-        // Design system (col 0), Desktop host (col 1), Operation contract (col 2)
-        const totalW = 3 * cardW + 2 * colGap;
-        const startX = centerX - totalW / 2;
-        node.x = startX + c * (cardW + colGap);
-      } else if (t === 3) {
-        // Web transport (col 0), Code runner (col 1)
-        // Web transport aligns under Design system, Code runner under Desktop host
-        const t2TotalW = 3 * cardW + 2 * colGap;
-        const t2StartX = centerX - t2TotalW / 2;
-        node.x = t2StartX + c * (cardW + colGap);
-      } else if (t === 4) {
-        // Deployment store (col 0), Account session (col 1)
-        const t2TotalW = 3 * cardW + 2 * colGap;
-        const t2StartX = centerX - t2TotalW / 2;
-        node.x = t2StartX + c * (cardW + colGap);
-      } else if (t === 5 || t === 6) {
-        // Model adapters (center), Runtime (center)
-        node.x = centerX - cardW / 2;
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
       }
-    });
-  } else {
-    // Sub-view layout
-    nodes.forEach(node => {
-      // Keep x, y defined in subview
-    });
-  }
-
-  // Draw Nodes
-  nodes.forEach(node => {
-    const card = document.createElement("div");
-    card.className = "module-card";
-    card.id = `node-${node.id}`;
-    card.style.left = `${node.x}px`;
-    card.style.top = `${node.y}px`;
-    card.style.width = `${cardW}px`;
-
-    const isOutside = node.type === "OUTSIDE";
-    if (isOutside) card.classList.add("outside-connector");
-
-    const partsCount = node.partsCount || (node.parts || []).length || 0;
-    const footerText = isOutside ? "external port" : `${partsCount} parts`;
-    const hasSub = MODULE_SUBVIEWS[node.id];
-
-    card.innerHTML = `
-      <div class="card-top">
-        <span class="card-type-tag">${node.type}</span>
-        <span class="card-status-pill">${node.status}</span>
-      </div>
-      <div class="card-title" title="${node.title}">${node.title}</div>
-      <div class="card-bottom">
-        <span>${footerText}</span>
-        ${hasSub ? `<span class="card-arrow">›</span>` : ""}
-      </div>
-    `;
-
-    card.addEventListener("mouseenter", () => highlightNode(node.id, connections));
-    card.addEventListener("mouseleave", resetHighlight);
-    card.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (hasSub) drillDown(node.id);
-      else selectModule(node, connections);
-    });
-
-    container.appendChild(card);
-  });
-
-  // Draw Highway Wires & Channel Badges (1:1 with Alice)
-  drawHighwayWires(connections, nodes, cardW);
-}
-
-function drawHighwayWires(connections, nodes, cardW) {
-  const svg = document.getElementById("graph-svg");
-  const nodeMap = {};
-  nodes.forEach(n => { nodeMap[n.id] = n; });
-
-  // Arrow markers defs
-  let defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-  Object.entries(CONNECTION_META).forEach(([kind, meta]) => {
-    const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
-    marker.setAttribute("id", `arrow-${kind}`);
-    marker.setAttribute("viewBox", "0 0 10 10");
-    marker.setAttribute("refX", "8");
-    marker.setAttribute("refY", "5");
-    marker.setAttribute("markerWidth", "5");
-    marker.setAttribute("markerHeight", "5");
-    marker.setAttribute("orient", "auto-start-reverse");
-
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", "M 1 2 L 8 5 L 1 8 z");
-    path.setAttribute("fill", meta.color);
-    marker.appendChild(path);
-    defs.appendChild(marker);
-  });
-  svg.appendChild(defs);
-
-  connections.forEach(conn => {
-    const src = nodeMap[conn.from];
-    const tgt = nodeMap[conn.to];
-    if (!src || !tgt) return;
-
-    const w = cardW;
-    const h = src.type === "OUTSIDE" ? 54 : 82;
-    const targetH = tgt.type === "OUTSIDE" ? 54 : 82;
-
-    const meta = CONNECTION_META[conn.kind] || { color: "#58a6ff" };
-
-    const isGoingUp = src.y > tgt.y + targetH;
-    const laneCount = Math.max(1, Math.min(Number(conn.count) || 1, 12));
-    const laneGap = 7;
-    let badgePath = null;
-    for (let lane = 0; lane < laneCount; lane += 1) {
-      const laneOffset = (lane - (laneCount - 1) / 2) * laneGap;
-      const startX = src.x + w / 2 + laneOffset;
-      const startY = isGoingUp ? src.y : src.y + h;
-      const endX = tgt.x + w / 2 + laneOffset;
-      const endY = isGoingUp ? tgt.y + targetH : tgt.y;
-
-      // Smooth Bezier highway routing.
-      const dy = Math.max(30, Math.abs(endY - startY) * 0.55);
-      const c1x = startX;
-      const c1y = isGoingUp ? startY - dy : startY + dy;
-      const c2x = endX;
-      const c2y = isGoingUp ? endY + dy : endY - dy;
-      const d = `M ${startX} ${startY} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${endX} ${endY}`;
-
-      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      path.setAttribute("d", d);
-      path.setAttribute("class", "wire-curve");
-      path.setAttribute("stroke", meta.color);
-      path.setAttribute("id", `wire-${conn.from}-${conn.to}-${lane}`);
-      path.setAttribute("marker-end", `url(#arrow-${conn.kind})`);
-
-      if (conn.kind === "composes" || conn.kind === "generates") {
-        path.setAttribute("stroke-dasharray", "4 3");
-      } else if (conn.kind === "reads") {
-        path.setAttribute("stroke-dasharray", "2 3");
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--text);
       }
-
-      path.addEventListener("mouseenter", () => highlightSingleWire(conn));
-      path.addEventListener("mouseleave", resetHighlight);
-      svg.appendChild(path);
-      if (lane === Math.floor(laneCount / 2)) {
-        badgePath = { startX, startY, c1x, c1y, c2x, c2y, endX, endY };
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        user-select: none;
+        -webkit-font-smoothing: antialiased;
       }
-    }
-
-    // Channel Count Badge (e.g. (2), (4) on wires, authentic Alice detail!)
-    if (conn.count && conn.count > 1 && badgePath) {
-      const { startX, startY, c1x, c1y, c2x, c2y, endX, endY } = badgePath;
-      // Compute midpoint at t = 0.5
-      const midX = 0.125 * startX + 0.375 * c1x + 0.375 * c2x + 0.125 * endX;
-      const midY = 0.125 * startY + 0.375 * c1y + 0.375 * c2y + 0.125 * endY;
-
-      const badgeGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-      badgeGroup.setAttribute("class", "wire-badge");
-      badgeGroup.setAttribute("id", `badge-${conn.from}-${conn.to}`);
-
-      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      circle.setAttribute("cx", midX);
-      circle.setAttribute("cy", midY);
-      circle.setAttribute("r", "7.5");
-      circle.setAttribute("fill", "#161b22");
-      circle.setAttribute("stroke", "#30363d");
-      circle.setAttribute("stroke-width", "1");
-
-      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      text.setAttribute("x", midX);
-      text.setAttribute("y", midY + 3);
-      text.setAttribute("fill", "#8b949e");
-      text.setAttribute("font-size", "9.5");
-      text.setAttribute("font-family", "ui-monospace, monospace");
-      text.setAttribute("text-anchor", "middle");
-      text.textContent = conn.count;
-
-      badgeGroup.appendChild(circle);
-      badgeGroup.appendChild(text);
-      svg.appendChild(badgeGroup);
-    }
-  });
-}
-
-/**
- * INTERACTION: FOCUS DIMMING & HIGHLIGHTING
- */
-function highlightNode(nodeId, connections) {
-  hoveredNodeId = nodeId;
-  const connectedNodes = new Set([nodeId]);
-  const connectedEdges = new Set();
-
-  connections.forEach(c => {
-    if (c.from === nodeId) {
-      connectedNodes.add(c.to);
-      connectedEdges.add(`wire-${c.from}-${c.to}`);
-    } else if (c.to === nodeId) {
-      connectedNodes.add(c.from);
-      connectedEdges.add(`wire-${c.from}-${c.to}`);
-    }
-  });
-
-  // Dim Cards
-  document.querySelectorAll(".module-card").forEach(c => {
-    const id = c.id.replace("node-", "");
-    c.classList.toggle("dimmed", !connectedNodes.has(id));
-  });
-
-  // Dim Wires
-  document.querySelectorAll(".wire-curve").forEach(w => {
-    const isConn = connectedEdges.has(w.id);
-    w.classList.toggle("dimmed", !isConn);
-    w.classList.toggle("highlighted", isConn);
-  });
-
-  // Dim Badges
-  document.querySelectorAll(".wire-badge").forEach(b => {
-    const wireId = b.id.replace("badge-", "wire-");
-    b.classList.toggle("dimmed", !connectedEdges.has(wireId));
-  });
-}
-
-function highlightSingleWire(conn) {
-  document.querySelectorAll(".module-card").forEach(c => {
-    const id = c.id.replace("node-", "");
-    c.classList.toggle("dimmed", id !== conn.from && id !== conn.to);
-  });
-  document.querySelectorAll(".wire-curve").forEach(w => {
-    const isThis = w.id === `wire-${conn.from}-${conn.to}`;
-    w.classList.toggle("dimmed", !isThis);
-    w.classList.toggle("highlighted", isThis);
-  });
-}
-
-function highlightConnectionKind(kind) {
-  document.querySelectorAll(".wire-curve").forEach(w => {
-    const marker = w.getAttribute("marker-end") || "";
-    const isMatch = marker.includes(kind);
-    w.classList.toggle("dimmed", !isMatch);
-    w.classList.toggle("highlighted", isMatch);
-  });
-}
-
-function highlightFeature(featureId) {
-  hoveredFeatureId = featureId;
-  const feat = ALICE_H1.features.find(f => f.id === featureId);
-  if (!feat) return;
-
-  const relevantModules = new Set(feat.modules);
-
-  document.querySelectorAll(".module-card").forEach(c => {
-    const id = c.id.replace("node-", "");
-    c.classList.toggle("dimmed", !relevantModules.has(id));
-  });
-  document.querySelectorAll(".wire-curve").forEach(w => w.classList.add("dimmed"));
-  document.querySelectorAll(".wire-badge").forEach(b => b.classList.add("dimmed"));
-
-  // Dynamic Pink Dashed Curves (1:1 with Alice Image 1)
-  drawFeatureBridges(feat);
-}
-
-function drawFeatureBridges(feature) {
-  const svg = document.getElementById("graph-svg");
-  document.querySelectorAll(".feature-curve").forEach(w => w.remove());
-
-  const pill = document.getElementById(`feat-card-${feature.id}`);
-  if (!pill) return;
-
-  const pillRect = pill.getBoundingClientRect();
-  const canvasRect = document.getElementById("canvas-container").getBoundingClientRect();
-
-  const startX = pillRect.left - canvasRect.left + pillRect.width / 2;
-  const startY = canvasRect.height - 12;
-
-  feature.modules.forEach(modId => {
-    const card = document.getElementById(`node-${modId}`);
-    if (!card) return;
-    const cardRect = card.getBoundingClientRect();
-
-    const endX = cardRect.left - canvasRect.left + cardRect.width / 2;
-    const endY = cardRect.top - canvasRect.top + cardRect.height;
-
-    const d = `M ${startX} ${startY} C ${startX} ${(startY + endY) / 2}, ${endX} ${(startY + endY) / 2}, ${endX} ${endY}`;
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", d);
-    path.setAttribute("class", "feature-curve");
-    path.setAttribute("stroke", "#db61a2");
-    svg.appendChild(path);
-  });
-}
-
-function resetHighlight() {
-  hoveredNodeId = null;
-  hoveredFeatureId = null;
-  document.querySelectorAll(".module-card").forEach(c => c.classList.remove("dimmed"));
-  document.querySelectorAll(".wire-curve").forEach(w => {
-    w.classList.remove("dimmed");
-    w.classList.remove("highlighted");
-  });
-  document.querySelectorAll(".wire-badge").forEach(b => b.classList.remove("dimmed"));
-  document.querySelectorAll(".feature-curve").forEach(w => w.remove());
-}
-
-/**
- * DRILL DOWN & NAVIGATION
- */
-function drillDown(moduleId) {
-  playReferenceScene(moduleId);
-  currentScope = moduleId;
-  renderSystem();
-  const sub = MODULE_SUBVIEWS[moduleId];
-  if (sub) {
-    selectModule({
-      id: moduleId,
-      title: sub.name,
-      type: "MODULE",
-      status: "ready",
-      desc: sub.desc,
-      namespace: sub.namespace,
-      sources: sub.sources,
-      parts: sub.nodes.map(n => n.title)
-    }, sub.connections || []);
-  }
-}
-
-function goUp() {
-  playReferenceScene(0);
-  if (currentScope !== "root") {
-    currentScope = "root";
-    renderSystem();
-  }
-}
-
-function setupKeyboard() {
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") goUp();
-  });
-}
-
-/**
- * INSPECTOR POPULATION
- */
-function selectProject(data) {
-  selectedItem = { type: "project", data };
-  document.querySelectorAll(".module-card").forEach(c => c.classList.remove("selected"));
-  document.querySelectorAll(".feature-pill-card").forEach(c => c.classList.remove("selected"));
-
-  document.getElementById("insp-badge").innerText = `${data.kind} ${data.status}`;
-  document.getElementById("insp-title").innerText = data.name;
-  document.getElementById("insp-namespace").innerText = data.namespace;
-  document.getElementById("insp-desc").innerHTML = data.desc;
-
-  // Counts clean table
-  const counts = document.getElementById("insp-counts");
-  counts.innerHTML = "";
-  Object.entries(data.counts || {}).forEach(([k, v]) => {
-    counts.innerHTML += `
-      <div class="count-row">
-        <span class="k">${k}</span>
-        <span class="v">${v}</span>
-      </div>
-    `;
-  });
-
-  // Sources
-  const sources = document.getElementById("insp-sources");
-  sources.innerHTML = "";
-  (data.sources || []).forEach(s => {
-    sources.innerHTML += `<div class="source-clean-item">${s}</div>`;
-  });
-
-  document.getElementById("section-parts").style.display = "none";
-  document.getElementById("section-outgoing").style.display = "none";
-  document.getElementById("section-incoming").style.display = "none";
-  document.getElementById("section-metadata").style.display = "block";
-}
-
-function selectModule(node, connections) {
-  selectedItem = { type: "module", data: node };
-  document.querySelectorAll(".module-card").forEach(c => c.classList.remove("selected"));
-  document.querySelectorAll(".feature-pill-card").forEach(c => c.classList.remove("selected"));
-
-  const card = document.getElementById(`node-${node.id}`);
-  if (card) card.classList.add("selected");
-
-  document.getElementById("insp-badge").innerText = `MODULE ${node.status}`;
-  document.getElementById("insp-title").innerText = node.title;
-  document.getElementById("insp-namespace").innerText = node.namespace || `alice.${node.id}`;
-  document.getElementById("insp-desc").innerHTML = node.desc || "Architectural crate member.";
-
-  // Counts table
-  const parts = node.parts || [];
-  const counts = document.getElementById("insp-counts");
-  counts.innerHTML = `
-    <div class="count-row"><span class="k">Parts</span><span class="v">${parts.length}</span></div>
-    <div class="count-row"><span class="k">Kind</span><span class="v">module</span></div>
-    <div class="count-row"><span class="k">Status</span><span class="v">${node.status}</span></div>
-  `;
-
-  // Sources
-  const sources = document.getElementById("insp-sources");
-  sources.innerHTML = "";
-  (node.sources || ["Cargo.toml"]).forEach(s => {
-    sources.innerHTML += `<div class="source-clean-item">${s}</div>`;
-  });
-
-  // Parts
-  const partsSection = document.getElementById("section-parts");
-  partsSection.style.display = "block";
-  document.getElementById("insp-parts-title").innerText = `PARTS (${parts.length})`;
-  const partsTable = document.getElementById("insp-parts");
-  partsTable.innerHTML = "";
-  parts.forEach(p => {
-    partsTable.innerHTML += `
-      <div class="part-line">
-        <span class="part-title-text"><span class="checkbox-icon"></span>${p}</span>
-        <span class="pill-badge" style="font-size:9px;padding:0 5px;">ready</span>
-      </div>
-    `;
-  });
-
-  // Relations
-  populateRelations(connections, node.id);
-  document.getElementById("section-outgoing").style.display = "block";
-  document.getElementById("section-incoming").style.display = "block";
-  document.getElementById("section-metadata").style.display = "none";
-}
-
-function selectFeature(feature) {
-  playReferenceScene(feature.id === "secrets" ? "secrets" : 0);
-  selectedItem = { type: "feature", data: feature };
-  document.querySelectorAll(".module-card").forEach(c => c.classList.remove("selected"));
-  document.querySelectorAll(".feature-pill-card").forEach(c => c.classList.remove("selected"));
-
-  const card = document.getElementById(`feat-card-${feature.id}`);
-  if (card) card.classList.add("selected");
-
-  document.getElementById("insp-badge").innerText = `FEATURE ready`;
-  document.getElementById("insp-title").innerText = feature.name;
-  document.getElementById("insp-namespace").innerText = `alice.feature.${feature.id}`;
-  document.getElementById("insp-desc").innerHTML = feature.desc;
-
-  // Counts
-  const counts = document.getElementById("insp-counts");
-  counts.innerHTML = `
-    <div class="count-row"><span class="k">Spanned modules</span><span class="v">${feature.modules.length}</span></div>
-    <div class="count-row"><span class="k">Kind</span><span class="v">feature</span></div>
-    <div class="count-row"><span class="k">Status</span><span class="v">ready</span></div>
-  `;
-
-  // Sources
-  const sources = document.getElementById("insp-sources");
-  sources.innerHTML = "";
-  feature.modules.forEach(m => {
-    sources.innerHTML += `<div class="source-clean-item">crates/${m}</div>`;
-  });
-
-  // Parts (Spanned Modules)
-  const partsSection = document.getElementById("section-parts");
-  partsSection.style.display = "block";
-  document.getElementById("insp-parts-title").innerText = `OUTGOING (${feature.modules.length})`;
-  const partsTable = document.getElementById("insp-parts");
-  partsTable.innerHTML = "";
-  feature.modules.forEach(m => {
-    partsTable.innerHTML += `
-      <div class="rel-item" onclick="drillDown('${m}')">
-        <div class="rel-head">
-          <span style="color:#db61a2;font-weight:bold;">⇢ composes</span>
-          <span class="rel-target-link">${m}</span>
-        </div>
-        <div class="rel-note">${feature.name} spans ${m} crate</div>
-      </div>
-    `;
-  });
-
-  document.getElementById("section-outgoing").style.display = "none";
-  document.getElementById("section-incoming").style.display = "none";
-  document.getElementById("section-metadata").style.display = "none";
-}
-
-function populateRelations(connections, nodeId) {
-  const outgoing = nodeId ? connections.filter(c => c.from === nodeId) : [];
-  const incoming = nodeId ? connections.filter(c => c.to === nodeId) : [];
-
-  document.getElementById("insp-outgoing-title").innerText = `OUTGOING (${outgoing.length})`;
-  const outContainer = document.getElementById("insp-outgoing");
-  outContainer.innerHTML = "";
-  if (outgoing.length === 0) {
-    outContainer.innerHTML = "<div style='color:#6e7681;font-size:11.5px;'>None.</div>";
-  } else {
-    outgoing.forEach(c => {
-      const meta = CONNECTION_META[c.kind] || { color: "#58a6ff" };
-      outContainer.innerHTML += `
-        <div class="rel-item">
-          <div class="rel-head">
-            <span class="rel-kind-link" style="color:${meta.color};">${meta.arrow} ${c.kind}</span>
-            <span class="rel-target-link">to ${c.to}</span>
+      button,
+      input {
+        font: inherit;
+      }
+      button {
+        color: inherit;
+      }
+      .app {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        overflow: hidden;
+      }
+      .main-stage {
+        min-width: 0;
+        flex: 1;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        border-right: 1px solid var(--line);
+        overflow: hidden;
+      }
+      .top-header {
+        height: 177px;
+        flex: 0 0 177px;
+        padding: 14px 23px 9px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        background: var(--bg);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        z-index: 4;
+      }
+      .header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        min-height: 25px;
+      }
+      .title-group {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
+      .project-name {
+        font-size: 21px;
+        line-height: 25px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        white-space: nowrap;
+      }
+      .status-pill,
+      .mini-status {
+        border: 1px solid rgba(63, 185, 80, 0.45);
+        border-radius: 999px;
+        color: #5eea83;
+        background: rgba(46, 160, 67, 0.12);
+        font:
+          600 10px ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        padding: 2px 8px;
+        letter-spacing: 0.04em;
+      }
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .repo-input,
+      .search-input {
+        height: 29px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--panel);
+        color: var(--text);
+        outline: none;
+        padding: 0 10px;
+        font-size: 12px;
+      }
+      .repo-input {
+        width: 215px;
+      }
+      .search-input {
+        width: 176px;
+      }
+      .repo-input:focus,
+      .search-input:focus {
+        border-color: var(--blue);
+        box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.12);
+      }
+      .repo-input::placeholder,
+      .search-input::placeholder {
+        color: var(--faint);
+      }
+      .build-button {
+        height: 29px;
+        border: 1px solid #b76427;
+        border-radius: 7px;
+        padding: 0 12px;
+        cursor: pointer;
+        color: #fff;
+        background: #c85a32;
+        font-weight: 700;
+        font-size: 12px;
+      }
+      .build-button:hover {
+        background: #dd6b3d;
+      }
+      .build-button:disabled {
+        opacity: 0.55;
+        cursor: wait;
+      }
+      .project-desc {
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 19px;
+      }
+      .stats {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 17px;
+      }
+      .legend-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .legend-label {
+        margin-right: 1px;
+        color: var(--muted);
+      }
+      .legend-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 24px;
+        padding: 0 9px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(21, 25, 29, 0.86);
+        color: #c9d1d9;
+        cursor: pointer;
+        font-size: 11px;
+      }
+      .legend-pill:hover,
+      .legend-pill.active {
+        border-color: #68727c;
+        color: #fff;
+        background: var(--soft);
+      }
+      .legend-swatch {
+        width: 16px;
+        height: 2px;
+        display: inline-block;
+        border-radius: 2px;
+      }
+      .hint {
+        color: var(--faint);
+        font-size: 11px;
+        font-style: italic;
+      }
+      .canvas-container {
+        position: relative;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
+        background: var(--bg);
+      }
+      #graph-svg,
+      #bridge-svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+        pointer-events: none;
+      }
+      #graph-svg {
+        z-index: 1;
+        pointer-events: auto;
+      }
+      #bridge-svg {
+        z-index: 2;
+      }
+      #nodes-container {
+        position: absolute;
+        inset: 0;
+        z-index: 3;
+        pointer-events: none;
+      }
+      .module-card {
+        position: absolute;
+        width: 180px;
+        height: 82px;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+        pointer-events: auto;
+        cursor: pointer;
+        transition:
+          opacity 0.25s ease,
+          transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+          border-color 0.2s ease,
+          background 0.2s ease,
+          box-shadow 0.2s ease;
+      }
+      .module-card:hover,
+      .module-card.selected {
+        transform: translateY(-2px);
+        border-color: var(--blue);
+        background: #1c2129;
+        box-shadow:
+          0 0 16px rgba(88, 166, 255, 0.2),
+          0 8px 24px rgba(0, 0, 0, 0.5);
+      }
+      .module-card.dimmed {
+        opacity: 0.12 !important;
+        pointer-events: none;
+      }
+      .module-card.outside {
+        height: 54px;
+        border-style: dashed;
+        padding: 8px 10px;
+      }
+      .card-top,
+      .card-bottom {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .card-type {
+        color: #7d8590;
+        font:
+          600 9px ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .card-title {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        color: #f0f6fc;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      .card-bottom {
+        color: var(--muted);
+        font:
+          10px ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+      }
+      .card-arrow {
+        color: var(--blue);
+        font-size: 14px;
+      }
+      .wire {
+        fill: none;
+        stroke-width: 1.45;
+        opacity: 0.78;
+        transition:
+          opacity 0.25s ease,
+          stroke-width 0.2s ease;
+        pointer-events: stroke;
+      }
+      .wire:hover,
+      .wire.highlighted {
+        stroke-width: 2.5;
+        opacity: 1;
+      }
+      .wire.dimmed {
+        opacity: 0.08 !important;
+      }
+      .wire-badge {
+        pointer-events: none;
+      }
+      .wire-badge.dimmed {
+        opacity: 0.08;
+      }
+      .feature-bridge {
+        fill: none;
+        stroke: var(--pink);
+        stroke-width: 1.8;
+        stroke-dasharray: 5 4;
+        opacity: 0.9;
+        animation: bridge-flow 1.6s linear infinite;
+      }
+      @keyframes bridge-flow {
+        to {
+          stroke-dashoffset: -28;
+        }
+      }
+      .scene-transition #graph-svg,
+      .scene-transition #nodes-container {
+        opacity: 0;
+      }
+      .bottom-features-panel {
+        height: 326px;
+        flex: 0 0 326px;
+        padding: 9px 39px 0;
+        border-top: 1px solid #252b31;
+        background: var(--bg);
+        z-index: 4;
+      }
+      .features-title {
+        color: var(--muted);
+        font-size: 11px;
+        margin-bottom: 8px;
+      }
+      .features-title strong {
+        color: #c9d1d9;
+      }
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 16px 34px;
+      }
+      .feature-card {
+        min-width: 0;
+        height: 64px;
+        padding: 7px 12px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        border: 1px solid #5a3567;
+        border-radius: 8px;
+        background: var(--feature);
+        cursor: pointer;
+        transition:
+          opacity 0.25s ease,
+          transform 0.2s ease,
+          border-color 0.2s ease,
+          box-shadow 0.2s ease;
+      }
+      .feature-card:hover,
+      .feature-card.selected {
+        transform: translateY(-1px);
+        border-color: #d2a8ff;
+        box-shadow: 0 0 16px rgba(210, 168, 255, 0.22);
+      }
+      .feature-card.dimmed {
+        opacity: 0.12;
+      }
+      .feature-top {
+        display: flex;
+        justify-content: space-between;
+        color: #d2a8ff;
+        font:
+          700 9px ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+      }
+      .feature-name {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        color: #f0f6fc;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .inspector-panel {
+        width: 374px;
+        flex: 0 0 374px;
+        height: 100%;
+        overflow: auto;
+        padding: 15px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        background: var(--panel);
+      }
+      .inspector-badge {
+        display: inline-flex;
+        width: fit-content;
+        padding: 2px 8px;
+        margin-bottom: 8px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--muted);
+        font:
+          700 10px ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        text-transform: uppercase;
+      }
+      .inspector-title {
+        font-size: 23px;
+        line-height: 27px;
+      }
+      .inspector-namespace {
+        margin-top: 2px;
+        color: var(--muted);
+        font:
+          12px ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+      }
+      .inspector-desc {
+        margin-top: 17px;
+        color: #e5e9ed;
+        font-size: 13px;
+        line-height: 19px;
+      }
+      .inspector-section {
+        border-top: 1px solid var(--line);
+        padding-top: 12px;
+      }
+      .inspector-section h3 {
+        margin-bottom: 9px;
+        color: var(--muted);
+        font:
+          700 11px ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .metric-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 20px;
+      }
+      .metric-row strong {
+        color: #f0f6fc;
+        font:
+          600 12px ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        text-align: right;
+      }
+      .source-list,
+      .relation-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .source-item,
+      .relation-item {
+        color: #c9d1d9;
+        font-size: 12px;
+        line-height: 17px;
+      }
+      .relation-item {
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+      }
+      .relation-kind {
+        color: var(--blue);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      .empty-state {
+        color: var(--faint);
+        font-size: 12px;
+      }
+      @media (max-width: 1100px) {
+        .inspector-panel {
+          width: 320px;
+          flex-basis: 320px;
+        }
+        .features-grid {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+        .repo-input {
+          width: 160px;
+        }
+      }
+      @media (max-height: 850px) {
+        .top-header {
+          height: 145px;
+          flex-basis: 145px;
+          padding: 10px 16px 6px;
+          gap: 3px;
+        }
+        .project-desc {
+          font-size: 11px;
+          line-height: 14px;
+        }
+        .stats {
+          font-size: 11px;
+        }
+        .hint {
+          font-size: 10px;
+        }
+        .header-actions {
+          gap: 4px;
+        }
+        .repo-input {
+          width: 130px;
+        }
+        .search-input {
+          width: 140px;
+        }
+        .bottom-features-panel {
+          height: 185px;
+          flex-basis: 185px;
+          padding: 7px 20px 0;
+        }
+        .features-title {
+          margin-bottom: 6px;
+        }
+        .features-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px 16px;
+        }
+        .feature-card {
+          height: 58px;
+          padding: 6px 9px;
+        }
+        .feature-name {
+          font-size: 12px;
+        }
+        .module-card {
+          width: 155px;
+        }
+      }
+      @media (max-width: 760px) {
+        .inspector-panel {
+          display: none;
+        }
+        .features-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .top-header {
+          padding-inline: 14px;
+        }
+        .repo-input {
+          width: 125px;
+        }
+        .search-input {
+          width: 130px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <main class="main-stage">
+        <header class="top-header">
+          <div class="header-row">
+            <div class="title-group">
+              <span class="project-name" id="stage-title">SE-H1</span
+              ><span class="status-pill" id="stage-status">LIVE</span>
+            </div>
+            <div class="header-actions">
+              <input
+                class="repo-input"
+                id="repo-input"
+                value="."
+                aria-label="repository path"
+                placeholder="GitHub or local path"
+              /><button class="build-button" id="build-button">
+                Build graph</button
+              ><input
+                class="search-input"
+                id="search-input"
+                aria-label="search symbols"
+                placeholder="Search files or symbols"
+              />
+            </div>
           </div>
-          <div class="rel-note">${c.desc || ""}</div>
-        </div>
-      `;
-    });
-  }
-
-  document.getElementById("insp-incoming-title").innerText = `INCOMING (${incoming.length})`;
-  const inContainer = document.getElementById("insp-incoming");
-  inContainer.innerHTML = "";
-  if (incoming.length === 0) {
-    inContainer.innerHTML = "<div style='color:#6e7681;font-size:11.5px;'>None.</div>";
-  } else {
-    incoming.forEach(c => {
-      const meta = CONNECTION_META[c.kind] || { color: "#58a6ff" };
-      inContainer.innerHTML += `
-        <div class="rel-item">
-          <div class="rel-head">
-            <span class="rel-kind-link" style="color:${meta.color};">← ${c.kind}</span>
-            <span class="rel-target-link">from ${c.from}</span>
+          <div class="project-desc" id="stage-desc">
+            A live map of this checkout: files, symbols, calls, and imports stay
+            attached to their source.
           </div>
-          <div class="rel-note">${c.desc || ""}</div>
+          <div class="stats" id="stats-summary">
+            Loading the checked-out graph…
+          </div>
+          <div class="legend-row" id="connections-legend"></div>
+          <div class="legend-row" id="secondary-legend"></div>
+          <div class="hint">
+            Hover a node to isolate its neighborhood · click a file to inspect
+            symbols · Esc returns to the checkout
+          </div>
+        </header>
+        <section
+          class="canvas-container"
+          id="canvas-container"
+          aria-label="live repository graph"
+        >
+          <svg id="graph-svg" aria-hidden="true"></svg
+          ><svg id="bridge-svg" aria-hidden="true"></svg>
+          <div id="nodes-container"></div>
+        </section>
+        <section class="bottom-features-panel">
+          <div class="features-title">
+            <strong>cross-cutting views</strong> · hover to trace a concern
+            through the live graph
+          </div>
+          <div class="features-grid" id="features-grid"></div>
+        </section>
+      </main>
+      <aside class="inspector-panel" id="inspector-panel">
+        <div>
+          <div class="inspector-badge" id="inspector-badge">PROJECT · LIVE</div>
+          <h1 class="inspector-title" id="inspector-title">SE-H1</h1>
+          <div class="inspector-namespace" id="inspector-namespace">
+            local.checkout
+          </div>
+          <div class="inspector-desc" id="inspector-desc">
+            Build the graph to inspect the files and symbols in this checkout.
+          </div>
         </div>
-      `;
-    });
-  }
-}
-</script>
-</body>
+        <section class="inspector-section">
+          <h3>Measures</h3>
+          <div id="metrics"></div>
+        </section>
+        <section class="inspector-section">
+          <h3>Sources</h3>
+          <div class="source-list" id="sources"></div>
+        </section>
+        <section class="inspector-section">
+          <h3>Relations</h3>
+          <div class="relation-list" id="relations"></div>
+        </section>
+      </aside>
+    </div>
+    <script>
+      "use strict";
+      const META = {
+        calls: { color: "#58a6ff", dash: "" },
+        imports: { color: "#d29922", dash: "6 4" },
+        contains: { color: "#8b949e", dash: "2 4" },
+        class: { color: "#bc8cff", dash: "" },
+        file: { color: "#2dd4bf", dash: "" },
+      };
+      const state = {
+        graph: null,
+        atlas: null,
+        scope: "root",
+        selection: { type: "project" },
+        hover: null,
+        query: "",
+      };
+      const $ = (id) => document.getElementById(id);
+      const esc = (value) =>
+        String(value ?? "").replace(
+          /[&<>\"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      function fileOf(node, byId) {
+        let current = node;
+        const seen = new Set();
+        while (current && !seen.has(current.id)) {
+          if (current.kind === "file") return current;
+          seen.add(current.id);
+          current = byId.get(current.parent);
+        }
+        return null;
+      }
+      function normalizeGraph(graph) {
+        const nodes = Array.isArray(graph?.nodes) ? graph.nodes : [],
+          edges = Array.isArray(graph?.edges) ? graph.edges : [],
+          byId = new Map(nodes.map((n) => [n.id, n])),
+          files = nodes.filter((n) => n.kind === "file"),
+          fileFor = new Map();
+        nodes.forEach((n) => {
+          const f = fileOf(n, byId);
+          if (f) fileFor.set(n.id, f.id);
+        });
+        const symbols = new Map(files.map((f) => [f.id, []]));
+        nodes
+          .filter((n) => n.kind !== "file")
+          .forEach((n) => symbols.get(fileFor.get(n.id))?.push(n));
+        const grouped = new Map();
+        edges
+          .filter((e) => e.kind !== "contains")
+          .forEach((e) => {
+            const a = fileFor.get(e.source),
+              b = fileFor.get(e.target);
+            if (a === undefined || b === undefined || a === b) return;
+            const key = `${a}|${b}|${e.kind}`,
+              item = grouped.get(key) || {
+                from: `file:${a}`,
+                to: `file:${b}`,
+                kind: e.kind,
+                count: 0,
+                raw: [],
+              };
+            item.count++;
+            item.raw.push(e);
+            grouped.set(key, item);
+          });
+        const moduleEdges = [...grouped.values()],
+          degree = new Map(files.map((f) => [f.id, 0]));
+        moduleEdges.forEach((e) => {
+          const a = Number(e.from.slice(5)),
+            b = Number(e.to.slice(5));
+          degree.set(a, (degree.get(a) || 0) + e.count);
+          degree.set(b, (degree.get(b) || 0) + e.count);
+        });
+        const orderedFiles = [...files].sort(
+            (a, b) =>
+              (degree.get(b.id) || 0) - (degree.get(a.id) || 0) ||
+              a.name.localeCompare(b.name),
+          ),
+          modules = orderedFiles.map((f) => ({
+            id: `file:${f.id}`,
+            rawId: f.id,
+            title: f.name,
+            type: "FILE",
+            status: "ready",
+            partsCount: symbols.get(f.id)?.length || 0,
+            parts: symbols.get(f.id) || [],
+            desc: `${f.file} is part of the checked-out repository. Its symbols and relations are read from the local graph.`,
+            namespace: f.file,
+            sources: [f.file],
+            degree: degree.get(f.id) || 0,
+          }));
+        const fileById = new Map(files.map((f) => [f.id, f]));
+        const feature = (id, tag, name, detail, kind, mods) => ({
+          id,
+          tag,
+          name,
+          detail,
+          kind,
+          modules: [...new Set(mods)],
+        });
+        const features = [
+          feature(
+            "calls",
+            "CALLS",
+            "Call graph",
+            `${edges.filter((e) => e.kind === "calls").length} call sites`,
+            "calls",
+            moduleEdges
+              .filter((e) => e.kind === "calls")
+              .flatMap((e) => [e.from, e.to]),
+          ),
+          feature(
+            "imports",
+            "IMPORTS",
+            "Imports",
+            `${edges.filter((e) => e.kind === "imports").length} imports`,
+            "imports",
+            moduleEdges
+              .filter((e) => e.kind === "imports")
+              .flatMap((e) => [e.from, e.to]),
+          ),
+          feature(
+            "symbols",
+            "SYMBOLS",
+            "Symbols",
+            `${nodes.filter((n) => n.kind === "function").length} functions`,
+            "symbols",
+            modules.filter((m) => m.partsCount).map((m) => m.id),
+          ),
+          feature(
+            "files",
+            "FILES",
+            "Source files",
+            `${files.length} files`,
+            "files",
+            modules.map((m) => m.id),
+          ),
+          feature(
+            "agent",
+            "AGENT",
+            "Agent surface",
+            "local tools and server",
+            "agent",
+            modules
+              .filter((m) => /code_agent|code_graph|languages/.test(m.title))
+              .map((m) => m.id),
+          ),
+          feature(
+            "health",
+            "HEALTH",
+            "Parse health",
+            `${graph.errors?.length || 0} errors`,
+            "health",
+            modules.filter((m) => m.partsCount).map((m) => m.id),
+          ),
+        ];
+        const subviews = {};
+        modules.forEach((module) => {
+          const local = symbols.get(module.rawId) || [],
+            localIds = new Set(local.map((n) => n.id)),
+            subNodes = local.map((n, i) => ({
+              id: `sym:${n.id}`,
+              rawId: n.id,
+              title: n.name,
+              type: (n.kind || "symbol").toUpperCase(),
+              status: "ready",
+              partsCount: 0,
+              parts: [],
+              line: n.line,
+              namespace: `${n.file}:${n.line}`,
+              desc: `${n.name} is defined in ${n.file} at line ${n.line}.`,
+              sources: [`${n.file}:${n.line}`],
+              x: 70 + (i % 4) * 220,
+              y: 42 + Math.floor(i / 4) * 126,
+            })),
+            outside = new Map(),
+            subEdges = [];
+          edges.forEach((e) => {
+            if (!localIds.has(e.source) && !localIds.has(e.target)) return;
+            if (localIds.has(e.source) && localIds.has(e.target)) {
+              subEdges.push({
+                from: `sym:${e.source}`,
+                to: `sym:${e.target}`,
+                kind: e.kind,
+                count: 1,
+                desc: `${e.kind} at line ${e.line || "?"}`,
+              });
+              return;
+            }
+            const localId = localIds.has(e.source) ? e.source : e.target,
+              externalId = localIds.has(e.source) ? e.target : e.source,
+              externalFile = fileById.get(fileFor.get(externalId));
+            if (!externalFile) return;
+            const outId = `outside:${module.rawId}:${externalFile.id}`;
+            if (!outside.has(outId))
+              outside.set(outId, {
+                id: outId,
+                title: `OUTSIDE ${externalFile.name}`,
+                type: "OUTSIDE",
+                status: "ready",
+                x: 90 + outside.size * 210,
+                y: 430,
+              });
+            subEdges.push(
+              localIds.has(e.source)
+                ? {
+                    from: `sym:${localId}`,
+                    to: outId,
+                    kind: e.kind,
+                    count: 1,
+                    desc: `leaves ${module.title}`,
+                  }
+                : {
+                    from: outId,
+                    to: `sym:${localId}`,
+                    kind: e.kind,
+                    count: 1,
+                    desc: `enters ${module.title}`,
+                  },
+            );
+          });
+          subviews[module.id] = {
+            id: module.id,
+            name: module.title,
+            title: `Inside ${module.title}`,
+            namespace: module.namespace,
+            desc: module.desc,
+            sources: module.sources,
+            nodes: [...subNodes, ...outside.values()],
+            connections: subEdges,
+            parts: local,
+          };
+        });
+        return {
+          name: graph.name || "SE-H1",
+          stats: graph.stats || {},
+          raw: graph,
+          modules,
+          moduleEdges,
+          features,
+          subviews,
+        };
+      }
+      function currentData() {
+        return state.scope === "root"
+          ? {
+              id: "root",
+              name: state.atlas?.name || "SE-H1",
+              title: state.atlas?.name || "SE-H1",
+              namespace: "local.checkout",
+              desc: "A live map of this checkout: files, symbols, calls, and imports stay attached to their source.",
+              tiers: state.atlas?.modules || [],
+              connections: state.atlas?.moduleEdges || [],
+              features: state.atlas?.features || [],
+              sources: state.atlas
+                ? state.atlas.modules.map((m) => m.title)
+                : [],
+            }
+          : state.atlas?.subviews[state.scope];
+      }
+      function renderLegend(data) {
+        const kinds = [...new Set((data.connections || []).map((e) => e.kind))];
+        $("connections-legend").innerHTML =
+          `<span class="legend-label">RELATIONS</span>` +
+          kinds
+            .map((kind) => {
+              const meta = META[kind] || META.calls;
+              return `<button class="legend-pill" data-kind="${esc(kind)}"><span class="legend-swatch" style="background:${meta.color}"></span>${esc(kind)} <small>${data.connections.filter((e) => e.kind === kind).reduce((sum, e) => sum + (e.count || 1), 0)}</small></button>`;
+            })
+            .join("");
+        $("connections-legend")
+          .querySelectorAll(".legend-pill")
+          .forEach((b) => {
+            b.addEventListener("mouseenter", () =>
+              setHover({ type: "kind", kind: b.dataset.kind }),
+            );
+            b.addEventListener("mouseleave", clearHover);
+          });
+        const s = state.atlas?.stats || {};
+        $("secondary-legend").innerHTML =
+          `<span class="legend-label">GRAPH</span><span class="legend-pill">${s.files || 0} files</span><span class="legend-pill">${s.nodes || 0} symbols</span><span class="legend-pill">${s.edges || 0} relations</span><span class="legend-pill">${s.errors || 0} parse errors</span>`;
+      }
+      function getCardWidth() {
+        return window.innerHeight < 850
+          ? Math.min(
+              155,
+              Math.max(
+                120,
+                Math.floor(($("canvas-container").clientWidth - 80) / 5),
+              ),
+            )
+          : 180;
+      }
+      function layoutRoot(nodes) {
+        const width = $("canvas-container").clientWidth,
+          cardWidth = getCardWidth(),
+          cols =
+            window.innerHeight < 850
+              ? Math.min(
+                  5,
+                  Math.max(1, Math.floor((width + 18) / (cardWidth + 18))),
+                )
+              : Math.min(4, Math.max(1, nodes.length)),
+          gap = Math.max(
+            18,
+            (width - 40 - cols * cardWidth) / Math.max(1, cols - 1),
+          ),
+          start = (width - (cols * cardWidth + (cols - 1) * gap)) / 2;
+        nodes.forEach((n, i) => {
+          n.x = start + (i % cols) * (cardWidth + gap);
+          n.y =
+            32 + Math.floor(i / cols) * (window.innerHeight < 850 ? 124 : 150);
+        });
+      }
+      function renderTopology(data, drilled) {
+        const container = $("nodes-container"),
+          svg = $("graph-svg");
+        container.innerHTML = "";
+        svg.innerHTML = "";
+        const nodes = drilled ? data.nodes : data.tiers,
+          connections = data.connections || [];
+        if (!drilled) layoutRoot(nodes);
+        nodes.forEach((n) => {
+          const card = document.createElement("div");
+          card.className = `module-card${n.type === "OUTSIDE" ? " outside" : ""}`;
+          card.id = `node-${n.id}`;
+          card.style.left = `${n.x}px`;
+          card.style.top = `${n.y}px`;
+          card.style.width = `${getCardWidth()}px`;
+          card.innerHTML = `<div class="card-top"><span class="card-type">${esc(n.type)}</span><span class="mini-status">ready</span></div><div class="card-title" title="${esc(n.title)}">${esc(n.title)}</div><div class="card-bottom"><span>${n.type === "OUTSIDE" ? "external port" : `${n.partsCount || n.parts?.length || 0} symbols`}</span>${n.type !== "OUTSIDE" ? '<span class="card-arrow">›</span>' : ""}</div>`;
+          card.addEventListener("mouseenter", () =>
+            setHover({ type: "node", id: n.id, connections }),
+          );
+          card.addEventListener("mouseleave", clearHover);
+          card.addEventListener("click", () => {
+            if (!drilled && state.atlas?.subviews[n.id]) drillDown(n.id);
+            else selectNode(n);
+          });
+          container.appendChild(card);
+        });
+        drawWires(connections, nodes);
+        applyQuery();
+      }
+      function drawWires(connections, nodes) {
+        const svg = $("graph-svg"),
+          map = new Map(nodes.map((n) => [n.id, n])),
+          half = getCardWidth() / 2,
+          defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+        Object.entries(META).forEach(([kind, meta]) => {
+          const marker = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "marker",
+          );
+          marker.id = `arrow-${kind}`;
+          marker.setAttribute("viewBox", "0 0 10 10");
+          marker.setAttribute("refX", "8");
+          marker.setAttribute("refY", "5");
+          marker.setAttribute("markerWidth", "5");
+          marker.setAttribute("markerHeight", "5");
+          marker.setAttribute("orient", "auto");
+          const p = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "path",
+          );
+          p.setAttribute("d", "M 1 2 L 8 5 L 1 8 z");
+          p.setAttribute("fill", meta.color);
+          marker.appendChild(p);
+          defs.appendChild(marker);
+        });
+        svg.appendChild(defs);
+        connections.forEach((c, index) => {
+          const s = map.get(c.from),
+            t = map.get(c.to);
+          if (!s || !t) return;
+          const count = Math.max(1, Math.min(Number(c.count) || 1, 9)),
+            meta = META[c.kind] || META.calls,
+            gap = 7;
+          for (let lane = 0; lane < count; lane++) {
+            const offset = (lane - (count - 1) / 2) * gap,
+              sx = s.x + half + offset,
+              tx = t.x + half + offset,
+              sy = s.y + (s.type === "OUTSIDE" ? 54 : 82),
+              ty = t.y,
+              down = ty >= sy,
+              y1 = down ? sy : s.y,
+              y2 = down ? ty : t.y + (t.type === "OUTSIDE" ? 54 : 82),
+              bend = Math.max(34, Math.abs(y2 - y1) * 0.55),
+              path = document.createElementNS(
+                "http://www.w3.org/2000/svg",
+                "path",
+              ),
+              c1 = down ? y1 + bend : y1 - bend,
+              c2 = down ? y2 - bend : y2 + bend;
+            path.setAttribute(
+              "d",
+              `M ${sx} ${y1} C ${sx} ${c1}, ${tx} ${c2}, ${tx} ${y2}`,
+            );
+            path.setAttribute("class", "wire");
+            path.dataset.index = index;
+            path.dataset.kind = c.kind;
+            path.dataset.from = c.from;
+            path.dataset.to = c.to;
+            path.setAttribute("stroke", meta.color);
+            path.setAttribute(
+              "marker-end",
+              `url(#arrow-${META[c.kind] ? c.kind : "calls"})`,
+            );
+            if (meta.dash) path.setAttribute("stroke-dasharray", meta.dash);
+            path.addEventListener("mouseenter", () =>
+              setHover({ type: "edge", index, connection: c }),
+            );
+            path.addEventListener("mouseleave", clearHover);
+            svg.appendChild(path);
+          }
+          if (count > 1) {
+            const y = (s.y + (s.type === "OUTSIDE" ? 54 : 82) + t.y) / 2,
+              g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            g.classList.add("wire-badge");
+            const circle = document.createElementNS(
+              "http://www.w3.org/2000/svg",
+              "circle",
+            );
+            circle.setAttribute("cx", s.x + half);
+            circle.setAttribute("cy", y);
+            circle.setAttribute("r", "7.5");
+            circle.setAttribute("fill", "#15191d");
+            circle.setAttribute("stroke", "#30363d");
+            const text = document.createElementNS(
+              "http://www.w3.org/2000/svg",
+              "text",
+            );
+            text.setAttribute("x", s.x + half);
+            text.setAttribute("y", y + 3);
+            text.setAttribute("fill", "#8b949e");
+            text.setAttribute("font-size", "9");
+            text.setAttribute("font-family", "ui-monospace,monospace");
+            text.setAttribute("text-anchor", "middle");
+            text.textContent = count;
+            g.append(circle, text);
+            svg.appendChild(g);
+          }
+        });
+      }
+      function applyQuery() {
+        const q = state.query.trim().toLowerCase();
+        $("nodes-container")
+          .querySelectorAll(".module-card")
+          .forEach((card) =>
+            card.classList.toggle(
+              "dimmed",
+              Boolean(q && !card.textContent.toLowerCase().includes(q)),
+            ),
+          );
+      }
+      function setHover(h) {
+        state.hover = h;
+        document
+          .querySelectorAll(".module-card")
+          .forEach((c) => c.classList.remove("dimmed"));
+        document
+          .querySelectorAll(".wire")
+          .forEach((w) => w.classList.remove("dimmed", "highlighted"));
+        if (!h) return;
+        if (h.type === "feature") {
+          setFeatureHover(h.feature);
+          return;
+        }
+        const activeNodes = new Set(),
+          activeEdges = new Set();
+        if (h.type === "node") {
+          activeNodes.add(h.id);
+          h.connections.forEach((e, i) => {
+            if (e.from === h.id || e.to === h.id) {
+              activeNodes.add(e.from);
+              activeNodes.add(e.to);
+              activeEdges.add(i);
+            }
+          });
+        }
+        if (h.type === "edge") {
+          activeNodes.add(h.connection.from);
+          activeNodes.add(h.connection.to);
+          activeEdges.add(h.index);
+        }
+        if (h.type === "kind") {
+          document
+            .querySelectorAll(`.wire[data-kind="${CSS.escape(h.kind)}"]`)
+            .forEach((w) => activeEdges.add(Number(w.dataset.index)));
+          document.querySelectorAll(".wire").forEach((w) => {
+            if (activeEdges.has(Number(w.dataset.index))) {
+              activeNodes.add(w.dataset.from);
+              activeNodes.add(w.dataset.to);
+            }
+          });
+        }
+        document.querySelectorAll(".module-card").forEach((c) => {
+          if (!activeNodes.has(c.id.slice(5))) c.classList.add("dimmed");
+        });
+        document.querySelectorAll(".wire").forEach((w) => {
+          if (!activeEdges.has(Number(w.dataset.index)))
+            w.classList.add("dimmed");
+          else if (h.type === "edge") w.classList.add("highlighted");
+        });
+      }
+      function clearHover() {
+        state.hover = null;
+        document
+          .querySelectorAll(".module-card,.wire")
+          .forEach((e) => e.classList.remove("dimmed", "highlighted"));
+        if (state.selection.type === "feature")
+          setFeatureHover(state.selection.feature);
+        else $("bridge-svg").innerHTML = "";
+      }
+      function renderFeatures(features) {
+        const grid = $("features-grid");
+        grid.innerHTML = "";
+        features.forEach((f) => {
+          const card = document.createElement("div");
+          card.className = "feature-card";
+          card.id = `feature-${f.id}`;
+          card.innerHTML = `<div class="feature-top"><span>✦ ${esc(f.tag)}</span><span>${esc(f.detail)}</span></div><div class="feature-name">${esc(f.name)}</div>`;
+          card.addEventListener("mouseenter", () => setFeatureHover(f));
+          card.addEventListener("mouseleave", clearHover);
+          card.addEventListener("click", () => selectFeature(f));
+          grid.appendChild(card);
+        });
+        if (state.selection.type === "feature")
+          $(`feature-${state.selection.feature.id}`)?.classList.add("selected");
+      }
+      function setFeatureHover(f) {
+        state.hover = { type: "feature", feature: f };
+        const ids = new Set(f.modules);
+        document
+          .querySelectorAll(".module-card")
+          .forEach((c) =>
+            c.classList.toggle("dimmed", !ids.has(c.id.slice(5))),
+          );
+        document
+          .querySelectorAll(".wire")
+          .forEach((w) => w.classList.add("dimmed"));
+        drawBridges(f);
+      }
+      function drawBridges(f) {
+        const svg = $("bridge-svg");
+        svg.innerHTML = "";
+        if (!f) return;
+        const base = svg.getBoundingClientRect(),
+          source = $(`feature-${f.id}`);
+        if (!source) return;
+        const sr = source.getBoundingClientRect();
+        f.modules.forEach((id) => {
+          const target = $(`node-${id}`);
+          if (!target) return;
+          const tr = target.getBoundingClientRect(),
+            x1 = sr.left + sr.width / 2 - base.left,
+            y1 = sr.top - base.top,
+            x2 = tr.left + tr.width / 2 - base.left,
+            y2 = tr.bottom - base.top,
+            bend = Math.max(28, Math.abs(y1 - y2) * 0.35),
+            p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          p.setAttribute("class", "feature-bridge");
+          p.setAttribute(
+            "d",
+            `M ${x1} ${y1} C ${x1} ${y1 - bend}, ${x2} ${y2 + bend}, ${x2} ${y2}`,
+          );
+          svg.appendChild(p);
+        });
+      }
+      function renderInspector(selection) {
+        const a = state.atlas,
+          d = currentData(),
+          root = selection.type === "project",
+          f = selection.type === "feature" ? selection.feature : null,
+          n = selection.type === "node" ? selection.node : null;
+        $("inspector-badge").textContent = root
+          ? "PROJECT · LIVE"
+          : f
+            ? `FEATURE · ${f.tag}`
+            : `${n?.type || "SYMBOL"} · READY`;
+        $("inspector-title").textContent = root
+          ? a.name
+          : f
+            ? f.name
+            : n?.title || "Selection";
+        $("inspector-namespace").textContent = root
+          ? "local.checkout"
+          : f
+            ? `view.${f.id}`
+            : n?.namespace || "local.symbol";
+        $("inspector-desc").textContent = root
+          ? d.desc
+          : f
+            ? `${f.detail}. Highlighted paths show which files participate in this concern.`
+            : n?.desc || "A symbol from the checked-out graph.";
+        const s = a.stats || {},
+          metrics = root
+            ? [
+                ["Files", s.files || 0],
+                ["Symbols", s.nodes || 0],
+                ["Relations", s.edges || 0],
+                ["Functions", s.functions || 0],
+                ["Parse errors", s.errors || 0],
+              ]
+            : f
+              ? [
+                  ["Kind", "feature"],
+                  ["Linked files", f.modules.length],
+                  ["Status", "ready"],
+                ]
+              : [
+                  ["Kind", n?.type || "symbol"],
+                  ["Line", n?.line || "—"],
+                  ["Symbols in file", n?.partsCount || n?.parts?.length || 0],
+                ];
+        $("metrics").innerHTML = metrics
+          .map(
+            ([k, v]) =>
+              `<div class="metric-row"><span>${esc(k)}</span><strong>${esc(v)}</strong></div>`,
+          )
+          .join("");
+        const sources = root
+          ? d.sources || []
+          : f
+            ? f.modules
+                .map((id) => a.modules.find((m) => m.id === id)?.title)
+                .filter(Boolean)
+            : n?.sources || [];
+        $("sources").innerHTML = sources.length
+          ? sources
+              .map((x) => `<div class="source-item">${esc(x)}</div>`)
+              .join("")
+          : `<div class="empty-state">No source references</div>`;
+        const titles = new Map(a.modules.map((m) => [m.id, m.title])),
+          rel = root
+            ? a.moduleEdges
+                .slice(0, 10)
+                .map(
+                  (e) =>
+                    `${titles.get(e.from) || e.from} → ${titles.get(e.to) || e.to} · ${e.kind}`,
+                )
+            : f
+              ? f.modules.map((id) => `composes → ${id}`)
+              : (d.connections || [])
+                  .filter((e) => e.from === n?.id || e.to === n?.id)
+                  .slice(0, 12)
+                  .map((e) => `${e.kind} · ${e.from} → ${e.to}`);
+        $("relations").innerHTML = rel.length
+          ? rel
+              .map((x) => {
+                const parts = x.split(" · ");
+                return `<div class="relation-item"><span class="relation-kind">${esc(parts[0])}</span>${parts[1] ? ` · ${esc(parts.slice(1).join(" · "))}` : ""}</div>`;
+              })
+              .join("")
+          : `<div class="empty-state">No direct relations</div>`;
+      }
+      function updateHeader(d) {
+        const s = state.atlas?.stats || {};
+        $("stage-title").textContent = state.atlas?.name || "SE-H1";
+        $("stage-desc").textContent = d.desc || "A live map of this checkout.";
+        $("stats-summary").textContent =
+          `${s.files || 0} files · ${s.nodes || 0} symbols · ${s.edges || 0} relations · ${s.errors || 0} parse errors`;
+      }
+      function renderAll() {
+        if (!state.atlas) return;
+        const d = currentData();
+        updateHeader(d);
+        renderLegend(d);
+        renderTopology(d, state.scope !== "root");
+        renderFeatures(state.atlas.features);
+        renderInspector(state.selection);
+        if (state.selection.type === "feature")
+          requestAnimationFrame(() => drawBridges(state.selection.feature));
+      }
+      function selectNode(n) {
+        state.selection = { type: "node", node: n };
+        renderInspector(state.selection);
+        document
+          .querySelectorAll(".module-card")
+          .forEach((c) =>
+            c.classList.toggle("selected", c.id === `node-${n.id}`),
+          );
+      }
+      function selectFeature(f) {
+        state.selection = { type: "feature", feature: f };
+        renderInspector(state.selection);
+        document
+          .querySelectorAll(".feature-card")
+          .forEach((c) =>
+            c.classList.toggle("selected", c.id === `feature-${f.id}`),
+          );
+        setFeatureHover(f);
+      }
+      function drillDown(id) {
+        if (!state.atlas?.subviews[id]) return;
+        document.body.classList.add("scene-transition");
+        $("graph-svg").innerHTML = "";
+        $("nodes-container").innerHTML = "";
+        requestAnimationFrame(() => {
+          state.scope = id;
+          state.selection = {
+            type: "node",
+            node: state.atlas.modules.find((m) => m.id === id),
+          };
+          document.body.classList.remove("scene-transition");
+          renderAll();
+        });
+      }
+      function goRoot() {
+        if (state.scope === "root") return;
+        document.body.classList.add("scene-transition");
+        $("graph-svg").innerHTML = "";
+        $("nodes-container").innerHTML = "";
+        requestAnimationFrame(() => {
+          state.scope = "root";
+          state.selection = { type: "project" };
+          document.body.classList.remove("scene-transition");
+          renderAll();
+        });
+      }
+      async function loadGraph(repo = ".") {
+        $("build-button").disabled = true;
+        $("stage-status").textContent = "BUILDING";
+        try {
+          const response = await fetch("/api/build", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ repo }),
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          state.graph = await response.json();
+          state.atlas = normalizeGraph(state.graph);
+          state.scope = "root";
+          state.selection = { type: "project" };
+          renderAll();
+          $("stage-status").textContent = "LIVE";
+        } catch (error) {
+          $("stage-status").textContent = "ERROR";
+          $("stage-desc").textContent = error.message;
+        } finally {
+          $("build-button").disabled = false;
+        }
+      }
+      $("build-button").addEventListener("click", () =>
+        loadGraph($("repo-input").value.trim() || "."),
+      );
+      $("repo-input").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") loadGraph($("repo-input").value.trim() || ".");
+      });
+      $("search-input").addEventListener("input", (e) => {
+        state.query = e.target.value;
+        applyQuery();
+      });
+      window.addEventListener("resize", () => {
+        if (state.atlas) renderAll();
+      });
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") goRoot();
+      });
+      window.addEventListener("DOMContentLoaded", () => loadGraph("."));
+    </script>
+  </body>
 </html>
