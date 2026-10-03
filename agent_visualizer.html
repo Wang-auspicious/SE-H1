@@ -1023,21 +1023,22 @@ function relationLines(item, data) {
 function renderInspector(selection) {
   const data = activeData();
   const root = !selection || selection.type === "project";
+  const scope = selection && selection.type === "scope";
   const node = selection && selection.node;
   const feature = selection && selection.feature;
-  const target = root ? data : feature || node;
+  const target = root || scope ? data : feature || node;
   $("#inspector-badge").textContent = root ? "PROJECT · READY" : feature ? "FEATURE · READY" : "MODULE · READY";
   $("#inspector-title").textContent = target.title || target.name || data.title;
   $("#inspector-namespace").textContent = target.namespace || (feature ? "proof." + feature.id : data.namespace);
   $("#inspector-desc").textContent = target.description || target.desc || data.description;
-  const metrics = root ? data.metrics : feature ? { "参与模块": feature.modules.length + " 个", "关系类型": "横切关注点" } : {
+  const metrics = root || scope ? data.metrics : feature ? { "参与模块": feature.modules.length + " 个", "关系类型": "横切关注点" } : {
     "内部构件": (node.parts || []).length + " 个",
     "层级": node.eyebrow,
     "下钻": SUBVIEWS[node.id] ? "可展开" : "叶子节点"
   };
   $("#metric-list").innerHTML = metricLines(metrics);
   $("#source-list").innerHTML = (target.sources || data.sources || []).map((source) => '<div class="source-row">' + source + "</div>").join("");
-  const parts = feature ? feature.modules.map((id) => ({ id: id, title: id })) :
+  const parts = scope ? (data.nodes || []).map((item) => ({ id: item.id, title: item.title })) : feature ? feature.modules.map((id) => ({ id: id, title: id })) :
     (node ? (node.parts || []).map((title, index) => ({ id: node.id + "-" + index, title: title })) : []);
   $("#parts-block").style.display = parts.length ? "block" : "none";
   $("#parts-heading").textContent = feature ? "participating modules" : "internal parts";
@@ -1045,12 +1046,17 @@ function renderInspector(selection) {
     part.id + '"><span>' + part.title + '</span><span>inspect ›</span></button>').join("");
   $("#part-list").querySelectorAll("[data-part]").forEach((button) => {
     button.addEventListener("click", () => {
+      if (scope) {
+        const partNode = nodeById(button.dataset.part, data);
+        if (partNode) selectItem({ type: "module", node: partNode, data: data });
+        return;
+      }
       if (!feature) return;
       const partNode = nodeById(button.dataset.part, data) || nodeById(button.dataset.part, H1);
       if (partNode) selectItem({ type: "module", node: partNode, data: data });
     });
   });
-  $("#relations-block").style.display = root || feature ? "none" : "block";
+  $("#relations-block").style.display = root || scope || feature ? "none" : "block";
   $("#relation-list").innerHTML = relationLines(selection, data);
   renderEvidence(root ? 4 : feature ? 3 : 2);
 }
@@ -1072,7 +1078,7 @@ function selectItem(selection) {
 function drillDown(id) {
   if (!SUBVIEWS[id]) return;
   state.scope = id;
-  state.selected = { type: "project" };
+  state.selected = { type: "scope" };
   render();
 }
 function goUp() {
