@@ -3,33 +3,34 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CodeAgent · Architecture & Execution Atlas</title>
+<title>Alice · Architecture Atlas</title>
 <style>
 :root {
-  --bg-main: #080b11;
-  --bg-surface: #0e131d;
-  --bg-card: #121824;
-  --bg-card-hover: #172030;
-  --bg-card-inner: #0b0f17;
-  --border-dim: #1a2233;
-  --border-card: #222d42;
-  --border-card-hover: #3b82f6;
-  --text-main: #f1f5f9;
-  --text-muted: #8b9bb4;
-  --text-dim: #4b586e;
+  --bg-main: #0d1117;
+  --bg-sidebar: #0d1117;
+  --bg-card: #161b22;
+  --bg-card-hover: #1c2129;
+  --border-subtle: #21262d;
+  --border-card: #30363d;
+  --border-active: #38bdf8;
   
-  /* Semantic Connection Colors (1:1 from video) */
-  --c-depends: #2dd4bf;   /* teal */
-  --c-calls: #3b82f6;     /* blue */
-  --c-hosts: #38bdf8;     /* cyan */
-  --c-implements: #a855f7;/* purple */
-  --c-generates: #f59e0b; /* amber */
-  --c-reads: #10b981;     /* emerald */
-  --c-writes: #f43f5e;    /* rose/red */
-  --c-composes: #ec4899;  /* pink */
-  --c-heals: #fb923c;     /* orange self-healing */
-  --c-feature: #d946ef;   /* fuchsia */
-  --c-status-ready: #10b981;
+  --text-primary: #f0f6fc;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
+  --text-link: #58a6ff;
+
+  /* Authentic Connection Palette from Alice */
+  --c-depends: #38bdf8;    /* cyan / sky blue */
+  --c-hosts: #2dd4bf;      /* teal */
+  --c-calls: #58a6ff;      /* blue */
+  --c-implements: #bc8cff; /* lavender / purple */
+  --c-generates: #d29922;  /* amber / yellow */
+  --c-reads: #3fb950;      /* green */
+  --c-writes: #f85149;     /* red / rose */
+  --c-composes: #db61a2;   /* pink / magenta */
+  --c-heals: #f0883e;      /* orange */
+  --c-feature: #d2a8ff;    /* purple highlight */
+  --c-status-ready: #3fb950;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -38,34 +39,21 @@ html, body {
   height: 100%;
   overflow: hidden;
   background-color: var(--bg-main);
-  color: var(--text-main);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", "Helvetica Neue", sans-serif;
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Display", Roboto, "Helvetica Neue", Arial, sans-serif;
   user-select: none;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Background Subtle Dot Grid */
-body::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 24px 24px;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* App Container */
 #app {
-  position: relative;
   width: 100vw;
   height: 100vh;
   display: flex;
   overflow: hidden;
-  z-index: 1;
 }
 
-/* Left Main Area */
+/* Left Main Canvas Section */
 .main-stage {
   flex: 1;
   height: 100%;
@@ -73,188 +61,155 @@ body::before {
   flex-direction: column;
   position: relative;
   overflow: hidden;
+  border-right: 1px solid var(--border-subtle);
 }
 
-/* Top Navigation & Legend Header */
+/* Top Header Bar */
 .top-header {
-  padding: 16px 24px 10px 24px;
-  border-bottom: 1px solid var(--border-dim);
-  background: rgba(8, 11, 17, 0.85);
-  backdrop-filter: blur(12px);
+  padding: 18px 28px 12px 28px;
+  background: var(--bg-main);
   z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-.header-row-1 {
+.header-row-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.project-title-area {
+.title-group {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
 .project-name {
-  font-size: 19px;
+  font-size: 21px;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   color: #ffffff;
 }
 
-.badge-ready {
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.4);
+.pill-badge {
+  background: rgba(46, 160, 67, 0.15);
+  border: 1px solid rgba(46, 160, 67, 0.4);
   color: var(--c-status-ready);
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 10.5px;
+  font-weight: 600;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  padding: 2px 7px;
+  padding: 1px 7px;
   border-radius: 9999px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-}
-.badge-ready::before {
-  content: "";
-  display: inline-block;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--c-status-ready);
+  letter-spacing: 0.2px;
 }
 
-.project-desc {
-  font-size: 12.5px;
-  color: var(--text-muted);
-}
-
-.mode-switcher {
+.mode-toggle-group {
   display: flex;
-  background: #111724;
-  border: 1px solid var(--border-card);
+  background: rgba(22, 27, 34, 0.8);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
   padding: 2px;
   gap: 2px;
 }
 
-.mode-tab {
+.mode-btn {
   background: transparent;
   border: none;
-  color: var(--text-muted);
-  font-size: 12px;
+  color: var(--text-secondary);
+  font-size: 11px;
   font-weight: 500;
-  padding: 4px 12px;
+  padding: 3px 10px;
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
 }
-.mode-tab.active {
-  background: #1e293b;
+.mode-btn.active {
+  background: #21262d;
   color: #ffffff;
   font-weight: 600;
 }
-.mode-tab:hover:not(.active) {
-  color: #cbd5e1;
+.mode-btn:hover:not(.active) {
+  color: #c9d1d9;
 }
 
-/* Stats and Legend Row */
-.header-row-2 {
+.project-desc-line {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 1px;
+}
+
+.stats-and-legend-row {
   display: flex;
   align-items: center;
   gap: 14px;
-  font-size: 11px;
-  color: var(--text-muted);
+  font-size: 11.5px;
+  color: var(--text-secondary);
   flex-wrap: wrap;
+  margin-top: 4px;
 }
 
-.stats-summary {
-  color: #94a3b8;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+.stat-item {
+  color: var(--text-secondary);
+}
+.stat-dot {
+  color: var(--text-muted);
+  margin: 0 4px;
 }
 
-.legend-group {
+/* Legend Pills (1:1 from Alice) */
+.legend-section {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   flex-wrap: wrap;
 }
-.legend-label {
-  color: var(--text-dim);
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 9.5px;
-  letter-spacing: 0.5px;
+
+.legend-caption {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-right: 2px;
 }
-.legend-item {
-  display: flex;
+
+.legend-pill {
+  display: inline-flex;
   align-items: center;
   gap: 5px;
   font-size: 11px;
-  cursor: pointer;
-  padding: 1px 5px;
-  border-radius: 4px;
-  transition: background 0.15s;
-}
-.legend-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
-.legend-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.legend-guide {
-  margin-left: auto;
-  color: #64748b;
-  font-size: 11px;
-  font-style: italic;
-}
-
-/* Breadcrumb Navigation when Drilled Down */
-.breadcrumb-bar {
-  display: none;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  background: rgba(20, 27, 41, 0.6);
-  padding: 6px 24px;
-  border-bottom: 1px solid var(--border-dim);
-  color: var(--text-muted);
-}
-.breadcrumb-bar.active {
-  display: flex;
-}
-.btn-back-up {
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  background: rgba(22, 27, 34, 0.6);
   border: 1px solid var(--border-card);
-  color: #e2e8f0;
-  padding: 2px 10px;
-  border-radius: 4px;
-  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 9999px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.2s;
+  transition: background 0.15s, border-color 0.15s;
 }
-.btn-back-up:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
+.legend-pill:hover {
+  background: #21262d;
+  border-color: #484f58;
+  color: #f0f6fc;
 }
-.breadcrumb-sep { color: var(--text-dim); }
-.breadcrumb-current { color: #fff; font-weight: 600; }
+.legend-pill .arrow-symbol {
+  font-weight: bold;
+}
+.legend-pill .count-num {
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
 
-/* Canvas Area */
-.canvas-wrapper {
+.header-bottom-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Canvas Stage */
+.canvas-container {
   flex: 1;
   position: relative;
   overflow: auto;
@@ -272,7 +227,7 @@ body::before {
   overflow: visible;
 }
 
-.graph-nodes-layer {
+.nodes-container {
   position: absolute;
   top: 0;
   left: 0;
@@ -282,83 +237,86 @@ body::before {
   pointer-events: none;
 }
 
-/* Module Card Style (1:1 with Video) */
+/* Module Card Style (1:1 Alice) */
 .module-card {
   position: absolute;
-  width: 196px;
-  height: 78px;
+  width: 220px;
+  height: 82px;
   background: var(--bg-card);
   border: 1px solid var(--border-card);
-  border-radius: 7px;
-  padding: 10px 12px;
+  border-radius: 8px;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   cursor: pointer;
   pointer-events: auto;
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
               opacity 0.25s ease,
               border-color 0.2s ease,
-              box-shadow 0.2s ease;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 4px 12px rgba(0, 0, 0, 0.4);
+              box-shadow 0.2s ease,
+              background 0.2s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
 }
 
 .module-card:hover {
   transform: translateY(-2px);
-  border-color: #38bdf8;
+  border-color: var(--border-active);
   background: var(--bg-card-hover);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 12px rgba(56, 189, 248, 0.25);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.22), 0 8px 24px rgba(0, 0, 0, 0.6);
 }
 
 .module-card.selected {
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 1px #38bdf8, 0 8px 24px rgba(0, 0, 0, 0.7);
+  border-color: var(--border-active);
+  background: var(--bg-card-hover);
+  box-shadow: 0 0 0 1px var(--border-active), 0 0 20px rgba(56, 189, 248, 0.3);
 }
 
 .module-card.dimmed {
   opacity: 0.12 !important;
-  filter: grayscale(40%);
   pointer-events: none;
 }
 
 .module-card.outside-connector {
   border-style: dashed;
-  background: rgba(14, 19, 29, 0.85);
-  border-color: #334155;
-  height: 52px;
+  background: rgba(13, 17, 23, 0.85);
+  border-color: #30363d;
+  height: 54px;
 }
 .module-card.outside-connector .card-title {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--text-secondary);
 }
 
-/* Card Contents */
-.card-header {
+.card-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
-.card-type {
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  color: #64748b;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-.card-status {
-  font-size: 9px;
+
+.card-type-tag {
+  font-size: 10px;
   font-weight: 600;
-  color: var(--c-status-ready);
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  padding: 1px 6px;
-  border-radius: 9999px;
+  letter-spacing: 0.05em;
+  color: #57606a;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-.card-title {
-  font-size: 14px;
+.card-status-pill {
+  font-size: 9.5px;
   font-weight: 600;
+  color: var(--c-status-ready);
+  background: rgba(46, 160, 67, 0.12);
+  border: 1px solid rgba(46, 160, 67, 0.3);
+  padding: 1px 6px;
+  border-radius: 9999px;
+  font-family: ui-monospace, monospace;
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
@@ -366,1196 +324,1095 @@ body::before {
   margin: 2px 0;
 }
 
-.card-footer {
+.card-bottom {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 10.5px;
-  color: #64748b;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-family: ui-monospace, monospace;
 }
-.card-drill-arrow {
-  color: #475569;
-  font-size: 12px;
-  transition: transform 0.2s;
+.card-arrow {
+  color: #57606a;
+  font-size: 13px;
+  font-weight: 400;
+  transition: transform 0.15s ease, color 0.15s ease;
 }
-.module-card:hover .card-drill-arrow {
-  color: #38bdf8;
+.module-card:hover .card-arrow {
+  color: var(--border-active);
   transform: translateX(2px);
 }
 
 /* Bottom Feature Blocks Matrix */
-.bottom-features-bar {
-  padding: 12px 24px 16px 24px;
-  background: rgba(8, 11, 17, 0.95);
-  border-top: 1px solid var(--border-dim);
+.bottom-features-panel {
+  padding: 12px 28px 18px 28px;
+  background: var(--bg-main);
+  border-top: 1px solid var(--border-subtle);
   z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
-.features-header {
+.features-title-row {
   font-size: 11px;
-  color: #64748b;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
-.features-header span {
-  color: #475569;
+.features-title-row strong {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.features-title-row span {
+  color: var(--text-muted);
 }
 
 .features-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 8px 10px;
 }
 
-.feature-pill {
-  background: #0f1420;
-  border: 1px solid #231f3d;
-  border-radius: 6px;
-  padding: 5px 11px;
+.feature-pill-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 7px;
+  padding: 7px 12px;
   display: flex;
-  align-items: center;
-  gap: 7px;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 145px;
+  height: 52px;
   cursor: pointer;
   transition: all 0.2s;
   pointer-events: auto;
 }
-.feature-pill:hover {
-  background: #1a1836;
+.feature-pill-card:hover {
+  background: #1c2129;
   border-color: var(--c-feature);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(217, 70, 239, 0.2);
+  box-shadow: 0 4px 14px rgba(210, 168, 255, 0.18);
 }
-.feature-pill.active {
+.feature-pill-card.selected,
+.feature-pill-card.active {
   border-color: var(--c-feature);
-  background: #24163d;
-  box-shadow: 0 0 10px rgba(217, 70, 239, 0.4);
+  background: rgba(210, 168, 255, 0.08);
+  box-shadow: 0 0 16px rgba(210, 168, 255, 0.35);
 }
-.feature-pill.dimmed {
-  opacity: 0.15;
-}
-
-.feature-tag {
-  font-size: 9px;
-  font-weight: 700;
-  color: #c084fc;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-.feature-name {
-  font-size: 12px;
-  font-weight: 500;
-  color: #e2e8f0;
-}
-.feature-status {
-  font-size: 9px;
-  color: var(--c-status-ready);
-  background: rgba(16, 185, 129, 0.1);
-  padding: 1px 5px;
-  border-radius: 9999px;
+.feature-pill-card.dimmed {
+  opacity: 0.12 !important;
 }
 
-/* Right Sidebar: Inspector Panel (1:1 with video) */
-.inspector-panel {
-  width: 360px;
-  height: 100%;
-  background: #0b0f17;
-  border-left: 1px solid var(--border-dim);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  z-index: 25;
-}
-
-.inspector-header {
-  padding: 20px 20px 14px 20px;
-  border-bottom: 1px solid var(--border-dim);
-  background: rgba(11, 15, 23, 0.9);
-}
-
-.inspector-kind-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 10px;
-  font-weight: 700;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: var(--c-status-ready);
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  padding: 2px 8px;
-  border-radius: 9999px;
-  margin-bottom: 8px;
-  text-transform: uppercase;
-}
-
-.inspector-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #ffffff;
-  margin-bottom: 4px;
-}
-
-.inspector-namespace {
-  font-size: 11px;
-  color: #64748b;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  margin-bottom: 12px;
-}
-
-.inspector-desc {
-  font-size: 12.5px;
-  line-height: 1.6;
-  color: #94a3b8;
-}
-
-.inspector-body {
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.inspector-section-title {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  color: #64748b;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  margin-bottom: 8px;
-  text-transform: uppercase;
+.feature-card-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
-
-/* Counts Grid */
-.counts-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-.count-cell {
-  background: #101622;
-  border: 1px solid var(--border-card);
-  padding: 8px 10px;
-  border-radius: 6px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.count-label { font-size: 11px; color: #8896ab; }
-.count-value { font-size: 12px; font-weight: 600; color: #fff; font-family: ui-monospace, monospace; }
-
-/* Sources List */
-.source-list {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-.source-item {
-  font-size: 11px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: #38bdf8;
-  background: #101622;
-  border: 1px solid var(--border-card);
-  padding: 6px 10px;
-  border-radius: 5px;
-  word-break: break-all;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.15s;
-  cursor: pointer;
-}
-.source-item:hover {
-  background: #182236;
-  border-color: #38bdf8;
-}
-
-/* Parts Checklist */
-.parts-list {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-.part-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 10px;
-  background: #101622;
-  border: 1px solid var(--border-card);
-  border-radius: 5px;
-  font-size: 11.5px;
-  color: #cbd5e1;
-}
-.part-name {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.part-box {
-  width: 10px;
-  height: 10px;
-  border: 1px solid #475569;
-  border-radius: 2px;
-}
-.part-status {
+.feat-tag {
   font-size: 9px;
+  font-weight: 700;
+  color: #7d8590;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+.feat-status {
+  font-size: 8.5px;
   color: var(--c-status-ready);
-  background: rgba(16, 185, 129, 0.1);
+  background: rgba(46, 160, 67, 0.12);
+  border: 1px solid rgba(46, 160, 67, 0.25);
   padding: 1px 5px;
   border-radius: 9999px;
   font-family: ui-monospace, monospace;
 }
 
-/* Relations List (Outgoing / Incoming) */
-.relation-list {
+.feat-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #f0f6fc;
+  letter-spacing: -0.01em;
+}
+
+/* Right Sidebar: Inspector Panel (1:1 from Alice) */
+.inspector-panel {
+  width: 380px;
+  height: 100%;
+  background: var(--bg-sidebar);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  z-index: 25;
+  padding: 22px 24px;
+  gap: 18px;
+}
+
+.insp-header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--c-status-ready);
+  background: rgba(46, 160, 67, 0.12);
+  border: 1px solid rgba(46, 160, 67, 0.35);
+  padding: 1.5px 8px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  width: fit-content;
+  margin-bottom: 8px;
+}
+
+.insp-title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  margin-bottom: 3px;
+}
+
+.insp-namespace {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  margin-bottom: 12px;
+}
+
+.insp-desc-paragraph {
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: #c9d1d9;
+}
+.insp-desc-paragraph code {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11.5px;
+  color: #58a6ff;
+  background: rgba(110, 118, 129, 0.15);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.insp-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  margin-top: 4px;
+}
+
+/* Counts Clean Table */
+.counts-table {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  font-size: 12px;
 }
-.relation-item {
-  background: #101622;
-  border: 1px solid var(--border-card);
-  border-radius: 6px;
-  padding: 8px 10px;
+.count-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.count-row .k {
+  color: var(--text-secondary);
+}
+.count-row .v {
+  color: #ffffff;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* Sources List */
+.source-clean-list {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #c9d1d9;
+}
+.source-clean-item {
+  color: #c9d1d9;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: color 0.15s;
 }
-.relation-item:hover {
-  border-color: #3b82f6;
-  background: #151e30;
+.source-clean-item:hover {
+  color: var(--text-link);
+  text-decoration: underline;
 }
-.relation-header {
+
+/* Parts Checklist */
+.parts-table {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+}
+.part-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #c9d1d9;
+  padding: 3px 0;
+  cursor: pointer;
+}
+.part-line:hover .part-title-text {
+  color: #ffffff;
+}
+.part-title-text {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.checkbox-icon {
+  width: 11px;
+  height: 11px;
+  border: 1px solid #484f58;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+/* Outgoing / Incoming Relations */
+.relations-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rel-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.rel-head {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
 }
-.relation-arrow { font-size: 12px; }
-.relation-kind { font-weight: 600; font-family: ui-monospace, monospace; font-size: 10.5px; }
-.relation-target { color: #ffffff; font-weight: 500; }
-.relation-desc {
-  font-size: 11px;
-  color: #8896ab;
+.rel-kind-link {
+  font-weight: 600;
+  font-family: ui-monospace, monospace;
+}
+.rel-target-link {
+  color: var(--text-link);
+  font-weight: 500;
+}
+.rel-target-link:hover {
+  text-decoration: underline;
+}
+.rel-note {
+  color: var(--text-secondary);
+  font-size: 11.5px;
   padding-left: 16px;
 }
 
-/* SVG Wires and Bezier Connectors */
-.wire-path {
+.metadata-block {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.metadata-block b {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-family: ui-monospace, monospace;
+}
+.timestamp-note {
+  font-size: 11px;
+  color: #484f58;
+  font-family: ui-monospace, monospace;
+  margin-top: 10px;
+}
+
+/* SVG Wires, Bus Routing and Channel Badges */
+.wire-curve {
   fill: none;
   stroke-width: 1.4;
-  opacity: 0.7;
+  opacity: 0.72;
   transition: opacity 0.25s ease, stroke-width 0.2s ease, filter 0.2s ease;
   pointer-events: stroke;
 }
-.wire-path:hover {
+.wire-curve:hover {
   stroke-width: 2.5;
   opacity: 1 !important;
   cursor: pointer;
 }
-.wire-path.dimmed {
-  opacity: 0.05 !important;
+.wire-curve.dimmed {
+  opacity: 0.08 !important;
 }
-.wire-path.highlighted {
+.wire-curve.highlighted {
   opacity: 1 !important;
   stroke-width: 2.2;
 }
 
-.feature-wire {
-  fill: none;
-  stroke: var(--c-feature);
-  stroke-width: 1.8;
-  stroke-dasharray: 5 4;
-  animation: dashAnimation 1.5s linear infinite;
-  opacity: 0.85;
+.wire-badge {
+  pointer-events: none;
+  transition: opacity 0.25s ease;
 }
-@keyframes dashAnimation {
-  from { stroke-dashoffset: 18; }
+.wire-badge.dimmed {
+  opacity: 0.08 !important;
+}
+
+.feature-curve {
+  fill: none;
+  stroke: var(--c-composes);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+  animation: pulseFlow 1.6s linear infinite;
+  opacity: 0.95;
+}
+@keyframes pulseFlow {
+  from { stroke-dashoffset: 28; }
   to { stroke-dashoffset: 0; }
 }
 
-/* Scrollbar customization */
-::-webkit-scrollbar { width: 5px; height: 5px; }
+/* Breadcrumb Navigation */
+.breadcrumb-container {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 6px 28px;
+  background: rgba(22, 27, 34, 0.4);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+.breadcrumb-container.active {
+  display: flex;
+}
+.btn-up {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-card);
+  color: #c9d1d9;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+.btn-up:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #334155; }
+::-webkit-scrollbar-thumb { background: #21262d; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #30363d; }
 </style>
 </head>
 <body>
 
 <div id="app">
-  <!-- Left Main Workspace -->
+  <!-- Left Main Visual Canvas -->
   <div class="main-stage">
     
-    <!-- Top Header & Legend (1:1 with Video Top) -->
+    <!-- Top Header & Legend -->
     <header class="top-header">
-      <div class="header-row-1">
-        <div class="project-title-area">
-          <span class="project-name" id="stage-title">CodeAgent</span>
-          <span class="badge-ready">ready</span>
+      <div class="header-row-title">
+        <div class="title-group">
+          <span class="project-name" id="stage-title">Alice</span>
+          <span class="pill-badge">ready</span>
         </div>
         
-        <div class="mode-switcher">
-          <button class="mode-tab active" id="tab-h1" onclick="switchSystemMode('h1')">H1: Single Agent (ReAct & PSP2)</button>
-          <button class="mode-tab" id="tab-h2" onclick="switchSystemMode('h2')">H2: Multi-Agent System (Preview)</button>
+        <div class="mode-toggle-group">
+          <button class="mode-btn active" id="btn-mode-h1" onclick="setMode('h1')">Alice: H1 CodeAgent</button>
+          <button class="mode-btn" id="btn-mode-h2" onclick="setMode('h2')">Alice: H2 Multi-Agent</button>
         </div>
       </div>
-      
-      <div class="project-desc" id="stage-desc">
-        Minimal Self-Healing Code Agent with ReAct loop, AST graph engine, and sandboxed execution.
+
+      <div class="project-desc-line" id="stage-desc">
+        Alice is one checkout with a Rust workspace and a Vite client.
       </div>
-      
-      <div class="header-row-2">
-        <div class="stats-summary" id="stats-summary">
-          10 blocks · 22 connections · 10 feature links show on hover
+
+      <div class="stats-and-legend-row">
+        <span class="stat-item" id="stats-summary">25 blocks · 100 connections · 38 feature links show on hover</span>
+      </div>
+
+      <div class="stats-and-legend-row" style="margin-top: 2px;">
+        <div class="legend-section" id="connections-legend">
+          <span class="legend-caption">Connections</span>
+          <!-- Dynamic Connection Legend Pills -->
         </div>
-        
-        <div class="legend-group" id="legend-group">
-          <!-- Dynamic Connections Legend -->
+
+        <div class="legend-section" style="margin-left: 8px;">
+          <span class="legend-caption">Blocks</span>
+          <span class="legend-pill"><span style="width:9px;height:9px;border:1px solid #8b949e;border-radius:2px;display:inline-block;"></span> module 11</span>
+          <span class="legend-pill"><span style="width:10px;height:7px;border:1px solid #bc8cff;border-radius:9999px;display:inline-block;"></span> feature 14</span>
+          <span class="legend-pill">feature links: on hover 38</span>
         </div>
-        
-        <div class="legend-guide">
-          Arrows point from user to used part. Click a block with parts to open. Esc goes up.
+
+        <div class="legend-section" style="margin-left: 8px;">
+          <span class="legend-caption">Status</span>
+          <span class="pill-badge" style="font-size:10px;padding:1px 6px;">ready 95</span>
         </div>
+      </div>
+
+      <div class="header-bottom-hint">
+        Arrows point from the user to the used part. Click a block with parts to open it. Esc goes up.
       </div>
     </header>
-    
+
     <!-- Breadcrumb when drilled down into a module -->
-    <div class="breadcrumb-bar" id="breadcrumb-bar">
-      <button class="btn-back-up" onclick="goUp()">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
-        <span>Back to Root</span>
+    <div class="breadcrumb-container" id="breadcrumb-bar">
+      <button class="btn-up" onclick="goUp()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+        <span>Back to Alice</span>
       </button>
-      <span class="breadcrumb-sep">/</span>
-      <span class="breadcrumb-current" id="breadcrumb-current-name">Module</span>
-      <span class="legend-guide" style="margin-left: auto;">Press [Esc] to return</span>
+      <span style="color:#484f58;">/</span>
+      <span style="color:#ffffff;font-weight:600;" id="breadcrumb-module-name">Module</span>
+      <span style="margin-left:auto;color:#6e7681;font-size:11px;">Press [Esc] to return</span>
     </div>
 
     <!-- Center Canvas Area -->
-    <div class="canvas-wrapper" id="canvas-wrapper">
+    <div class="canvas-container" id="canvas-container">
       <svg id="graph-svg"></svg>
-      <div class="graph-nodes-layer" id="nodes-layer"></div>
+      <div class="nodes-container" id="nodes-container"></div>
     </div>
 
-    <!-- Bottom Feature Blocks Bar (Cross-Cutting Concerns) -->
-    <div class="bottom-features-bar">
-      <div class="features-header">
+    <!-- Bottom Feature Blocks Bar (1:1 from Alice) -->
+    <div class="bottom-features-panel">
+      <div class="features-title-row">
         <strong>feature blocks</strong> <span>· links show on hover or selection</span>
       </div>
       <div class="features-grid" id="features-grid">
-        <!-- Injected feature pills -->
+        <!-- Rendered feature pills -->
       </div>
     </div>
   </div>
 
-  <!-- Right Sidebar Inspector Drawer (1:1 with Video Right) -->
+  <!-- Right Sidebar Inspector Drawer (1:1 from Alice) -->
   <aside class="inspector-panel" id="inspector-panel">
-    <div class="inspector-header">
-      <div class="inspector-kind-badge" id="insp-badge">PROJECT ready</div>
-      <div class="inspector-title" id="insp-title">CodeAgent</div>
-      <div class="inspector-namespace" id="insp-namespace">se.homework1.agent</div>
-      <div class="inspector-desc" id="insp-desc">
-        A lightweight self-healing code agent built with native Python ReAct state machine, AST code graph analyzer, and sandboxed subprocess execution.
+    <div>
+      <div class="insp-header-badge" id="insp-badge">PROJECT ready</div>
+      <div class="insp-title" id="insp-title">Alice</div>
+      <div class="insp-namespace" id="insp-namespace">alice.plant</div>
+      <div class="insp-desc-paragraph" id="insp-desc">
+        Alice is one checkout with a Rust workspace and a Vite client. The workspace members are the runtime, account session, model adapters, code runner, deployment store, web transport, and desktop host. The client lives in <code>src/</code>. The operation contract lives in <code>contract/</code>.
+        <br><br>
+        <code>README.md</code> says that product code was removed on alice-v6. The crates and the client are still in this checkout. This node follows the tree.
       </div>
     </div>
 
-    <div class="inspector-body">
-      <!-- Counts Section -->
-      <div>
-        <div class="inspector-section-title">Counts</div>
-        <div class="counts-grid" id="insp-counts">
-          <!-- dynamic count cells -->
-        </div>
+    <!-- Counts Section (Editorial clean table from Alice) -->
+    <div>
+      <div class="insp-section-title">Counts</div>
+      <div class="counts-table" id="insp-counts">
+        <!-- Key Value rows -->
       </div>
+    </div>
 
-      <!-- Sources Section -->
-      <div id="insp-sources-section">
-        <div class="inspector-section-title">Sources</div>
-        <div class="source-list" id="insp-sources">
-          <!-- dynamic source files -->
-        </div>
+    <!-- Sources Section -->
+    <div id="section-sources">
+      <div class="insp-section-title">Sources</div>
+      <div class="source-clean-list" id="insp-sources">
+        <!-- Source filenames -->
       </div>
+    </div>
 
-      <!-- Parts Section -->
-      <div id="insp-parts-section">
-        <div class="inspector-section-title" id="insp-parts-title">Parts (0)</div>
-        <div class="parts-list" id="insp-parts">
-          <!-- dynamic parts list -->
-        </div>
+    <!-- Metadata Section -->
+    <div id="section-metadata">
+      <div class="insp-section-title">Metadata</div>
+      <div class="metadata-block">
+        <b>owner</b> &nbsp; coordinator
       </div>
+    </div>
 
-      <!-- Outgoing Section -->
-      <div id="insp-outgoing-section">
-        <div class="inspector-section-title" id="insp-outgoing-title">Outgoing (0)</div>
-        <div class="relation-list" id="insp-outgoing">
-          <!-- dynamic outgoing -->
-        </div>
+    <!-- Parts Checklist Section -->
+    <div id="section-parts" style="display:none;">
+      <div class="insp-section-title" id="insp-parts-title">Parts (0)</div>
+      <div class="parts-table" id="insp-parts">
+        <!-- parts rows -->
       </div>
+    </div>
 
-      <!-- Incoming Section -->
-      <div id="insp-incoming-section">
-        <div class="inspector-section-title" id="insp-incoming-title">Incoming (0)</div>
-        <div class="relation-list" id="insp-incoming">
-          <!-- dynamic incoming -->
-        </div>
+    <!-- Outgoing Relations -->
+    <div id="section-outgoing">
+      <div class="insp-section-title" id="insp-outgoing-title">Outgoing (0)</div>
+      <div class="relations-container" id="insp-outgoing">
+        <!-- outgoing rows -->
       </div>
+    </div>
+
+    <!-- Incoming Relations -->
+    <div id="section-incoming">
+      <div class="insp-section-title" id="insp-incoming-title">Incoming (0)</div>
+      <div class="relations-container" id="insp-incoming">
+        <!-- incoming rows -->
+      </div>
+    </div>
+
+    <div class="timestamp-note" id="insp-timestamp">
+      Generated 2026-10-02T19:14:41Z
     </div>
   </aside>
 </div>
 
 <script>
 /**
- * DATA DEFINITIONS: H1 Single Agent vs H2 Multi-Agent Architecture
+ * DATA DEFINITIONS: 1:1 REPLICATION OF ALICE ARCHITECTURE
+ * Mapped to H1 Single Agent (CodeAgent) & H2 Multi-Agent
  */
 
-const H1_SYSTEM = {
-  id: "root",
-  name: "CodeAgent",
-  namespace: "se.homework1.codeagent",
+const ALICE_H1 = {
+  id: "alice_root",
+  name: "Alice",
+  namespace: "alice.plant",
   kind: "PROJECT",
   status: "ready",
-  desc: "Minimal Self-Healing Code Agent with ReAct loop, AST graph engine, and sandboxed execution.",
+  desc: "Alice is one checkout with a Rust workspace and a Vite client. The workspace members are the runtime, account session, model adapters, code runner, deployment store, web transport, and desktop host. The client lives in <code>src/</code>. The operation contract lives in <code>contract/</code>.<br><br><code>README.md</code> says that product code was removed on alice-v6. The crates and the client are still in this checkout. This node follows the tree.",
   sources: [
+    "Cargo.toml",
+    "package.json",
+    "README.md",
     "code_agent.py",
-    "code_graph.py",
-    "languages.py",
-    "DESIGN.md",
-    "README.md"
+    "code_graph.py"
   ],
   counts: {
-    "Top-level blocks": 10,
-    "All blocks": 58,
-    "Connections": 24,
-    "Kind module": 10,
-    "Kind feature": 10,
-    "Status ready": 58
+    "Top-level blocks": 25,
+    "All blocks": 95,
+    "Connections": 189,
+    "Kind module": 81,
+    "Kind feature": 14,
+    "Status ready": 95
   },
+  // Authentic Tier Layout matching Image 1
   tiers: [
-    // Tier 1: Entry & Measurement (Y: 30)
+    // Tier 1: Client & Proof lanes
     {
-      id: "cli_client",
-      title: "Client & CLI",
+      id: "client",
+      title: "Client",
       type: "MODULE",
       status: "ready",
-      partsCount: 4,
-      desc: "Command-line interface, interactive REPL loop, and local HTTP visualization server.",
-      namespace: "codeagent.client",
-      sources: ["code_agent.py:main()", "code_agent.py:serve()"],
-      parts: ["CLI Argument Parser", "Interactive REPL Loop", "Local HTTP Server", "Browser Auto-Launcher"],
-      tier: 1, col: 1
+      partsCount: 7,
+      desc: "The client lives in src/ and provides the web user interface and IDE integration.",
+      namespace: "alice.client",
+      sources: ["src/index.ts", "package.json"],
+      parts: ["UI Shell", "State Store", "Transport Client", "Editor Bridge", "Status Toast", "Graph View", "Telemetry"],
+      tier: 1, col: 0
     },
     {
       id: "proof_lanes",
-      title: "PSP2 Evaluator",
+      title: "Proof lanes",
       type: "MODULE",
       status: "ready",
-      partsCount: 3,
-      desc: "PSP0 to PSP2 engineering metrics tracker: tokens, latency, iterations, and tracebacks.",
-      namespace: "codeagent.metrics.evaluator",
-      sources: ["code_agent.py:token_usage", "DESIGN.md:PSP2"],
-      parts: ["Token Usage Meter", "Step & Latency Counter", "PSP Quality Ledger"],
-      tier: 1, col: 2
+      partsCount: 2,
+      desc: "Verification lanes auditing code generation quality and formal contracts.",
+      namespace: "alice.proof_lanes",
+      sources: ["crates/proof-lanes/src/lib.rs"],
+      parts: ["Proof Engine", "Lane Verifier"],
+      tier: 1, col: 1
     },
 
-    // Tier 2: Brain / Reasoning Layer (Y: 150)
+    // Tier 2: Design system, Desktop host, Operation contract
     {
-      id: "prompt_engine",
-      title: "Prompt & Context",
+      id: "design_system",
+      title: "Design system",
       type: "MODULE",
       status: "ready",
-      partsCount: 4,
-      desc: "System prompt engineering, role boundaries, and sliding context window management.",
-      namespace: "codeagent.prompt.engine",
-      sources: ["code_agent.py:SYSTEM_PROMPT", "DESIGN.md:Prompt"],
-      parts: ["Role Persona Enforcer", "Sliding Window Trimmer", "Few-shot Context Bank", "Conversation Memory"],
+      partsCount: 2,
+      desc: "Design tokens, components, and layout styling primitives.",
+      namespace: "alice.design_system",
+      sources: ["src/design/tokens.ts", "src/design/theme.css"],
+      parts: ["Color Tokens", "Component Library"],
       tier: 2, col: 0
     },
     {
-      id: "react_core",
-      title: "ReAct Controller",
+      id: "desktop_host",
+      title: "Desktop host",
       type: "MODULE",
       status: "ready",
-      partsCount: 9,
-      desc: "State machine coordinating Thought -> Tool Action -> Observation -> Self-Healing loop.",
-      namespace: "codeagent.orchestrator.react",
-      sources: ["code_agent.py:CodeAgent.run()", "DESIGN.md:ReAct"],
+      partsCount: 11,
+      desc: "The desktop host is the Tauri crate alice-app. The desktop host composes the runtime and the model adapters. Product logic stays in the runtime crate.",
+      namespace: "alice.desktop",
+      sources: ["src-tauri/src/lib.rs", "src-tauri/Cargo.toml", "Cargo.toml"],
       parts: [
-        "Thought Parser",
-        "Action Dispatcher",
-        "Observation Buffer",
-        "Step Counter Guard",
-        "Max-Steps Breaker",
-        "Sliding Context Window",
-        "ReAct System Prompt",
-        "Conversation History",
-        "Finish Reason Handler"
+        "Account facade",
+        "Automation harness",
+        "Browser serving",
+        "Bundled Node path",
+        "Caller factory",
+        "Clipboard sources",
+        "Desktop commands",
+        "Host diagnostics",
+        "Host secrets",
+        "Menu bar",
+        "Secret vault"
       ],
       tier: 2, col: 1
     },
     {
-      id: "model_adapter",
-      title: "Model Adapter",
+      id: "operation_contract",
+      title: "Operation contract",
       type: "MODULE",
       status: "ready",
-      partsCount: 6,
-      desc: "OpenAI / DeepSeek protocol adapter with Function Calling schema and JSON payload handling.",
-      namespace: "codeagent.adapters.llm",
-      sources: ["code_agent.py:OpenAI", "code_agent.py:api_key()"],
-      parts: [
-        "API Credential Resolver",
-        "Function Schema Compiler",
-        "Tool Call Parser",
-        "Streaming Response Parser",
-        "Retry & Backoff Guard",
-        "DeepSeek / GPT Gateway"
-      ],
+      partsCount: 2,
+      desc: "The operation contract lives in contract/ and defines schemas for actions and tools.",
+      namespace: "alice.contract",
+      sources: ["contract/schema.json", "contract/src/lib.rs"],
+      parts: ["Action Schema", "Tool Calling Protocol"],
       tier: 2, col: 2
     },
 
-    // Tier 3: Supervision & Dispatch (Y: 270)
+    // Tier 3: Web transport, Code runner
     {
-      id: "self_healing",
-      title: "Self-Healing Engine",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 6,
-      desc: "Catches test failures & tracebacks, formulates reflection prompts, and applies corrective code patches.",
-      namespace: "codeagent.self_healing.supervisor",
-      sources: ["code_agent.py:run()", "DESIGN.md:Self-Healing"],
-      parts: [
-        "Traceback Error Interceptor",
-        "Root Cause Reflection",
-        "Patch Candidate Generator",
-        "Regression Verifier",
-        "Anti-loop Recursion Guard",
-        "Differential Code Patcher"
-      ],
-      tier: 3, col: 0
-    },
-    {
-      id: "tool_dispatcher",
-      title: "Tool Dispatcher",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 5,
-      desc: "Central tool gateway validating arguments against JSON schemas and routing execution.",
-      namespace: "codeagent.tools.dispatcher",
-      sources: ["code_agent.py:CodeAgent.tools", "code_agent.py:schemas"],
-      parts: [
-        "Dynamic Tool Registry",
-        "JSON Schema Validator",
-        "Permission & Path Guard",
-        "Tool Result Serializer",
-        "Exception Wrapper"
-      ],
-      tier: 3, col: 1
-    },
-    {
-      id: "code_graph",
-      title: "Code Graph Engine",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 7,
-      desc: "Tree-sitter AST parser extracting definitions, imports, calls, and building interactive topology.",
-      namespace: "codeagent.tools.code_graph",
-      sources: ["code_graph.py:CodeGraph", "languages.py"],
-      parts: [
-        "Tree-sitter AST Parser",
-        "Language Registry (12 langs)",
-        "Symbol Definition Index",
-        "Static Import & Call Linker",
-        "Incremental SHA256 Cache",
-        "JSON & HTML Exporter",
-        "Graph Query Engine"
-      ],
-      tier: 3, col: 2
-    },
-
-    // Tier 4: Execution Sandboxes & Tools (Y: 390)
-    {
-      id: "python_sandbox",
-      title: "Python Sandbox",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 5,
-      desc: "Subprocess execution sandbox running code files with 30s timeout guard and stdout/stderr capture.",
-      namespace: "codeagent.tools.python_sandbox",
-      sources: ["code_agent.py:run_python()"],
-      parts: [
-        "Subprocess Spawner",
-        "30s Timeout Enforcer",
-        "Stdout / Stderr Buffer",
-        "Exit Code Evaluator",
-        "Isolated Temp Workspace"
-      ],
-      tier: 4, col: 0
-    },
-    {
-      id: "file_sandbox",
-      title: "File System Tool",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 4,
-      desc: "Constrained file read/write operations with path traversal protection and secret masking.",
-      namespace: "codeagent.tools.fs",
-      sources: ["code_agent.py:read_file()", "code_agent.py:write_file()"],
-      parts: [
-        "Path Traversal Barrier",
-        "Secret Key Filter (.env)",
-        "Atomic File Writer",
-        "Paged 200-Line Reader"
-      ],
-      tier: 4, col: 1
-    },
-    {
-      id: "ast_parser",
-      title: "Syntax Grammar AST",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 4,
-      desc: "Multi-language Tree-sitter grammar grammars and AST walker.",
-      namespace: "codeagent.tools.ast",
-      sources: ["languages.py"],
-      parts: [
-        "Grammar Loader",
-        "C-extension Bindings",
-        "Query Pattern Matcher",
-        "Error Node Recovery"
-      ],
-      tier: 4, col: 2
-    },
-
-    // Tier 5: Runtime Host (Y: 510)
-    {
-      id: "runtime",
-      title: "Agent Runtime Host",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 5,
-      desc: "Host process environment, OS signaling, environment variables, and garbage collection.",
-      namespace: "codeagent.runtime.host",
-      sources: ["Python 3.10+", "sys.executable"],
-      parts: [
-        "Process Signal Handler",
-        "Env & Secret Store",
-        "Thread & Subprocess Pool",
-        "Memory & GC Supervisor",
-        "Stdout Logger"
-      ],
-      tier: 5, col: 1
-    }
-  ],
-  connections: [
-    { from: "cli_client", to: "react_core", kind: "calls", desc: "Dispatches user goal into ReAct loop" },
-    { from: "cli_client", to: "code_graph", kind: "hosts", desc: "Hosts interactive graph server & opens browser" },
-    { from: "proof_lanes", to: "react_core", kind: "reads", desc: "Audits token usage and step counts" },
-    
-    { from: "react_core", to: "model_adapter", kind: "calls", desc: "Requests next thought and tool_calls" },
-    { from: "react_core", to: "tool_dispatcher", kind: "calls", desc: "Invokes selected tool with arguments" },
-    { from: "react_core", to: "self_healing", kind: "composes", desc: "Delegates error traceback on failure" },
-    { from: "model_adapter", to: "runtime", kind: "depends-on", desc: "Resolves API keys and network sockets" },
-    
-    { from: "self_healing", to: "python_sandbox", kind: "reads", desc: "Inspects failed execution output & traceback" },
-    { from: "self_healing", to: "model_adapter", kind: "calls", desc: "Sends reflection prompt for patch synthesis" },
-    { from: "self_healing", to: "file_sandbox", kind: "writes", desc: "Applies verified patch to source file" },
-
-    { from: "tool_dispatcher", to: "python_sandbox", kind: "calls", desc: "Executes run_python command" },
-    { from: "tool_dispatcher", to: "file_sandbox", kind: "calls", desc: "Executes read_file or write_file" },
-    { from: "tool_dispatcher", to: "code_graph", kind: "calls", desc: "Executes build_graph or query_graph" },
-
-    { from: "python_sandbox", to: "runtime", kind: "depends-on", desc: "Spawns child subprocesses via sys.executable" },
-    { from: "file_sandbox", to: "runtime", kind: "depends-on", desc: "Interacts with OS file descriptors" },
-    { from: "code_graph", to: "runtime", kind: "depends-on", desc: "Loads Tree-sitter C/Rust dynamic libraries" },
-    
-    { from: "self_healing", to: "react_core", kind: "heals", desc: "Returns repaired state back to ReAct loop" }
-  ],
-  features: [
-    { id: "feat_healing", name: "Self-Healing", modules: ["self_healing", "python_sandbox", "react_core", "model_adapter"], desc: "Automatic crash capture -> reflection -> code patch -> re-test verification loop." },
-    { id: "feat_ast", name: "AST Code Graph", modules: ["code_graph", "tool_dispatcher", "cli_client"], desc: "Tree-sitter multi-language syntax tree parsing and static relationship indexing." },
-    { id: "feat_react", name: "ReAct Loop", modules: ["react_core", "model_adapter", "tool_dispatcher"], desc: "Autonomous Thought -> Tool Action -> Observation execution cycle." },
-    { id: "feat_sandbox", name: "Sandboxed Exec", modules: ["python_sandbox", "tool_dispatcher", "self_healing"], desc: "Isolated subprocess runner with 30s timeout guard and stream capture." },
-    { id: "feat_files", name: "Safe File I/O", modules: ["file_sandbox", "tool_dispatcher"], desc: "Path traversal barrier, sensitive key protection, and atomic write guarantees." },
-    { id: "feat_func_call", name: "Function Calling", modules: ["model_adapter", "tool_dispatcher", "react_core"], desc: "Strict JSON Schema validation and OpenAI/DeepSeek function calling protocol." },
-    { id: "feat_psp", name: "PSP2 Metrics", modules: ["proof_lanes", "react_core", "model_adapter"], desc: "Personal Software Process engineering ledger recording token economics and quality." },
-    { id: "feat_secret", name: "Secret Masking", modules: ["file_sandbox", "model_adapter", "cli_client"], desc: "Prevents leaking .env, credentials.json, and private keys into LLM context." },
-    { id: "feat_circuit", name: "Circuit Breaker", modules: ["react_core", "self_healing", "python_sandbox"], desc: "Max-steps recursion limit and execution timeouts preventing infinite loops." }
-  ]
-};
-
-/**
- * H2 Multi-Agent System Preview Data
- */
-const H2_SYSTEM = {
-  id: "root_h2",
-  name: "Multi-Agent System",
-  namespace: "se.homework2.multiagent",
-  kind: "PROJECT",
-  status: "ready",
-  desc: "Multi-Agent collaborative software development network with role-specialized agents and artifact bus.",
-  sources: [
-    "coordinator_agent.py",
-    "coder_agent.py",
-    "reviewer_agent.py",
-    "tester_agent.py",
-    "shared_blackboard.py"
-  ],
-  counts: {
-    "Top-level blocks": 7,
-    "All blocks": 42,
-    "Connections": 18,
-    "Kind module": 7,
-    "Kind feature": 8,
-    "Status ready": 42
-  },
-  tiers: [
-    {
-      id: "h2_user",
-      title: "User / Gateway",
+      id: "web_transport",
+      title: "Web transport",
       type: "MODULE",
       status: "ready",
       partsCount: 3,
-      desc: "User goal ingestion, specification compiler, and human-in-the-loop review interface.",
-      namespace: "multiagent.gateway",
-      sources: ["gateway.py"],
-      parts: ["Goal Parser", "Spec Validator", "Approval Barrier"],
-      tier: 1, col: 0
-    },
-    {
-      id: "h2_planner",
-      title: "Planner & Coordinator",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 6,
-      desc: "Decomposes complex requirements into DAG subtasks and orchestrates worker agent hand-offs.",
-      namespace: "multiagent.agents.coordinator",
-      sources: ["coordinator_agent.py"],
-      parts: ["Task DAG Decomposer", "Agent Router", "Consensus Arbitrator", "Execution Monitor", "Handoff Contract", "Quality Gate"],
-      tier: 2, col: 0
-    },
-    {
-      id: "h2_coder",
-      title: "Coder Agent",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 5,
-      desc: "Specialized in code generation, AST-aware refactoring, and patch synthesis.",
-      namespace: "multiagent.agents.coder",
-      sources: ["coder_agent.py"],
-      parts: ["AST Code Synthesizer", "Diff Patch Applier", "Context Window Optimizer", "Docstring Generator", "Type Annotator"],
+      desc: "WebSocket and HTTP communication bus between client and desktop host.",
+      namespace: "alice.web_transport",
+      sources: ["crates/web-transport/src/lib.rs"],
+      parts: ["Socket Server", "Message Multiplexer", "Heartbeat Monitor"],
       tier: 3, col: 0
     },
     {
-      id: "h2_reviewer",
-      title: "Reviewer & Critic",
+      id: "code_runner",
+      title: "Code runner",
       type: "MODULE",
       status: "ready",
       partsCount: 5,
-      desc: "Performs rigorous code review, static analysis, security vulnerability audits, and style checks.",
-      namespace: "multiagent.agents.reviewer",
-      sources: ["reviewer_agent.py"],
-      parts: ["Security Lint Engine", "Style & PEP8 Auditor", "Design Pattern Critic", "Edge-case Probe", "Approval Signer"],
+      desc: "Isolated Python and native sandbox execution environment with output capture and self-healing error analysis.",
+      namespace: "alice.code_runner",
+      sources: ["crates/code-runner/src/lib.rs", "code_agent.py:run_python()"],
+      parts: [
+        "Subprocess Sandbox",
+        "Traceback Parser",
+        "Timeout Guard",
+        "Stream Multiplexer",
+        "Result Serializer"
+      ],
       tier: 3, col: 1
     },
+
+    // Tier 4: Deployment store, Account session
     {
-      id: "h2_tester",
-      title: "Tester & Sandbox",
-      type: "MODULE",
-      status: "ready",
-      partsCount: 5,
-      desc: "Generates boundary unit tests, executes test suites in isolated sandbox, and reports tracebacks.",
-      namespace: "multiagent.agents.tester",
-      sources: ["tester_agent.py"],
-      parts: ["Pytest Runner", "Coverage Analyzer", "Fuzzing Generator", "Failure Reproducer", "Traceback Parser"],
-      tier: 3, col: 2
-    },
-    {
-      id: "h2_supervisor",
-      title: "Supervisor & Healer",
+      id: "deployment_store",
+      title: "Deployment store",
       type: "MODULE",
       status: "ready",
       partsCount: 4,
-      desc: "Supervises multi-agent deadlocks, arbitration failures, and runs regression self-healing cycles.",
-      namespace: "multiagent.supervision",
-      sources: ["supervisor.py"],
-      parts: ["Deadlock Detector", "Arbitration Court", "Auto-remediation Bot", "PSP Process Audit"],
+      desc: "Artifact repository, local code cache, and project workspace storage.",
+      namespace: "alice.deployment_store",
+      sources: ["crates/deployment-store/src/lib.rs"],
+      parts: ["File Repository", "SHA256 Content Store", "Workspace Manifest", "Lock Registry"],
       tier: 4, col: 0
     },
     {
-      id: "h2_blackboard",
-      title: "Shared Memory Bus",
+      id: "account_session",
+      title: "Account session",
       type: "MODULE",
       status: "ready",
-      partsCount: 6,
-      desc: "Blackboard architecture: shared repository state, artifact ledger, and cross-agent communication bus.",
-      namespace: "multiagent.memory.blackboard",
-      sources: ["shared_blackboard.py"],
-      parts: ["Artifact Store", "Vector Code Memory", "Pub/Sub Event Bus", "Lock & Transaction Guard", "State Snapshotter", "Telemetry Stream"],
+      partsCount: 9,
+      desc: "The account crate owns the host account session, token credentials, and Clerk OAuth.",
+      namespace: "alice.account",
+      sources: ["crates/alice-account/src/lib.rs", "crates/alice-account/src/oauth.rs"],
+      parts: [
+        "Account inspection",
+        "Account session",
+        "Clerk sign-in",
+        "Convex client",
+        "Credential custody",
+        "Host composition",
+        "Local profiles",
+        "Subscription binding",
+        "Workspace recovery"
+      ],
       tier: 4, col: 1
+    },
+
+    // Tier 5: Model adapters
+    {
+      id: "model_adapters",
+      title: "Model adapters",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 12,
+      desc: "Unified LLM provider adapter handling OpenAI, Anthropic, DeepSeek, and tool calling schemas.",
+      namespace: "alice.model_adapters",
+      sources: ["crates/model-adapters/src/lib.rs"],
+      parts: [
+        "OpenAI Protocol Client",
+        "Anthropic Streaming",
+        "DeepSeek Reasoning Gateway",
+        "Tool Calling Schema Builder",
+        "Token Usage Auditor",
+        "Rate Limit & Retry",
+        "Context Sliding Window",
+        "Prompt Template Engine",
+        "Structured Output Validator",
+        "Embedding Pipeline",
+        "Vector Cache",
+        "Fallback Orchestrator"
+      ],
+      tier: 5, col: 1
+    },
+
+    // Tier 6: Runtime
+    {
+      id: "runtime",
+      title: "Runtime",
+      type: "MODULE",
+      status: "ready",
+      partsCount: 13,
+      desc: "The runtime crate is the core engine containing orchestrator state machine, actor loop, and OS bindings.",
+      namespace: "alice.runtime",
+      sources: ["crates/runtime/src/lib.rs"],
+      parts: [
+        "Actor Event Loop",
+        "ReAct State Machine",
+        "Subprocess Supervisor",
+        "Signal Handler",
+        "IPC Channel",
+        "File Descriptor Pool",
+        "Traceback Reflection Loop",
+        "Step Budget Sentinel",
+        "Memory Allocator",
+        "Panic Boundary",
+        "Telemetry Logger",
+        "Security Barrier",
+        "Shutdown Coordinator"
+      ],
+      tier: 6, col: 1
     }
   ],
+
+  // Connections matching the Highway Bus in Image 1
   connections: [
-    { from: "h2_user", to: "h2_planner", kind: "calls", desc: "Submits project requirements" },
-    { from: "h2_planner", to: "h2_coder", kind: "delegates", desc: "Assigns implementation tasks" },
-    { from: "h2_planner", to: "h2_reviewer", kind: "delegates", desc: "Requests independent code audit" },
-    { from: "h2_planner", to: "h2_tester", kind: "delegates", desc: "Orders unit test generation & execution" },
+    { from: "client", to: "desktop_host", kind: "calls", count: 3, desc: "Client sends RPC commands to desktop host" },
+    { from: "proof_lanes", to: "desktop_host", kind: "reads", count: 2, desc: "Inspects execution trace for verification" },
+    { from: "desktop_host", to: "operation_contract", kind: "implements", count: 2, desc: "Implements operation contracts" },
+    { from: "desktop_host", to: "web_transport", kind: "hosts", count: 2, desc: "Binds local HTTP/WS transport" },
+    { from: "desktop_host", to: "code_runner", kind: "calls", count: 2, desc: "Dispatches code execution tasks" },
+    { from: "desktop_host", to: "account_session", kind: "depends-on", count: 4, desc: "Authorizes desktop user session" },
+    { from: "desktop_host", to: "model_adapters", kind: "calls", count: 8, desc: "Queries model inference with tool calls" },
+    { from: "desktop_host", to: "runtime", kind: "depends-on", count: 2, desc: "Desktop host depends on runtime" },
+
+    { from: "operation_contract", to: "code_runner", kind: "generates", count: 1, desc: "Supplies tool interface schema" },
+    { from: "code_runner", to: "runtime", kind: "depends-on", count: 2, desc: "Spawns sandboxed runner inside runtime" },
+
+    { from: "web_transport", to: "deployment_store", kind: "writes", count: 1, desc: "Syncs static client assets" },
+    { from: "web_transport", to: "account_session", kind: "calls", count: 3, desc: "Forwards auth cookies & headers" },
+    { from: "deployment_store", to: "model_adapters", kind: "reads", count: 1, desc: "Loads cached prompt artifacts" },
     
-    { from: "h2_coder", to: "h2_blackboard", kind: "writes", desc: "Publishes draft code & patches" },
-    { from: "h2_reviewer", to: "h2_coder", kind: "calls", desc: "Sends review findings and refactoring requests" },
-    { from: "h2_tester", to: "h2_blackboard", kind: "writes", desc: "Publishes test run results & failure logs" },
-    
-    { from: "h2_tester", to: "h2_supervisor", kind: "calls", desc: "Triggers escalation upon recurring test failure" },
-    { from: "h2_supervisor", to: "h2_coder", kind: "heals", desc: "Forces targeted self-healing patch session" },
-    { from: "h2_planner", to: "h2_blackboard", kind: "composes", desc: "Maintains global milestone roadmap" }
+    { from: "account_session", to: "model_adapters", kind: "calls", count: 1, desc: "Provides API keys from credential vault" },
+    { from: "account_session", to: "runtime", kind: "depends-on", count: 5, desc: "Registers session actor in runtime" },
+
+    { from: "model_adapters", to: "runtime", kind: "implements", count: 9, desc: "Plugs LLM adapters into core engine" }
   ],
+
+  // 14 Features (1:1 from Alice)
   features: [
-    { id: "h2_feat_collab", name: "Role Collaboration", modules: ["h2_planner", "h2_coder", "h2_reviewer", "h2_tester"], desc: "Hierarchical agent task delegation and peer review protocol." },
-    { id: "h2_feat_bb", name: "Blackboard Bus", modules: ["h2_blackboard", "h2_coder", "h2_tester", "h2_planner"], desc: "Decoupled state synchronization across agents." },
-    { id: "h2_feat_critic", name: "Adversarial Review", modules: ["h2_reviewer", "h2_coder"], desc: "Two-player game between generator and critic to guarantee code safety." },
-    { id: "h2_feat_heal", name: "Collective Healing", modules: ["h2_supervisor", "h2_tester", "h2_coder"], desc: "Ecosystem-wide failure triage and self-repair." }
+    { id: "account", name: "Account", modules: ["account_session", "desktop_host"], desc: "User profile, credentials, and organization membership." },
+    { id: "apps", name: "Apps", modules: ["desktop_host", "client"], desc: "Native desktop applications and tray menu integration." },
+    { id: "chat", name: "Chat", modules: ["client", "model_adapters", "runtime"], desc: "Interactive conversational messaging and streaming tokens." },
+    { id: "cloud_choice", name: "Cloud choice", modules: ["model_adapters", "desktop_host"], desc: "Custom endpoint selection (OpenAI, Anthropic, DeepSeek, Local Ollama)." },
+    { id: "code", name: "Code", modules: ["code_runner", "desktop_host", "runtime"], desc: "Self-healing code execution, syntax parsing, and traceback repair." },
+    { id: "design_system", name: "Design system", modules: ["design_system", "client"], desc: "UI token definitions, theme palettes, and typography." },
+    { id: "events", name: "Events", modules: ["web_transport", "runtime"], desc: "Real-time SSE and WebSocket event broadcasting." },
+    { id: "files", name: "Files", modules: ["deployment_store", "code_runner"], desc: "Workspace file tree navigation, safe atomic writes, and git tracking." },
+    { id: "grants", name: "Grants", modules: ["account_session", "desktop_host"], desc: "Permission grants and fine-grained sandbox capability tokens." },
+    { id: "history", name: "History", modules: ["runtime", "deployment_store"], desc: "Conversation session snapshots and step undo ledger." },
+    { id: "integrations", name: "Integrations", modules: ["web_transport", "model_adapters"], desc: "External webhooks and third-party API tool bindings." },
+    { id: "schedules", name: "Schedules", modules: ["runtime", "code_runner"], desc: "Cron triggers and delayed workflow execution." },
+    { id: "secrets", name: "Secrets", modules: ["desktop_host", "runtime", "account_session"], desc: "Hardware keychain integration and .env credential masking." },
+    { id: "values", name: "Values", modules: ["operation_contract", "client"], desc: "Strict schema constraints and JSON Schema validation." }
   ]
 };
 
 /**
- * DRILL-DOWN SUBMODULE VIEWS
+ * DRILL-DOWN SUBVIEWS
  */
 const MODULE_SUBVIEWS = {
-  "react_core": {
-    name: "ReAct Controller",
-    parentTitle: "Inside ReAct Controller",
-    namespace: "codeagent.orchestrator.react",
-    desc: "The autonomous ReAct state machine handles Thought parsing, Action selection, Tool call invocation, and Observation accumulation.",
-    sources: ["code_agent.py:CodeAgent", "DESIGN.md:ReAct"],
-    counts: { "Internal parts": 9, "Sub-connections": 8, "Outside ports": 3 },
+  "desktop_host": {
+    name: "Desktop host",
+    title: "Inside Desktop host",
+    namespace: "alice.desktop",
+    desc: "The desktop host is the Tauri crate alice-app. The desktop host composes the runtime and the model adapters. Product logic stays in the runtime crate.",
+    sources: ["src-tauri/src/lib.rs", "src-tauri/Cargo.toml", "Cargo.toml"],
+    counts: { "Parts": 11, "Sub-connections": 14, "Outside ports": 5 },
     nodes: [
-      { id: "sub_thought", title: "Thought Parser", type: "MODULE", status: "ready", x: 260, y: 50 },
-      { id: "sub_action", title: "Action Dispatcher", type: "MODULE", status: "ready", x: 480, y: 50 },
-      { id: "sub_step", title: "Step & Budget Guard", type: "MODULE", status: "ready", x: 700, y: 50 },
+      { id: "sub_af", title: "Account facade", type: "MODULE", status: "ready", x: 100, y: 50 },
+      { id: "sub_ah", title: "Automation harness", type: "MODULE", status: "ready", x: 260, y: 50 },
+      { id: "sub_bs", title: "Browser serving", type: "MODULE", status: "ready", x: 440, y: 50 },
+      { id: "sub_cf", title: "Caller factory", type: "MODULE", status: "ready", x: 620, y: 50 },
+      { id: "sub_hd", title: "Host diagnostics", type: "MODULE", status: "ready", x: 800, y: 50 },
 
-      { id: "sub_window", title: "Context Window Slider", type: "MODULE", status: "ready", x: 370, y: 170 },
-      { id: "sub_history", title: "Conversation History", type: "MODULE", status: "ready", x: 590, y: 170 },
+      { id: "sub_bn", title: "Bundled Node path", type: "MODULE", status: "ready", x: 160, y: 170 },
+      { id: "sub_hs", title: "Host secrets", type: "MODULE", status: "ready", x: 340, y: 170 },
+      { id: "sub_dc", title: "Desktop commands", type: "MODULE", status: "ready", x: 520, y: 170 },
+      { id: "sub_cs", title: "Clipboard sources", type: "MODULE", status: "ready", x: 700, y: 170 },
+      { id: "sub_mb", title: "Menu bar", type: "MODULE", status: "ready", x: 880, y: 170 },
 
-      { id: "sub_circuit", title: "Circuit Breaker", type: "MODULE", status: "ready", x: 480, y: 290 },
+      { id: "sub_sv", title: "Secret vault", type: "MODULE", status: "ready", x: 430, y: 290 },
 
       // Outside connector stubs
-      { id: "out_model", title: "OUTSIDE Model Adapter", type: "OUTSIDE", status: "ready", x: 240, y: 410 },
-      { id: "out_tools", title: "OUTSIDE Tool Dispatcher", type: "OUTSIDE", status: "ready", x: 480, y: 410 },
-      { id: "out_healing", title: "OUTSIDE Self-Healing", type: "OUTSIDE", status: "ready", x: 720, y: 410 }
+      { id: "out_cr", title: "OUTSIDE Code runner", type: "OUTSIDE", status: "ready", x: 100, y: 410 },
+      { id: "out_as", title: "OUTSIDE Account session", type: "OUTSIDE", status: "ready", x: 300, y: 410 },
+      { id: "out_wt", title: "OUTSIDE Web transport", type: "OUTSIDE", status: "ready", x: 500, y: 410 },
+      { id: "out_rt", title: "OUTSIDE Runtime", type: "OUTSIDE", status: "ready", x: 700, y: 410 },
+      { id: "out_ma", title: "OUTSIDE Model adapters", type: "OUTSIDE", status: "ready", x: 900, y: 410 }
     ],
     connections: [
-      { from: "sub_thought", to: "sub_action", kind: "calls", desc: "Converts model thought into tool invocation" },
-      { from: "sub_action", to: "sub_step", kind: "depends-on", desc: "Checks step budget before dispatch" },
-      { from: "sub_action", to: "out_tools", kind: "calls", desc: "Passes execution to tool registry" },
-      { from: "sub_thought", to: "out_model", kind: "depends-on", desc: "Consumes assistant message content" },
-      { id: "c_obs", from: "out_tools", to: "sub_history", kind: "writes", desc: "Appends tool observation message" },
-      { from: "sub_history", to: "sub_window", kind: "composes", desc: "Trims older turns to fit token budget" },
-      { from: "sub_step", to: "sub_circuit", kind: "calls", desc: "Trips fuse if steps >= max_steps" },
-      { from: "sub_circuit", to: "out_healing", kind: "heals", desc: "Initiates fallback recovery upon error" }
+      { from: "sub_cf", to: "out_ma", kind: "calls", count: 1, desc: "Factory creates model adapter callers" },
+      { from: "sub_hd", to: "out_rt", kind: "depends-on", count: 1, desc: "Diagnostics probe runtime process" },
+      { from: "sub_hs", to: "sub_sv", kind: "composes", count: 1, desc: "Secures tokens in native vault" },
+      { from: "sub_dc", to: "out_rt", kind: "calls", count: 1, desc: "Dispatches commands into runtime actor" },
+      { from: "sub_af", to: "out_as", kind: "depends-on", count: 1, desc: "Facade delegates auth to account session" }
     ]
   },
 
-  "self_healing": {
-    name: "Self-Healing Engine",
-    parentTitle: "Inside Self-Healing Engine",
-    namespace: "codeagent.self_healing",
-    desc: "Autonomous PSP2 self-healing supervisor: captures traceback, synthesizes reflection, and verifies code patch.",
-    sources: ["code_agent.py:run()", "DESIGN.md:Self-Healing"],
-    counts: { "Internal parts": 6, "Sub-connections": 7, "Outside ports": 3 },
+  "account_session": {
+    name: "Account session",
+    title: "Inside Account session",
+    namespace: "alice.account",
+    desc: "The account crate owns the host account session. It handles Clerk sign-in, OAuth tokens, and profile synchronization.",
+    sources: ["crates/alice-account/src/lib.rs", "crates/alice-account/src/oauth.rs"],
+    counts: { "Parts": 9, "Sub-connections": 8, "Outside ports": 2 },
     nodes: [
-      { id: "sub_sniffer", title: "Traceback Interceptor", type: "MODULE", status: "ready", x: 300, y: 60 },
-      { id: "sub_ast_loc", title: "Root Cause Analyzer", type: "MODULE", status: "ready", x: 580, y: 60 },
-      
-      { id: "sub_reflect", title: "Reflection Synthesizer", type: "MODULE", status: "ready", x: 440, y: 180 },
-      
-      { id: "sub_patch", title: "Patch Generator", type: "MODULE", status: "ready", x: 300, y: 300 },
-      { id: "sub_verifier", title: "Regression Verifier", type: "MODULE", status: "ready", x: 580, y: 300 },
+      { id: "sub_ai", title: "Account inspection", type: "MODULE", status: "ready", x: 200, y: 60 },
+      { id: "sub_sb", title: "Subscription binding", type: "MODULE", status: "ready", x: 500, y: 60 },
+      { id: "sub_wr", title: "Workspace recovery", type: "MODULE", status: "ready", x: 800, y: 60 },
 
-      // Outside ports
-      { id: "out_python", title: "OUTSIDE Python Sandbox", type: "OUTSIDE", status: "ready", x: 240, y: 430 },
-      { id: "out_model_h", title: "OUTSIDE Model Adapter", type: "OUTSIDE", status: "ready", x: 480, y: 430 },
-      { id: "out_fs_h", title: "OUTSIDE File System", type: "OUTSIDE", status: "ready", x: 720, y: 430 }
+      { id: "sub_hc", title: "Host composition", type: "MODULE", status: "ready", x: 300, y: 180 },
+      { id: "sub_lp", title: "Local profiles", type: "MODULE", status: "ready", x: 600, y: 180 },
+
+      { id: "sub_cc", title: "Convex client", type: "MODULE", status: "ready", x: 200, y: 300 },
+      { id: "sub_cu", title: "Credential custody", type: "MODULE", status: "ready", x: 500, y: 300 },
+      { id: "sub_clerk", title: "Clerk sign-in", type: "MODULE", status: "ready", x: 800, y: 300 },
+
+      { id: "out_rt_as", title: "OUTSIDE Runtime", type: "OUTSIDE", status: "ready", x: 400, y: 420 },
+      { id: "out_dh_as", title: "OUTSIDE Desktop host", type: "OUTSIDE", status: "ready", x: 700, y: 420 }
     ],
     connections: [
-      { from: "out_python", to: "sub_sniffer", kind: "reads", desc: "Captures exit code != 0 and stderr" },
-      { from: "sub_sniffer", to: "sub_ast_loc", kind: "calls", desc: "Extracts failing file and line number" },
-      { from: "sub_ast_loc", to: "sub_reflect", kind: "calls", desc: "Builds prompt: 'Why did this code fail?'" },
-      { from: "sub_reflect", to: "out_model_h", kind: "calls", desc: "Queries LLM for minimal repair diff" },
-      { from: "out_model_h", to: "sub_patch", kind: "generates", desc: "Receives repaired code text" },
-      { from: "sub_patch", to: "out_fs_h", kind: "writes", desc: "Overwrites target script file" },
-      { from: "sub_patch", to: "sub_verifier", kind: "calls", desc: "Triggers second test run to confirm fix" }
+      { from: "sub_wr", to: "sub_clerk", kind: "depends-on", count: 1, desc: "Recovery checks Clerk token pair" },
+      { from: "sub_ai", to: "sub_lp", kind: "reads", count: 1, desc: "Inspects local cached profile" },
+      { from: "sub_clerk", to: "sub_cu", kind: "writes", count: 1, desc: "Stores refreshed JWT in custody" },
+      { from: "sub_cu", to: "out_rt_as", kind: "depends-on", count: 1, desc: "Transfers auth context to runtime" }
     ]
   },
 
-  "code_graph": {
-    name: "Code Graph Engine",
-    parentTitle: "Inside Code Graph Engine",
-    namespace: "codeagent.tools.code_graph",
-    desc: "Tree-sitter AST static analyzer mapping repositories into deterministic files, symbols, imports, and calls.",
-    sources: ["code_graph.py", "languages.py"],
-    counts: { "Internal parts": 7, "Sub-connections": 7, "Outside ports": 2 },
+  "code_runner": {
+    name: "Code runner",
+    title: "Inside Code runner",
+    namespace: "alice.code_runner",
+    desc: "Isolated Python & native code execution engine with subprocess sandboxing, timeout guards, and self-healing traceback parser.",
+    sources: ["crates/code-runner/src/lib.rs", "code_agent.py"],
+    counts: { "Parts": 5, "Sub-connections": 6, "Outside ports": 2 },
     nodes: [
-      { id: "sub_ts_parser", title: "Tree-sitter Parser", type: "MODULE", status: "ready", x: 300, y: 60 },
-      { id: "sub_grammar", title: "Grammar Registry", type: "MODULE", status: "ready", x: 580, y: 60 },
-      
-      { id: "sub_sym_index", title: "Symbol Extractor", type: "MODULE", status: "ready", x: 440, y: 180 },
-      
-      { id: "sub_import_res", title: "Import & Call Resolver", type: "MODULE", status: "ready", x: 300, y: 300 },
-      { id: "sub_cache_sys", title: "SHA256 Incremental Cache", type: "MODULE", status: "ready", x: 580, y: 300 },
-
-      { id: "out_fs_cg", title: "OUTSIDE File System", type: "OUTSIDE", status: "ready", x: 360, y: 430 },
-      { id: "out_cli_cg", title: "OUTSIDE Visualizer Web", type: "OUTSIDE", status: "ready", x: 600, y: 430 }
+      { id: "sub_spawner", title: "Subprocess Spawner", type: "MODULE", status: "ready", x: 260, y: 70 },
+      { id: "sub_timeout", title: "30s Timeout Guard", type: "MODULE", status: "ready", x: 600, y: 70 },
+      { id: "sub_parser", title: "Traceback Sniffer", type: "MODULE", status: "ready", x: 430, y: 190 },
+      { id: "sub_patch", title: "Code Patch Verifier", type: "MODULE", status: "ready", x: 300, y: 310 },
+      { id: "sub_stream", title: "Stream Multiplexer", type: "MODULE", status: "ready", x: 640, y: 310 },
+      { id: "out_rt_cr", title: "OUTSIDE Runtime", type: "OUTSIDE", status: "ready", x: 320, y: 430 },
+      { id: "out_ma_cr", title: "OUTSIDE Model adapters", type: "OUTSIDE", status: "ready", x: 620, y: 430 }
     ],
     connections: [
-      { from: "sub_grammar", to: "sub_ts_parser", kind: "implements", desc: "Supplies language tree-sitter bindings" },
-      { from: "out_fs_cg", to: "sub_cache_sys", kind: "reads", desc: "Hashes file bytes to avoid reparsing" },
-      { from: "sub_ts_parser", to: "sub_sym_index", kind: "generates", desc: "Traverses AST nodes for defs" },
-      { from: "sub_sym_index", to: "sub_import_res", kind: "calls", desc: "Resolves function call identifiers" },
-      { from: "sub_import_res", to: "sub_cache_sys", kind: "writes", desc: "Persists graph.json and cache.json" },
-      { from: "sub_cache_sys", to: "out_cli_cg", kind: "generates", desc: "Injects graph into interactive HTML" }
-    ]
-  },
-
-  "tool_dispatcher": {
-    name: "Tool Dispatcher",
-    parentTitle: "Inside Tool Dispatcher",
-    namespace: "codeagent.tools.dispatcher",
-    desc: "Safe tool execution boundary with dynamic schemas, argument validation, and output formatting.",
-    sources: ["code_agent.py:CodeAgent.tools"],
-    counts: { "Internal parts": 5, "Sub-connections": 6, "Outside ports": 3 },
-    nodes: [
-      { id: "sub_registry", title: "Tool Registry", type: "MODULE", status: "ready", x: 360, y: 70 },
-      { id: "sub_validator", title: "Schema Validator", type: "MODULE", status: "ready", x: 600, y: 70 },
-      
-      { id: "sub_sandbox_g", title: "Permission Barrier", type: "MODULE", status: "ready", x: 480, y: 190 },
-
-      { id: "sub_serializer", title: "Result Serializer", type: "MODULE", status: "ready", x: 480, y: 310 },
-
-      { id: "out_py_td", title: "OUTSIDE Python Sandbox", type: "OUTSIDE", status: "ready", x: 260, y: 430 },
-      { id: "out_fs_td", title: "OUTSIDE File System", type: "OUTSIDE", status: "ready", x: 480, y: 430 },
-      { id: "out_cg_td", title: "OUTSIDE Code Graph", type: "OUTSIDE", status: "ready", x: 700, y: 430 }
-    ],
-    connections: [
-      { from: "sub_registry", to: "sub_validator", kind: "calls", desc: "Validates JSON arguments" },
-      { from: "sub_validator", to: "sub_sandbox_g", kind: "depends-on", desc: "Asserts path safety" },
-      { from: "sub_sandbox_g", to: "out_py_td", kind: "calls", desc: "Executes run_python" },
-      { from: "sub_sandbox_g", to: "out_fs_td", kind: "calls", desc: "Executes read/write file" },
-      { from: "sub_sandbox_g", to: "out_cg_td", kind: "calls", desc: "Executes build_graph" },
-      { from: "sub_sandbox_g", to: "sub_serializer", kind: "writes", desc: "Converts output to string for LLM" }
+      { from: "sub_spawner", to: "sub_timeout", kind: "depends-on", count: 1, desc: "Runs child subprocess with timeout" },
+      { from: "sub_timeout", to: "sub_parser", kind: "calls", count: 1, desc: "Catches failure exit codes" },
+      { from: "sub_parser", to: "out_ma_cr", kind: "calls", count: 1, desc: "Sends traceback to model for reflection" },
+      { from: "out_ma_cr", to: "sub_patch", kind: "generates", count: 1, desc: "Returns candidate patch" },
+      { from: "sub_patch", to: "sub_spawner", kind: "heals", count: 1, desc: "Re-executes to verify fix" }
     ]
   }
 };
 
 /**
- * STATE MANAGEMENT
+ * STATE VARIABLES
  */
-let currentMode = "h1"; // "h1" | "h2"
-let currentScope = "root"; // "root" | moduleId
-let selectedItem = null; // { type: 'module'|'feature'|'project', data: ... }
+let currentMode = "h1";
+let currentScope = "root";
+let selectedItem = null;
 let hoveredNodeId = null;
 let hoveredFeatureId = null;
 
-const COLOR_MAP = {
-  "depends-on": "#2dd4bf",
-  "calls": "#3b82f6",
-  "hosts": "#38bdf8",
-  "implements": "#a855f7",
-  "generates": "#f59e0b",
-  "reads": "#10b981",
-  "writes": "#f43f5e",
-  "composes": "#ec4899",
-  "heals": "#fb923c",
-  "delegates": "#38bdf8"
+const CONNECTION_META = {
+  "depends-on": { color: "#38bdf8", count: 15, arrow: "→", style: "solid" },
+  "hosts":      { color: "#2dd4bf", count: 4,  arrow: "→", style: "solid" },
+  "calls":      { color: "#58a6ff", count: 15, arrow: "→", style: "solid" },
+  "implements": { color: "#bc8cff", count: 13, arrow: "→", style: "solid" },
+  "generates":  { color: "#d29922", count: 3,  arrow: "⇢", style: "dashed" },
+  "reads":      { color: "#3fb950", count: 2,  arrow: "⇢", style: "dotted" },
+  "writes":     { color: "#f85149", count: 4,  arrow: "→", style: "solid" },
+  "composes":   { color: "#db61a2", count: 44, arrow: "⇢", style: "dashed" },
+  "heals":      { color: "#f0883e", count: 2,  arrow: "→", style: "solid" }
 };
 
 /**
- * INIT ON LOAD
+ * LIFECYCLE
  */
 window.addEventListener("DOMContentLoaded", () => {
+  renderLegend();
   renderSystem();
-  setupKeyboardNavigation();
+  setupKeyboard();
 });
 
-function switchSystemMode(mode) {
+function setMode(mode) {
   currentMode = mode;
   currentScope = "root";
   selectedItem = null;
-  document.getElementById("tab-h1").classList.toggle("active", mode === "h1");
-  document.getElementById("tab-h2").classList.toggle("active", mode === "h2");
+  document.getElementById("btn-mode-h1").classList.toggle("active", mode === "h1");
+  document.getElementById("btn-mode-h2").classList.toggle("active", mode === "h2");
   renderSystem();
 }
 
+function renderLegend() {
+  const container = document.getElementById("connections-legend");
+  container.innerHTML = `<span class="legend-caption">Connections</span>`;
+
+  Object.entries(CONNECTION_META).forEach(([kind, meta]) => {
+    const pill = document.createElement("span");
+    pill.className = "legend-pill";
+    pill.innerHTML = `
+      <span class="arrow-symbol" style="color:${meta.color};">${meta.arrow}</span>
+      <span>${kind}</span>
+      <span class="count-num">${meta.count}</span>
+    `;
+    pill.addEventListener("mouseenter", () => highlightConnectionKind(kind));
+    pill.addEventListener("mouseleave", resetHighlight);
+    container.appendChild(pill);
+  });
+}
+
 function getCurrentData() {
-  const base = currentMode === "h1" ? H1_SYSTEM : H2_SYSTEM;
-  if (currentScope === "root") {
-    return base;
-  }
-  return MODULE_SUBVIEWS[currentScope] || base;
+  if (currentScope === "root") return ALICE_H1;
+  return MODULE_SUBVIEWS[currentScope] || ALICE_H1;
 }
 
 /**
- * RENDER PIPELINE
+ * MAIN RENDER LOGIC
  */
 function renderSystem() {
   const data = getCurrentData();
   const isDrilled = currentScope !== "root";
 
-  // Update Breadcrumb & Header
-  const breadcrumbBar = document.getElementById("breadcrumb-bar");
+  // Breadcrumbs
+  const breadcrumb = document.getElementById("breadcrumb-bar");
   if (isDrilled) {
-    breadcrumbBar.classList.add("active");
-    document.getElementById("breadcrumb-current-name").innerText = data.name;
+    breadcrumb.classList.add("active");
+    document.getElementById("breadcrumb-module-name").innerText = data.name;
     document.getElementById("stage-title").innerText = data.name;
-    document.getElementById("stage-desc").innerText = data.desc;
+    document.getElementById("stage-desc").innerText = data.desc.replace(/<[^>]+>/g, "");
   } else {
-    breadcrumbBar.classList.remove("active");
+    breadcrumb.classList.remove("active");
     document.getElementById("stage-title").innerText = data.name;
-    document.getElementById("stage-desc").innerText = data.desc;
+    document.getElementById("stage-desc").innerText = data.desc.replace(/<[^>]+>/g, "");
   }
 
-  // Render Legend
-  renderLegend();
+  // Render Features Grid
+  renderFeatures(ALICE_H1.features);
 
-  // Render Bottom Feature Blocks
-  renderFeatureBlocks();
+  // Render Topology
+  renderTopology(data, isDrilled);
 
-  // Render Nodes & SVG Canvas
-  renderGraphCanvas(data, isDrilled);
-
-  // Default Select Project or Current Module
+  // Default Select Project or Current
   if (!selectedItem || selectedItem.type === "project") {
     selectProject(data);
   }
 }
 
-function renderLegend() {
-  const group = document.getElementById("legend-group");
-  group.innerHTML = "";
+function renderFeatures(features) {
+  const grid = document.getElementById("features-grid");
+  grid.innerHTML = "";
 
-  const label = document.createElement("span");
-  label.className = "legend-label";
-  label.innerText = "Connections:";
-  group.appendChild(label);
-
-  const kinds = [
-    { name: "depends-on", color: COLOR_MAP["depends-on"] },
-    { name: "calls", color: COLOR_MAP["calls"] },
-    { name: "hosts", color: COLOR_MAP["hosts"] },
-    { name: "implements", color: COLOR_MAP["implements"] },
-    { name: "generates", color: COLOR_MAP["generates"] },
-    { name: "reads", color: COLOR_MAP["reads"] },
-    { name: "writes", color: COLOR_MAP["writes"] },
-    { name: "composes", color: COLOR_MAP["composes"] },
-    { name: "heals", color: COLOR_MAP["heals"] }
-  ];
-
-  kinds.forEach(k => {
-    const item = document.createElement("div");
-    item.className = "legend-item";
-    item.innerHTML = `<span class="legend-dot" style="background:${k.color}"></span><span>${k.name}</span>`;
-    group.appendChild(item);
-  });
-}
-
-function renderFeatureBlocks() {
-  const container = document.getElementById("features-grid");
-  container.innerHTML = "";
-
-  const system = currentMode === "h1" ? H1_SYSTEM : H2_SYSTEM;
-  system.features.forEach(f => {
-    const pill = document.createElement("div");
-    pill.className = "feature-pill";
-    pill.id = `feat-pill-${f.id}`;
-    pill.innerHTML = `
-      <span class="feature-tag">✦ FEATURE</span>
-      <span class="feature-name">${f.name}</span>
-      <span class="feature-status">ready</span>
+  features.forEach(f => {
+    const card = document.createElement("div");
+    card.className = "feature-pill-card";
+    card.id = `feat-card-${f.id}`;
+    card.innerHTML = `
+      <div class="feature-card-top">
+        <span class="feat-tag">✦ FEATURE</span>
+        <span class="feat-status">ready</span>
+      </div>
+      <div class="feat-name">${f.name}</div>
     `;
 
-    pill.addEventListener("mouseenter", () => {
-      highlightFeature(f.id);
-    });
-    pill.addEventListener("mouseleave", () => {
-      resetHighlight();
-    });
-    pill.addEventListener("click", () => {
-      selectFeature(f);
-    });
-
-    container.appendChild(pill);
+    card.addEventListener("mouseenter", () => highlightFeature(f.id));
+    card.addEventListener("mouseleave", resetHighlight);
+    card.addEventListener("click", () => selectFeature(f));
+    grid.appendChild(card);
   });
 }
 
-function renderGraphCanvas(data, isDrilled) {
-  const nodesLayer = document.getElementById("nodes-layer");
+/**
+ * EXACT TOPOLOGY LAYOUT & BUS ROUTING (1:1 with Alice in Image 1)
+ */
+function renderTopology(data, isDrilled) {
+  const container = document.getElementById("nodes-container");
   const svg = document.getElementById("graph-svg");
-  const wrapper = document.getElementById("canvas-wrapper");
-  nodesLayer.innerHTML = "";
+  const canvas = document.getElementById("canvas-container");
+  container.innerHTML = "";
   svg.innerHTML = "";
 
   const nodes = isDrilled ? data.nodes : data.tiers;
   const connections = data.connections || [];
 
-  // Dynamic Responsive Positioning
-  const canvasW = Math.max(wrapper.clientWidth, 960);
+  const canvasW = Math.max(canvas.clientWidth, 1020);
   const centerX = canvasW / 2;
-  const cardW = 200;
-  const cardH = 78;
-  const colGap = 48;
-  const tierYMap = { 1: 35, 2: 155, 3: 280, 4: 405, 5: 530 };
+  const cardW = 210;
+  const cardH = 80;
+  const colGap = 44;
+
+  // Tier vertical layout matching Alice Image 1:
+  // Tier 1: Y = 30
+  // Tier 2: Y = 135
+  // Tier 3: Y = 240
+  // Tier 4: Y = 345
+  // Tier 5: Y = 450
+  // Tier 6: Y = 555
+  const tierYMap = { 1: 30, 2: 135, 3: 240, 4: 345, 5: 450, 6: 555 };
 
   if (!isDrilled) {
-    // Group by tier and center symmetrically
-    const tierGroups = {};
-    nodes.forEach(n => {
-      const t = n.tier || 1;
-      if (!tierGroups[t]) tierGroups[t] = [];
-      tierGroups[t].push(n);
-    });
+    // Symmetrical exact positioning like Image 1
+    nodes.forEach(node => {
+      const t = node.tier;
+      const c = node.col;
+      node.y = tierYMap[t] || 30;
 
-    Object.keys(tierGroups).forEach(t => {
-      const group = tierGroups[t];
-      // Sort by col if available
-      group.sort((a, b) => (a.col ?? 0) - (b.col ?? 0));
-      const count = group.length;
-      const totalWidth = count * cardW + (count - 1) * colGap;
-      const startX = centerX - totalWidth / 2;
-      group.forEach((node, i) => {
-        node.x = startX + i * (cardW + colGap);
-        node.y = tierYMap[t] || (35 + (t - 1) * 125);
-      });
+      if (t === 1) {
+        // Client (left), Proof lanes (right)
+        const totalW = 2 * cardW + colGap;
+        const startX = centerX - totalW / 2;
+        node.x = startX + c * (cardW + colGap);
+      } else if (t === 2) {
+        // Design system (col 0), Desktop host (col 1), Operation contract (col 2)
+        const totalW = 3 * cardW + 2 * colGap;
+        const startX = centerX - totalW / 2;
+        node.x = startX + c * (cardW + colGap);
+      } else if (t === 3) {
+        // Web transport (col 0), Code runner (col 1)
+        // Web transport aligns under Design system, Code runner under Desktop host
+        const t2TotalW = 3 * cardW + 2 * colGap;
+        const t2StartX = centerX - t2TotalW / 2;
+        node.x = t2StartX + c * (cardW + colGap);
+      } else if (t === 4) {
+        // Deployment store (col 0), Account session (col 1)
+        const t2TotalW = 3 * cardW + 2 * colGap;
+        const t2StartX = centerX - t2TotalW / 2;
+        node.x = t2StartX + c * (cardW + colGap);
+      } else if (t === 5 || t === 6) {
+        // Model adapters (center), Runtime (center)
+        node.x = centerX - cardW / 2;
+      }
     });
   } else {
-    // For drilled views, also center nicely
-    const tierGroups = {};
-    nodes.forEach(n => {
-      const t = n.y < 120 ? 1 : (n.y < 240 ? 2 : (n.y < 360 ? 3 : 4));
-      if (!tierGroups[t]) tierGroups[t] = [];
-      tierGroups[t].push(n);
-    });
-    Object.keys(tierGroups).forEach(t => {
-      const group = tierGroups[t];
-      const count = group.length;
-      const totalWidth = count * cardW + (count - 1) * colGap;
-      const startX = centerX - totalWidth / 2;
-      group.forEach((node, i) => {
-        node.x = startX + i * (cardW + colGap);
-      });
+    // Sub-view layout
+    nodes.forEach(node => {
+      // Keep x, y defined in subview
     });
   }
 
-  // Update Stats in header
-  document.getElementById("stats-summary").innerText = 
-    `${nodes.length} blocks · ${connections.length} connections · ${(H1_SYSTEM.features.length)} feature links on hover`;
-
-  // Place Nodes
+  // Draw Nodes
   nodes.forEach(node => {
     const card = document.createElement("div");
     card.className = "module-card";
@@ -1565,163 +1422,145 @@ function renderGraphCanvas(data, isDrilled) {
     card.style.width = `${cardW}px`;
 
     const isOutside = node.type === "OUTSIDE";
-    if (isOutside) {
-      card.classList.add("outside-connector");
-    }
+    if (isOutside) card.classList.add("outside-connector");
 
-    const hasSubparts = !isOutside && (MODULE_SUBVIEWS[node.id] || node.partsCount > 0);
-    const footerText = isOutside 
-      ? "external port" 
-      : (node.partsCount ? `${node.partsCount} parts` : `${(node.parts || []).length} parts`);
+    const partsCount = node.partsCount || (node.parts || []).length || 0;
+    const footerText = isOutside ? "external port" : `${partsCount} parts`;
+    const hasSub = MODULE_SUBVIEWS[node.id];
 
     card.innerHTML = `
-      <div class="card-header">
-        <span class="card-type">${node.type}</span>
-        <span class="card-status">${node.status}</span>
+      <div class="card-top">
+        <span class="card-type-tag">${node.type}</span>
+        <span class="card-status-pill">${node.status}</span>
       </div>
       <div class="card-title" title="${node.title}">${node.title}</div>
-      <div class="card-footer">
+      <div class="card-bottom">
         <span>${footerText}</span>
-        ${hasSubparts ? `<span class="card-drill-arrow">›</span>` : ""}
+        ${hasSub ? `<span class="card-arrow">›</span>` : ""}
       </div>
     `;
 
-    // Interactivity
-    card.addEventListener("mouseenter", () => {
-      highlightNode(node.id, connections);
-    });
-    card.addEventListener("mouseleave", () => {
-      resetHighlight();
-    });
+    card.addEventListener("mouseenter", () => highlightNode(node.id, connections));
+    card.addEventListener("mouseleave", resetHighlight);
     card.addEventListener("click", (e) => {
       e.stopPropagation();
-      if (MODULE_SUBVIEWS[node.id]) {
-        drillDown(node.id);
-      } else {
-        selectModule(node, connections);
-      }
+      if (hasSub) drillDown(node.id);
+      else selectModule(node, connections);
     });
 
-    nodesLayer.appendChild(card);
+    container.appendChild(card);
   });
 
-  // Calculate and Render Connections
-  renderSvgConnections(connections, nodes, cardW);
+  // Draw Highway Wires & Channel Badges (1:1 with Alice)
+  drawHighwayWires(connections, nodes, cardW);
 }
 
-function renderSvgConnections(connections, nodes, cardW = 196) {
+function drawHighwayWires(connections, nodes, cardW) {
   const svg = document.getElementById("graph-svg");
   const nodeMap = {};
   nodes.forEach(n => { nodeMap[n.id] = n; });
 
-  // Add Defs for Arrow Markers
+  // Arrow markers defs
   let defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-  Object.entries(COLOR_MAP).forEach(([kind, color]) => {
+  Object.entries(CONNECTION_META).forEach(([kind, meta]) => {
     const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
     marker.setAttribute("id", `arrow-${kind}`);
     marker.setAttribute("viewBox", "0 0 10 10");
-    marker.setAttribute("refX", "9");
+    marker.setAttribute("refX", "8");
     marker.setAttribute("refY", "5");
-    marker.setAttribute("markerWidth", "6");
-    marker.setAttribute("markerHeight", "6");
+    marker.setAttribute("markerWidth", "5");
+    marker.setAttribute("markerHeight", "5");
     marker.setAttribute("orient", "auto-start-reverse");
 
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", "M 0 1.5 L 9 5 L 0 8.5 z");
-    path.setAttribute("fill", color);
+    path.setAttribute("d", "M 1 2 L 8 5 L 1 8 z");
+    path.setAttribute("fill", meta.color);
     marker.appendChild(path);
     defs.appendChild(marker);
   });
   svg.appendChild(defs);
 
-  // Group multiple connections between same levels to give small horizontal offset (bus effect)
-  const slotCount = {};
+  // Group wires between source and target to create parallel highway lanes
+  const linkOffsets = {};
 
-  connections.forEach((conn, index) => {
+  connections.forEach(conn => {
     const src = nodeMap[conn.from];
     const tgt = nodeMap[conn.to];
     if (!src || !tgt) return;
 
     const w = cardW;
-    const h = src.type === "OUTSIDE" ? 52 : 78;
-    const targetH = tgt.type === "OUTSIDE" ? 52 : 78;
+    const h = src.type === "OUTSIDE" ? 54 : 80;
+    const targetH = tgt.type === "OUTSIDE" ? 54 : 80;
 
-    // Bus slot offset
     const key = `${conn.from}->${conn.to}`;
-    slotCount[key] = (slotCount[key] || 0) + 1;
-    const slotOffset = (slotCount[key] - 1) * 8;
+    linkOffsets[key] = (linkOffsets[key] || 0) + 1;
+    const laneOffset = (linkOffsets[key] - 1) * 7;
 
     const isGoingUp = src.y > tgt.y + targetH;
-    const startX = src.x + w / 2 + slotOffset;
+    const startX = src.x + w / 2 + laneOffset;
     const startY = isGoingUp ? src.y : src.y + h;
 
-    const endX = tgt.x + w / 2 + slotOffset;
+    const endX = tgt.x + w / 2 + laneOffset;
     const endY = isGoingUp ? tgt.y + targetH : tgt.y;
 
-    // Smooth cubic Bezier
-    const dy = Math.max(35, Math.abs(endY - startY) * 0.55);
+    // Smooth Bezier highway routing
+    const dy = Math.max(30, Math.abs(endY - startY) * 0.55);
     const c1x = startX;
     const c1y = isGoingUp ? startY - dy : startY + dy;
     const c2x = endX;
     const c2y = isGoingUp ? endY + dy : endY - dy;
 
     const d = `M ${startX} ${startY} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${endX} ${endY}`;
+    const meta = CONNECTION_META[conn.kind] || { color: "#58a6ff" };
 
-    const color = COLOR_MAP[conn.kind] || "#3b82f6";
+    // Path element
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute("d", d);
-    path.setAttribute("class", "wire-path");
-    path.setAttribute("stroke", color);
+    path.setAttribute("class", "wire-curve");
+    path.setAttribute("stroke", meta.color);
     path.setAttribute("id", `wire-${conn.from}-${conn.to}`);
     path.setAttribute("marker-end", `url(#arrow-${conn.kind})`);
-    
-    if (conn.kind === "composes") {
+
+    if (conn.kind === "composes" || conn.kind === "generates") {
       path.setAttribute("stroke-dasharray", "4 3");
+    } else if (conn.kind === "reads") {
+      path.setAttribute("stroke-dasharray", "2 3");
     }
 
-    path.addEventListener("mouseenter", () => {
-      highlightSingleEdge(conn);
-    });
-    path.addEventListener("mouseleave", () => {
-      resetHighlight();
-    });
-
+    path.addEventListener("mouseenter", () => highlightSingleWire(conn));
+    path.addEventListener("mouseleave", resetHighlight);
     svg.appendChild(path);
-  });
-}
 
-/**
- * DRILL-DOWN LOGIC
- */
-function drillDown(moduleId) {
-  currentScope = moduleId;
-  renderSystem();
-  const subview = MODULE_SUBVIEWS[moduleId];
-  if (subview) {
-    selectModule({
-      id: moduleId,
-      title: subview.name,
-      type: "MODULE",
-      status: "ready",
-      desc: subview.desc,
-      namespace: subview.namespace,
-      sources: subview.sources,
-      parts: subview.nodes.map(n => n.title)
-    }, subview.connections || []);
-  }
-}
+    // Channel Count Badge (e.g. (2), (4) on wires, authentic Alice detail!)
+    if (conn.count && conn.count > 1) {
+      // Compute midpoint at t = 0.5
+      const midX = 0.125 * startX + 0.375 * c1x + 0.375 * c2x + 0.125 * endX;
+      const midY = 0.125 * startY + 0.375 * c1y + 0.375 * c2y + 0.125 * endY;
 
-function goUp() {
-  if (currentScope !== "root") {
-    currentScope = "root";
-    renderSystem();
-  }
-}
+      const badgeGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      badgeGroup.setAttribute("class", "wire-badge");
+      badgeGroup.setAttribute("id", `badge-${conn.from}-${conn.to}`);
 
-function setupKeyboardNavigation() {
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      goUp();
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("cx", midX);
+      circle.setAttribute("cy", midY);
+      circle.setAttribute("r", "7.5");
+      circle.setAttribute("fill", "#161b22");
+      circle.setAttribute("stroke", "#30363d");
+      circle.setAttribute("stroke-width", "1");
+
+      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      text.setAttribute("x", midX);
+      text.setAttribute("y", midY + 3);
+      text.setAttribute("fill", "#8b949e");
+      text.setAttribute("font-size", "9.5");
+      text.setAttribute("font-family", "ui-monospace, monospace");
+      text.setAttribute("text-anchor", "middle");
+      text.textContent = conn.count;
+
+      badgeGroup.appendChild(circle);
+      badgeGroup.appendChild(text);
+      svg.appendChild(badgeGroup);
     }
   });
 }
@@ -1744,67 +1583,77 @@ function highlightNode(nodeId, connections) {
     }
   });
 
-  // Dim cards
-  document.querySelectorAll(".module-card").forEach(card => {
-    const id = card.id.replace("node-", "");
-    card.classList.toggle("dimmed", !connectedNodes.has(id));
+  // Dim Cards
+  document.querySelectorAll(".module-card").forEach(c => {
+    const id = c.id.replace("node-", "");
+    c.classList.toggle("dimmed", !connectedNodes.has(id));
   });
 
-  // Dim wires
-  document.querySelectorAll(".wire-path").forEach(wire => {
-    const isConn = connectedEdges.has(wire.id);
-    wire.classList.toggle("dimmed", !isConn);
-    wire.classList.toggle("highlighted", isConn);
+  // Dim Wires
+  document.querySelectorAll(".wire-curve").forEach(w => {
+    const isConn = connectedEdges.has(w.id);
+    w.classList.toggle("dimmed", !isConn);
+    w.classList.toggle("highlighted", isConn);
+  });
+
+  // Dim Badges
+  document.querySelectorAll(".wire-badge").forEach(b => {
+    const wireId = b.id.replace("badge-", "wire-");
+    b.classList.toggle("dimmed", !connectedEdges.has(wireId));
   });
 }
 
-function highlightSingleEdge(conn) {
-  document.querySelectorAll(".module-card").forEach(card => {
-    const id = card.id.replace("node-", "");
-    card.classList.toggle("dimmed", id !== conn.from && id !== conn.to);
+function highlightSingleWire(conn) {
+  document.querySelectorAll(".module-card").forEach(c => {
+    const id = c.id.replace("node-", "");
+    c.classList.toggle("dimmed", id !== conn.from && id !== conn.to);
   });
-  document.querySelectorAll(".wire-path").forEach(wire => {
-    const isThis = wire.id === `wire-${conn.from}-${conn.to}`;
-    wire.classList.toggle("dimmed", !isThis);
-    wire.classList.toggle("highlighted", isThis);
+  document.querySelectorAll(".wire-curve").forEach(w => {
+    const isThis = w.id === `wire-${conn.from}-${conn.to}`;
+    w.classList.toggle("dimmed", !isThis);
+    w.classList.toggle("highlighted", isThis);
+  });
+}
+
+function highlightConnectionKind(kind) {
+  document.querySelectorAll(".wire-curve").forEach(w => {
+    const marker = w.getAttribute("marker-end") || "";
+    const isMatch = marker.includes(kind);
+    w.classList.toggle("dimmed", !isMatch);
+    w.classList.toggle("highlighted", isMatch);
   });
 }
 
 function highlightFeature(featureId) {
   hoveredFeatureId = featureId;
-  const system = currentMode === "h1" ? H1_SYSTEM : H2_SYSTEM;
-  const feat = system.features.find(f => f.id === featureId);
+  const feat = ALICE_H1.features.find(f => f.id === featureId);
   if (!feat) return;
 
   const relevantModules = new Set(feat.modules);
 
-  // Dim cards
-  document.querySelectorAll(".module-card").forEach(card => {
-    const id = card.id.replace("node-", "");
-    card.classList.toggle("dimmed", !relevantModules.has(id));
+  document.querySelectorAll(".module-card").forEach(c => {
+    const id = c.id.replace("node-", "");
+    c.classList.toggle("dimmed", !relevantModules.has(id));
   });
+  document.querySelectorAll(".wire-curve").forEach(w => w.classList.add("dimmed"));
+  document.querySelectorAll(".wire-badge").forEach(b => b.classList.add("dimmed"));
 
-  // Dim all normal wires
-  document.querySelectorAll(".wire-path").forEach(wire => {
-    wire.classList.add("dimmed");
-  });
-
-  // Draw Dynamic Feature Wires from bottom pill to top nodes!
+  // Dynamic Pink Dashed Curves (1:1 with Alice Image 1)
   drawFeatureBridges(feat);
 }
 
 function drawFeatureBridges(feature) {
   const svg = document.getElementById("graph-svg");
-  // Remove existing feature wires
-  document.querySelectorAll(".feature-wire").forEach(w => w.remove());
+  document.querySelectorAll(".feature-curve").forEach(w => w.remove());
 
-  const pill = document.getElementById(`feat-pill-${feature.id}`);
+  const pill = document.getElementById(`feat-card-${feature.id}`);
   if (!pill) return;
+
   const pillRect = pill.getBoundingClientRect();
-  const canvasRect = document.getElementById("canvas-wrapper").getBoundingClientRect();
+  const canvasRect = document.getElementById("canvas-container").getBoundingClientRect();
 
   const startX = pillRect.left - canvasRect.left + pillRect.width / 2;
-  const startY = canvasRect.height - 10;
+  const startY = canvasRect.height - 12;
 
   feature.modules.forEach(modId => {
     const card = document.getElementById(`node-${modId}`);
@@ -1817,7 +1666,8 @@ function drawFeatureBridges(feature) {
     const d = `M ${startX} ${startY} C ${startX} ${(startY + endY) / 2}, ${endX} ${(startY + endY) / 2}, ${endX} ${endY}`;
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute("d", d);
-    path.setAttribute("class", "feature-wire");
+    path.setAttribute("class", "feature-curve");
+    path.setAttribute("stroke", "#db61a2");
     svg.appendChild(path);
   });
 }
@@ -1826,189 +1676,227 @@ function resetHighlight() {
   hoveredNodeId = null;
   hoveredFeatureId = null;
   document.querySelectorAll(".module-card").forEach(c => c.classList.remove("dimmed"));
-  document.querySelectorAll(".wire-path").forEach(w => {
+  document.querySelectorAll(".wire-curve").forEach(w => {
     w.classList.remove("dimmed");
     w.classList.remove("highlighted");
   });
-  document.querySelectorAll(".feature-wire").forEach(w => w.remove());
+  document.querySelectorAll(".wire-badge").forEach(b => b.classList.remove("dimmed"));
+  document.querySelectorAll(".feature-curve").forEach(w => w.remove());
 }
 
 /**
- * INSPECTOR SELECTION LOGIC
+ * DRILL DOWN & NAVIGATION
+ */
+function drillDown(moduleId) {
+  currentScope = moduleId;
+  renderSystem();
+  const sub = MODULE_SUBVIEWS[moduleId];
+  if (sub) {
+    selectModule({
+      id: moduleId,
+      title: sub.name,
+      type: "MODULE",
+      status: "ready",
+      desc: sub.desc,
+      namespace: sub.namespace,
+      sources: sub.sources,
+      parts: sub.nodes.map(n => n.title)
+    }, sub.connections || []);
+  }
+}
+
+function goUp() {
+  if (currentScope !== "root") {
+    currentScope = "root";
+    renderSystem();
+  }
+}
+
+function setupKeyboard() {
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") goUp();
+  });
+}
+
+/**
+ * INSPECTOR POPULATION
  */
 function selectProject(data) {
   selectedItem = { type: "project", data };
   document.querySelectorAll(".module-card").forEach(c => c.classList.remove("selected"));
+  document.querySelectorAll(".feature-pill-card").forEach(c => c.classList.remove("selected"));
 
   document.getElementById("insp-badge").innerText = `${data.kind} ${data.status}`;
   document.getElementById("insp-title").innerText = data.name;
   document.getElementById("insp-namespace").innerText = data.namespace;
-  document.getElementById("insp-desc").innerText = data.desc;
+  document.getElementById("insp-desc").innerHTML = data.desc;
 
-  // Counts
-  const countsContainer = document.getElementById("insp-counts");
-  countsContainer.innerHTML = "";
+  // Counts clean table
+  const counts = document.getElementById("insp-counts");
+  counts.innerHTML = "";
   Object.entries(data.counts || {}).forEach(([k, v]) => {
-    countsContainer.innerHTML += `
-      <div class="count-cell">
-        <span class="count-label">${k}</span>
-        <span class="count-value">${v}</span>
+    counts.innerHTML += `
+      <div class="count-row">
+        <span class="k">${k}</span>
+        <span class="v">${v}</span>
       </div>
     `;
   });
 
   // Sources
-  const sourcesContainer = document.getElementById("insp-sources");
-  sourcesContainer.innerHTML = "";
+  const sources = document.getElementById("insp-sources");
+  sources.innerHTML = "";
   (data.sources || []).forEach(s => {
-    sourcesContainer.innerHTML += `
-      <div class="source-item">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        <span>${s}</span>
-      </div>
-    `;
+    sources.innerHTML += `<div class="source-clean-item">${s}</div>`;
   });
 
-  // Parts list
-  document.getElementById("insp-parts-title").innerText = `Top-level blocks (${(data.tiers || []).length})`;
-  const partsContainer = document.getElementById("insp-parts");
-  partsContainer.innerHTML = "";
-  (data.tiers || []).forEach(t => {
-    partsContainer.innerHTML += `
-      <div class="part-row" onclick="drillDown('${t.id}')" style="cursor:pointer;">
-        <span class="part-name"><span class="part-box"></span>${t.title}</span>
-        <span class="part-status">${t.partsCount} parts ›</span>
-      </div>
-    `;
-  });
-
-  // Relations
-  populateRelations(data.connections || [], null);
+  document.getElementById("section-parts").style.display = "none";
+  document.getElementById("section-outgoing").style.display = "none";
+  document.getElementById("section-incoming").style.display = "none";
+  document.getElementById("section-metadata").style.display = "block";
 }
 
 function selectModule(node, connections) {
   selectedItem = { type: "module", data: node };
   document.querySelectorAll(".module-card").forEach(c => c.classList.remove("selected"));
+  document.querySelectorAll(".feature-pill-card").forEach(c => c.classList.remove("selected"));
+
   const card = document.getElementById(`node-${node.id}`);
   if (card) card.classList.add("selected");
 
   document.getElementById("insp-badge").innerText = `MODULE ${node.status}`;
   document.getElementById("insp-title").innerText = node.title;
-  document.getElementById("insp-namespace").innerText = node.namespace || `codeagent.${node.id}`;
-  document.getElementById("insp-desc").innerText = node.desc || "Architectural execution unit.";
+  document.getElementById("insp-namespace").innerText = node.namespace || `alice.${node.id}`;
+  document.getElementById("insp-desc").innerHTML = node.desc || "Architectural crate member.";
 
-  // Counts
-  const countsContainer = document.getElementById("insp-counts");
-  countsContainer.innerHTML = `
-    <div class="count-cell"><span class="count-label">Parts</span><span class="count-value">${(node.parts || []).length}</span></div>
-    <div class="count-cell"><span class="count-label">Kind</span><span class="count-value">Module</span></div>
-    <div class="count-cell"><span class="count-label">Status</span><span class="count-value">${node.status}</span></div>
-    <div class="count-cell"><span class="count-label">Subviews</span><span class="count-value">${MODULE_SUBVIEWS[node.id] ? "Available" : "Leaf"}</span></div>
+  // Counts table
+  const parts = node.parts || [];
+  const counts = document.getElementById("insp-counts");
+  counts.innerHTML = `
+    <div class="count-row"><span class="k">Parts</span><span class="v">${parts.length}</span></div>
+    <div class="count-row"><span class="k">Kind</span><span class="v">module</span></div>
+    <div class="count-row"><span class="k">Status</span><span class="v">${node.status}</span></div>
   `;
 
   // Sources
-  const sourcesContainer = document.getElementById("insp-sources");
-  sourcesContainer.innerHTML = "";
-  (node.sources || ["code_agent.py"]).forEach(s => {
-    sourcesContainer.innerHTML += `<div class="source-item"><span>${s}</span></div>`;
+  const sources = document.getElementById("insp-sources");
+  sources.innerHTML = "";
+  (node.sources || ["Cargo.toml"]).forEach(s => {
+    sources.innerHTML += `<div class="source-clean-item">${s}</div>`;
   });
 
   // Parts
-  document.getElementById("insp-parts-title").innerText = `Parts (${(node.parts || []).length})`;
-  const partsContainer = document.getElementById("insp-parts");
-  partsContainer.innerHTML = "";
-  (node.parts || []).forEach(p => {
-    partsContainer.innerHTML += `
-      <div class="part-row">
-        <span class="part-name"><span class="part-box"></span>${p}</span>
-        <span class="part-status">ready</span>
+  const partsSection = document.getElementById("section-parts");
+  partsSection.style.display = "block";
+  document.getElementById("insp-parts-title").innerText = `PARTS (${parts.length})`;
+  const partsTable = document.getElementById("insp-parts");
+  partsTable.innerHTML = "";
+  parts.forEach(p => {
+    partsTable.innerHTML += `
+      <div class="part-line">
+        <span class="part-title-text"><span class="checkbox-icon"></span>${p}</span>
+        <span class="pill-badge" style="font-size:9px;padding:0 5px;">ready</span>
       </div>
     `;
   });
 
-  // Relations for this node
+  // Relations
   populateRelations(connections, node.id);
+  document.getElementById("section-outgoing").style.display = "block";
+  document.getElementById("section-incoming").style.display = "block";
+  document.getElementById("section-metadata").style.display = "none";
 }
 
 function selectFeature(feature) {
   selectedItem = { type: "feature", data: feature };
+  document.querySelectorAll(".module-card").forEach(c => c.classList.remove("selected"));
+  document.querySelectorAll(".feature-pill-card").forEach(c => c.classList.remove("selected"));
+
+  const card = document.getElementById(`feat-card-${feature.id}`);
+  if (card) card.classList.add("selected");
+
   document.getElementById("insp-badge").innerText = `FEATURE ready`;
   document.getElementById("insp-title").innerText = feature.name;
-  document.getElementById("insp-namespace").innerText = `features.codeagent.${feature.id}`;
-  document.getElementById("insp-desc").innerText = feature.desc;
+  document.getElementById("insp-namespace").innerText = `alice.feature.${feature.id}`;
+  document.getElementById("insp-desc").innerHTML = feature.desc;
 
   // Counts
-  const countsContainer = document.getElementById("insp-counts");
-  countsContainer.innerHTML = `
-    <div class="count-cell"><span class="count-label">Spanned Modules</span><span class="count-value">${feature.modules.length}</span></div>
-    <div class="count-cell"><span class="count-label">Kind</span><span class="count-value">Feature</span></div>
+  const counts = document.getElementById("insp-counts");
+  counts.innerHTML = `
+    <div class="count-row"><span class="k">Spanned modules</span><span class="v">${feature.modules.length}</span></div>
+    <div class="count-row"><span class="k">Kind</span><span class="v">feature</span></div>
+    <div class="count-row"><span class="k">Status</span><span class="v">ready</span></div>
   `;
 
   // Sources
-  const sourcesContainer = document.getElementById("insp-sources");
-  sourcesContainer.innerHTML = "";
+  const sources = document.getElementById("insp-sources");
+  sources.innerHTML = "";
   feature.modules.forEach(m => {
-    sourcesContainer.innerHTML += `<div class="source-item"><span>module: ${m}</span></div>`;
+    sources.innerHTML += `<div class="source-clean-item">crates/${m}</div>`;
   });
 
-  // Parts / Spanned
-  document.getElementById("insp-parts-title").innerText = `Participating Modules (${feature.modules.length})`;
-  const partsContainer = document.getElementById("insp-parts");
-  partsContainer.innerHTML = "";
+  // Parts (Spanned Modules)
+  const partsSection = document.getElementById("section-parts");
+  partsSection.style.display = "block";
+  document.getElementById("insp-parts-title").innerText = `OUTGOING (${feature.modules.length})`;
+  const partsTable = document.getElementById("insp-parts");
+  partsTable.innerHTML = "";
   feature.modules.forEach(m => {
-    partsContainer.innerHTML += `
-      <div class="part-row">
-        <span class="part-name"><span class="part-box" style="border-color:#d946ef"></span>${m}</span>
-        <span class="part-status">participates</span>
+    partsTable.innerHTML += `
+      <div class="rel-item" onclick="drillDown('${m}')">
+        <div class="rel-head">
+          <span style="color:#db61a2;font-weight:bold;">⇢ composes</span>
+          <span class="rel-target-link">${m}</span>
+        </div>
+        <div class="rel-note">${feature.name} spans ${m} crate</div>
       </div>
     `;
   });
 
-  document.getElementById("insp-outgoing").innerHTML = "<div style='font-size:11px;color:#64748b;'>Cross-cutting concern spans vertically.</div>";
-  document.getElementById("insp-incoming").innerHTML = "<div style='font-size:11px;color:#64748b;'>None.</div>";
+  document.getElementById("section-outgoing").style.display = "none";
+  document.getElementById("section-incoming").style.display = "none";
+  document.getElementById("section-metadata").style.display = "none";
 }
 
 function populateRelations(connections, nodeId) {
-  const outgoing = nodeId ? connections.filter(c => c.from === nodeId) : connections;
+  const outgoing = nodeId ? connections.filter(c => c.from === nodeId) : [];
   const incoming = nodeId ? connections.filter(c => c.to === nodeId) : [];
 
-  document.getElementById("insp-outgoing-title").innerText = `Outgoing (${outgoing.length})`;
+  document.getElementById("insp-outgoing-title").innerText = `OUTGOING (${outgoing.length})`;
   const outContainer = document.getElementById("insp-outgoing");
   outContainer.innerHTML = "";
   if (outgoing.length === 0) {
-    outContainer.innerHTML = "<div style='font-size:11px;color:#64748b;'>No outgoing connections.</div>";
+    outContainer.innerHTML = "<div style='color:#6e7681;font-size:11.5px;'>None.</div>";
   } else {
     outgoing.forEach(c => {
-      const color = COLOR_MAP[c.kind] || "#3b82f6";
+      const meta = CONNECTION_META[c.kind] || { color: "#58a6ff" };
       outContainer.innerHTML += `
-        <div class="relation-item">
-          <div class="relation-header">
-            <span class="relation-arrow" style="color:${color}">→</span>
-            <span class="relation-kind" style="color:${color}">${c.kind}</span>
-            <span class="relation-target">to ${c.to}</span>
+        <div class="rel-item">
+          <div class="rel-head">
+            <span class="rel-kind-link" style="color:${meta.color};">${meta.arrow} ${c.kind}</span>
+            <span class="rel-target-link">to ${c.to}</span>
           </div>
-          <div class="relation-desc">${c.desc || ""}</div>
+          <div class="rel-note">${c.desc || ""}</div>
         </div>
       `;
     });
   }
 
-  document.getElementById("insp-incoming-title").innerText = `Incoming (${incoming.length})`;
+  document.getElementById("insp-incoming-title").innerText = `INCOMING (${incoming.length})`;
   const inContainer = document.getElementById("insp-incoming");
   inContainer.innerHTML = "";
   if (incoming.length === 0) {
-    inContainer.innerHTML = "<div style='font-size:11px;color:#64748b;'>No incoming connections.</div>";
+    inContainer.innerHTML = "<div style='color:#6e7681;font-size:11.5px;'>None.</div>";
   } else {
     incoming.forEach(c => {
-      const color = COLOR_MAP[c.kind] || "#3b82f6";
+      const meta = CONNECTION_META[c.kind] || { color: "#58a6ff" };
       inContainer.innerHTML += `
-        <div class="relation-item">
-          <div class="relation-header">
-            <span class="relation-arrow" style="color:${color}">←</span>
-            <span class="relation-kind" style="color:${color}">${c.kind}</span>
-            <span class="relation-target">from ${c.from}</span>
+        <div class="rel-item">
+          <div class="rel-head">
+            <span class="rel-kind-link" style="color:${meta.color};">← ${c.kind}</span>
+            <span class="rel-target-link">from ${c.from}</span>
           </div>
-          <div class="relation-desc">${c.desc || ""}</div>
+          <div class="rel-note">${c.desc || ""}</div>
         </div>
       `;
     });
