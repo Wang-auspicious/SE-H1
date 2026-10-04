@@ -3,11 +3,26 @@ import unittest
 from pathlib import Path
 from urllib.parse import parse_qs
 
-from code_agent import source_excerpt
+from code_agent import local_review, source_excerpt
 from code_graph import CodeGraph
 
 
 class BackendGraphTests(unittest.TestCase):
+    def test_local_review_returns_tool_trail_and_findings(self):
+        result = local_review(
+            {
+                "stats": {"files": 2, "edges": 3, "call_sites": 4, "linked_calls": 2, "errors": 0},
+                "nodes": [
+                    {"kind": "file", "file": "main.py"},
+                    {"kind": "function", "file": "main.py", "name": "main"},
+                ],
+            },
+            "检查结构",
+        )
+        self.assertEqual(result["mode"], "local")
+        self.assertEqual(len(result["events"]), 3)
+        self.assertIn("结构提醒", result["answer"])
+
     def test_source_excerpt_is_bounded_and_graph_scoped(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

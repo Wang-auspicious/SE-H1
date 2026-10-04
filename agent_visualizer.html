@@ -64,9 +64,9 @@
         overflow: hidden;
       }
       .top-header {
-        height: 177px;
-        flex: 0 0 177px;
-        padding: 14px 23px 9px;
+        height: 145px;
+        flex: 0 0 145px;
+        padding: 12px 23px 7px;
         display: flex;
         flex-direction: column;
         gap: 6px;
@@ -212,7 +212,7 @@
         position: relative;
         flex: 1 1 auto;
         min-height: 0;
-        overflow: auto;
+        overflow: hidden;
         background: var(--bg);
         background-image:
           linear-gradient(rgba(88, 166, 255, 0.045) 1px, transparent 1px),
@@ -244,16 +244,16 @@
       }
       .module-card {
         position: absolute;
-        width: 180px;
+         width: 220px;
         height: 82px;
         padding: 10px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
         border: 1px solid var(--line);
-        border-radius: 8px;
+         border-radius: 10px;
         background: var(--panel);
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+         box-shadow: 0 5px 18px rgba(0, 0, 0, 0.42);
         pointer-events: auto;
         cursor: pointer;
         transition:
@@ -287,6 +287,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 8px;
+        flex-shrink: 0;
       }
       .card-type {
         color: #7d8590;
@@ -299,6 +300,10 @@
         text-transform: uppercase;
       }
       .card-title {
+        min-height: 16px;
+        flex: 1 1 auto;
+        display: flex;
+        align-items: center;
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
@@ -321,8 +326,9 @@
       }
       .wire {
         fill: none;
-        stroke-width: 1.45;
-        opacity: 0.78;
+        stroke-width: 1.8;
+        opacity: 0.82;
+        filter: drop-shadow(0 0 2px rgba(88, 166, 255, 0.18));
         transition:
           opacity 0.25s ease,
           stroke-width 0.2s ease;
@@ -334,11 +340,12 @@
         opacity: 1;
       }
       .wire-calls {
-        stroke-dasharray: 2 7;
-        animation: wire-flow 1.7s linear infinite;
+        stroke-dasharray: 2 8;
+        animation: wire-flow 1.45s linear infinite;
       }
       .wire-imports {
-        animation: wire-flow 2.8s linear infinite;
+        stroke-dasharray: 7 5;
+        animation: wire-flow 2.4s linear infinite;
       }
       @keyframes wire-flow {
         to {
@@ -372,9 +379,9 @@
         opacity: 0;
       }
       .bottom-features-panel {
-        height: 326px;
-        flex: 0 0 326px;
-        padding: 9px 39px 0;
+         height: 185px;
+         flex: 0 0 185px;
+         padding: 8px 24px 0;
         border-top: 1px solid #252b31;
         background: var(--bg);
         z-index: 4;
@@ -421,12 +428,19 @@
       .feature-top {
         display: flex;
         justify-content: space-between;
+        gap: 8px;
         color: #d2a8ff;
         font:
           700 9px ui-monospace,
           SFMono-Regular,
           Menlo,
           monospace;
+      }
+      .feature-top span:last-child {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        text-align: right;
       }
       .feature-name {
         overflow: hidden;
@@ -553,6 +567,69 @@
           Menlo,
           monospace;
       }
+      .review-input {
+        width: 100%;
+        min-height: 64px;
+        resize: vertical;
+        padding: 8px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #101419;
+        color: var(--text);
+        outline: none;
+        user-select: text;
+        font-size: 12px;
+        line-height: 17px;
+      }
+      .review-input:focus { border-color: var(--blue); }
+      .review-button {
+        width: 100%;
+        height: 29px;
+        margin-top: 7px;
+        border: 1px solid #b76427;
+        border-radius: 7px;
+        background: #c85a32;
+        color: #fff;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .review-button:disabled { opacity: 0.55; cursor: wait; }
+      .review-flow { display: flex; flex-direction: column; gap: 5px; margin-top: 9px; }
+      .review-step {
+        display: grid;
+        grid-template-columns: 18px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 7px;
+        border-radius: 6px;
+        background: #1a2026;
+        color: var(--muted);
+        font-size: 11px;
+        opacity: 0;
+        transform: translateY(4px);
+        animation: review-in 0.28s ease forwards;
+      }
+      .review-step b { color: var(--text); font-weight: 600; }
+      .review-step em { color: var(--green); font-style: normal; font-size: 10px; }
+      .review-step.failed em { color: var(--red); }
+      .review-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+      .review-step.failed .review-dot { background: var(--red); }
+      .review-output {
+        max-height: 180px;
+        overflow: auto;
+        margin-top: 8px;
+        padding: 8px;
+        border: 1px solid rgba(48, 54, 61, 0.8);
+        border-radius: 6px;
+        background: #101419;
+        color: #c9d1d9;
+        white-space: pre-wrap;
+        user-select: text;
+        font: 10px/15px ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      .review-status { margin-top: 6px; color: var(--muted); font-size: 11px; }
+      @keyframes review-in { to { opacity: 1; transform: translateY(0); } }
       .relation-item {
         padding-bottom: 6px;
         border-bottom: 1px solid rgba(48, 54, 61, 0.5);
@@ -624,6 +701,7 @@
         }
         .module-card {
           width: 155px;
+          padding: 7px 8px;
         }
       }
       @media (max-width: 760px) {
@@ -632,6 +710,9 @@
         }
         .features-grid {
           grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .canvas-container {
+          overflow: auto;
         }
         .top-header {
           padding-inline: 14px;
@@ -714,6 +795,14 @@
           </div>
         </div>
         <section class="inspector-section">
+          <h3>Single-agent review</h3>
+          <textarea class="review-input" id="review-input">审查这个代码库的结构、调用关系和测试风险</textarea>
+          <button class="review-button" id="review-button">Run review</button>
+          <div class="review-status" id="review-status">The graph is the agent's first piece of evidence.</div>
+          <div class="review-flow" id="review-flow"></div>
+          <pre class="review-output" id="review-output">Run a review to see the tool trail and conclusion.</pre>
+        </section>
+        <section class="inspector-section">
           <h3>Measures</h3>
           <div id="metrics"></div>
         </section>
@@ -741,6 +830,11 @@ Select a source to inspect a bounded excerpt.</pre>
         contains: { color: "#8b949e", dash: "2 4" },
         related: { color: "#bc8cff", dash: "2 5" },
       });
+      const LANE_COLORS = {
+        calls: ["#58a6ff", "#2dd4bf", "#bc8cff", "#db61a2", "#f78166", "#79c0ff"],
+        imports: ["#d29922", "#f2cc60", "#ffa657"],
+        related: ["#bc8cff", "#3fb950", "#ff7b72"],
+      };
       const state = {
         graph: null,
         atlas: null,
@@ -772,6 +866,17 @@ Select a source to inspect a bounded excerpt.</pre>
         return state.atlas?.rawNodes.get(Number(id));
       }
 
+      function edgeMeta(edge) {
+        const base = META[edge.kind] || META.related;
+        const colors = LANE_COLORS[edge.kind] || LANE_COLORS.related;
+        return { ...base, color: colors[(edge.lane || 0) % colors.length] };
+      }
+
+      function moduleTitle(node) {
+        const label = String(node.file || node.label || "module");
+        return label.split("/").pop().replace(/\.[^.]+$/, "") || label;
+      }
+
       function fileIdForRaw(id) {
         const node = rawNode(id);
         if (!node) return undefined;
@@ -781,10 +886,16 @@ Select a source to inspect a bounded excerpt.</pre>
         });
       }
 
+      function moduleIdForRaw(id) {
+        if (state.atlas?.moduleById?.has(Number(id))) return Number(id);
+        return state.atlas?.moduleOfRaw?.(Number(id));
+      }
+
       function selectedViewNode() {
         if (state.selection.type !== "node") return null;
         return (
           state.layout?.nodes.find((node) => node.id === state.selection.id) ||
+          state.atlas?.moduleById?.get(Number(state.selection.id)) ||
           state.atlas?.rawNodes.get(state.selection.id) ||
           null
         );
@@ -815,72 +926,72 @@ Select a source to inspect a bounded excerpt.</pre>
       }
 
       function buildFeatures(graph, atlas) {
-        const files = atlas.files;
-        const fileIds = files.map((node) => node.id);
+        const modules = atlas.modules || [];
         const edges = Array.isArray(graph.edges) ? graph.edges : [];
         const kindEdges = (kind) => edges.filter((edge) => edge.kind === kind);
         const moduleIdsFor = (kind) =>
-          kindEdges(kind).flatMap((edge) => [
-            fileIdForRaw(edge.source),
-            fileIdForRaw(edge.target),
-          ]);
+          Array.from(new Set(kindEdges(kind).flatMap((edge) => [
+            atlas.moduleOfRaw(edge.source),
+            atlas.moduleOfRaw(edge.target),
+          ]).filter((id) => id !== undefined)));
         const functionCount = atlas.rawNodes.size
           ? Array.from(atlas.rawNodes.values()).filter(
               (node) => node.kind === "function",
             ).length
           : 0;
-        const agentFiles = files
-          .filter((node) => /code_agent|code_graph|languages/.test(node.label))
-          .map((node) => node.id);
         const errors = Array.isArray(graph.errors) ? graph.errors.length : 0;
+        const modulesFor = (pattern) => modules
+          .filter((module) => pattern.test(module.label + " " + module.description))
+          .map((module) => module.id);
+        const allModules = modules.map((module) => module.id);
         return [
           makeFeature(
+            "flow",
+            "FLOW",
+            "Call flow",
+            kindEdges("calls").length + " linked relations",
             "calls",
-            "CALLS",
-            "Call graph",
-            kindEdges("calls").length + " call sites",
-            "calls",
-            moduleIdsFor("calls"),
-          ),
-          makeFeature(
-            "imports",
-            "IMPORTS",
-            "Imports",
-            kindEdges("imports").length + " import links",
-            "imports",
-            moduleIdsFor("imports"),
-          ),
-          makeFeature(
-            "symbols",
-            "SYMBOLS",
-            "Symbols",
-            functionCount + " functions",
-            "symbols",
-            fileIds,
-          ),
-          makeFeature(
-            "files",
-            "FILES",
-            "Source files",
-            files.length + " tracked files",
-            "files",
-            fileIds,
+            moduleIdsFor("calls").length ? moduleIdsFor("calls") : allModules,
           ),
           makeFeature(
             "agent",
             "AGENT",
-            "Agent surface",
-            agentFiles.length + " runtime files",
+            "Agent loop",
+            "tools, review, and execution",
             "agent",
-            agentFiles,
+            modulesFor(/agent runtime/i),
           ),
           makeFeature(
-            "health",
-            "HEALTH",
-            "Parse health",
-            errors + " parse errors",
-            "health",
-            errors ? fileIds : [],
+            "graph",
+            "GRAPH",
+            "Graph build",
+            functionCount + " functions indexed",
+            "graph",
+            modulesFor(/graph engine/i),
+          ),
+          makeFeature(
+            "surface",
+            "SURFACE",
+            "Source evidence",
+            "files and symbols stay traceable",
+            "surface",
+            modulesFor(/interface/i),
+          ),
+          makeFeature(
+            "checks",
+            "CHECKS",
+            "Verification",
+            errors + " parse errors · tests stay local",
+            "checks",
+            modulesFor(/verification/i),
+          ),
+          makeFeature(
+            "imports",
+            "IMPORTS",
+            "Module boundaries",
+            kindEdges("imports").length + " import links",
+            "imports",
+            moduleIdsFor("imports"),
           ),
         ];
       }
@@ -893,7 +1004,7 @@ Select a source to inspect a bounded excerpt.</pre>
 
       function currentView() {
         return activeScope() === null
-          ? state.atlas.projectView("files")
+          ? state.atlas.projectView("architecture")
           : state.atlas.scopeView(activeScope());
       }
 
@@ -913,6 +1024,9 @@ Select a source to inspect a bounded excerpt.</pre>
             siblings.push(node.id);
             state.children.set(node.parent, siblings);
           }
+        });
+        state.atlas.modules.forEach((module) => {
+          state.children.set(module.id, module.fileIds || []);
         });
         state.features = buildFeatures(graph, state.atlas);
         state.scopeStack = [];
@@ -1002,6 +1116,7 @@ Select a source to inspect a bounded excerpt.</pre>
         state.view = view;
         state.layout = AtlasGraph.layout(view, {
           width,
+          height: canvas.clientHeight,
           columns: columnsFor(width),
         });
         const layout = state.layout;
@@ -1048,7 +1163,7 @@ Select a source to inspect a bounded excerpt.</pre>
         graphSvg.appendChild(defs);
         layout.edges.forEach((edge, index) => {
           if (!edge.path) return;
-          const meta = META[edge.kind] || META.related;
+           const meta = edgeMeta(edge);
           const path = createSvgElement("path", {
             d: edge.path,
             class: "wire wire-" + (META[edge.kind] ? edge.kind : "related"),
@@ -1074,7 +1189,7 @@ Select a source to inspect a bounded excerpt.</pre>
           );
           path.addEventListener("mouseleave", clearHover);
           graphSvg.appendChild(path);
-          if (edge.count > 1 && edge.badge) {
+           if (edge.lane === 0 && edge.count > 1 && edge.badge) {
             const badge = createSvgElement("g", { class: "wire-badge" });
             badge.appendChild(
               createSvgElement("circle", {
@@ -1101,14 +1216,26 @@ Select a source to inspect a bounded excerpt.</pre>
         layout.nodes.forEach((node) => {
           const card = document.createElement("article");
           const outside = Boolean(node.outside);
+          const isModule = node.kind === "module";
           const kind = outside
             ? "OUTSIDE"
-            : String(node.kind || "symbol").toUpperCase();
+            : isModule || view.mode === "files"
+              ? "MODULE"
+              : String(node.kind || "symbol").toUpperCase();
           const detail = outside
             ? "external boundary"
-            : node.kind === "file"
-              ? String(node.children || 0) + " symbols"
-              : (node.file || "local") + ":" + (node.line || "—");
+            : isModule
+              ? String(node.parts || node.children || 0) + " parts"
+              : view.mode === "files"
+                ? String(node.children || 0) + " symbols"
+                : node.kind === "file"
+                  ? String(node.children || 0) + " symbols"
+                  : (node.file || "local") + ":" + (node.line || "—");
+          const title = isModule
+            ? node.label
+            : view.mode === "files"
+              ? moduleTitle(node)
+              : node.label;
           card.className = "module-card" + (outside ? " outside" : "");
           card.id = "node-" + node.id;
           card.dataset.nodeId = String(node.id);
@@ -1120,11 +1247,13 @@ Select a source to inspect a bounded excerpt.</pre>
           card.innerHTML =
             '<div class="card-top"><span class="card-type">' +
             esc(kind) +
-            '</span><span class="mini-status">LIVE</span></div>' +
+            '</span><span class="mini-status">' +
+            (isModule ? "READY" : "LIVE") +
+            "</span></div>" +
             '<div class="card-title" title="' +
-            esc(node.label) +
+            esc(title) +
             '">' +
-            esc(node.label) +
+            esc(title) +
             "</div>" +
             '<div class="card-bottom"><span>' +
             esc(detail) +
@@ -1157,6 +1286,9 @@ Select a source to inspect a bounded excerpt.</pre>
 
       function canDrill(id) {
         const scope = activeScope();
+        if (state.atlas?.moduleById?.has(Number(id))) {
+          return Number(id) !== scope && Boolean(state.atlas.moduleById.get(Number(id)).fileIds.length);
+        }
         return (
           id !== scope &&
           state.children.has(Number(id)) &&
@@ -1174,7 +1306,7 @@ Select a source to inspect a bounded excerpt.</pre>
         const sourceRect = source.getBoundingClientRect();
         const targets = state.layout.nodes
           .filter((node) => {
-            const owner = fileIdForRaw(node.id);
+          const owner = moduleIdForRaw(node.id);
             return (
               feature.modules.indexOf(node.id) >= 0 ||
               feature.modules.indexOf(owner) >= 0
@@ -1305,8 +1437,8 @@ Select a source to inspect a bounded excerpt.</pre>
           card.classList.toggle("dimmed", !active);
         });
         document.querySelectorAll(".wire").forEach((wire) => {
-          const sourceOwner = fileIdForRaw(Number(wire.dataset.from));
-          const targetOwner = fileIdForRaw(Number(wire.dataset.to));
+          const sourceOwner = moduleIdForRaw(Number(wire.dataset.from));
+          const targetOwner = moduleIdForRaw(Number(wire.dataset.to));
           const active =
             feature.modules.indexOf(Number(wire.dataset.from)) >= 0 ||
             feature.modules.indexOf(Number(wire.dataset.to)) >= 0 ||
@@ -1348,16 +1480,17 @@ Select a source to inspect a bounded excerpt.</pre>
           }));
         }
         if (selection.type === "feature") {
-          return selection.feature.modules
-            .map((id) => state.atlas.files.find((file) => file.id === id))
-            .filter(Boolean)
-            .map((file) => ({
-              file: file.label,
-              line: 1,
-              label: file.label,
-            }));
+          return selection.feature.modules.flatMap((id) => {
+            const module = state.atlas.moduleById?.get(Number(id));
+            return module
+              ? module.files.map((file) => ({ file, line: 1, label: file }))
+              : [];
+          });
         }
         const node = selectedViewNode();
+        if (node?.kind === "module") {
+          return (node.files || []).map((file) => ({ file, line: 1, label: file }));
+        }
         const raw = node ? rawNode(node.id) : null;
         if (!raw) return [];
         return [
@@ -1387,25 +1520,36 @@ Select a source to inspect a bounded excerpt.</pre>
         const feature = selection.type === "feature" ? selection.feature : null;
         const selected = selection.type === "node" ? selectedViewNode() : null;
         const raw = selected ? rawNode(selected.id) : null;
+        const module = selected?.kind === "module"
+          ? state.atlas.moduleById?.get(Number(selected.id))
+          : null;
         $("inspector-badge").textContent = isProject
           ? "PROJECT · LIVE"
           : feature
             ? "FEATURE · " + feature.tag
+            : module
+              ? "MODULE · READY"
             : (selected?.kind || "SYMBOL").toUpperCase() + " · LIVE";
         $("inspector-title").textContent = isProject
           ? state.atlas.name
           : feature
             ? feature.name
+            : module
+              ? module.label
             : selected?.label || "Selection";
         $("inspector-namespace").textContent = isProject
           ? "local.checkout"
           : feature
             ? "cross-cutting." + feature.id
+            : module
+              ? "module." + module.tag.toLowerCase()
             : (raw?.file || "local.scope") + (raw?.line ? ":" + raw.line : "");
         $("inspector-desc").textContent = isProject
-          ? "A source-backed map of this checkout. Files, symbols, calls, and imports remain attached to their definitions."
+          ? "A live architecture map of this checkout. Every route ends at a real symbol or source file."
           : feature
             ? feature.detail + ". Hover the view to trace participating files."
+            : module
+              ? module.description + ". Click a source below to inspect the actual checkout."
             : selected?.outside
               ? "This relation leaves the current scope. Open the connected file from the root view."
               : "A source-backed symbol in " + currentScopeLabel() + ".";
@@ -1424,6 +1568,13 @@ Select a source to inspect a bounded excerpt.</pre>
                 ["Linked files", feature.modules.length],
                 ["Status", "live"],
               ]
+            : module
+              ? [
+                  ["Kind", "module"],
+                  ["Files", module.fileIds.length],
+                  ["Parts", module.parts],
+                  ["Status", "ready"],
+                ]
             : [
                 ["Kind", raw?.kind || selected?.kind || "symbol"],
                 ["Line", raw?.line || "—"],
@@ -1527,7 +1678,7 @@ Select a source to inspect a bounded excerpt.</pre>
           activeScope() === null ? "LIVE" : "SCOPE";
         $("stage-desc").textContent =
           activeScope() === null
-            ? "A source-backed map of this checkout: every visible relation comes from the local parser."
+            ? "A source-backed architecture map: modules, calls, imports, and evidence stay attached to their files."
             : "Inside " +
               currentScopeLabel() +
               " · local symbols, external ports, and evidence paths.";
@@ -1612,6 +1763,56 @@ Select a source to inspect a bounded excerpt.</pre>
         });
       }
 
+      function showReviewEvents(events) {
+        const flow = $("review-flow");
+        flow.innerHTML = "";
+        (events || []).forEach((item, index) => {
+          const row = document.createElement("div");
+          row.className = "review-step" + (item.state === "failed" ? " failed" : "");
+          row.style.animationDelay = `${index * 90}ms`;
+          const dot = document.createElement("span");
+          dot.className = "review-dot";
+          const detail = document.createElement("span");
+          const label = document.createElement("b");
+          label.textContent = `${item.phase || "Agent"} · ${item.tool || "step"}`;
+          detail.append(label, document.createTextNode(`  ${item.detail || ""}`));
+          const state = document.createElement("em");
+          state.textContent = item.state || "done";
+          row.append(dot, detail, state);
+          flow.append(row);
+        });
+      }
+
+      async function runReview() {
+        const button = $("review-button");
+        const status = $("review-status");
+        const output = $("review-output");
+        button.disabled = true;
+        $("stage-status").textContent = "REVIEW";
+        status.textContent = "Agent is collecting repository evidence…";
+        output.textContent = "";
+        try {
+          const response = await fetch("/api/review", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: $("review-input").value.trim() }),
+          });
+          if (!response.ok) throw new Error("review endpoint returned HTTP " + response.status);
+          const result = await response.json();
+          showReviewEvents(result.events);
+          output.textContent = result.answer || "No conclusion returned.";
+          status.textContent = result.mode === "llm"
+            ? "LLM-backed review completed."
+            : "Local evidence review completed; add an API key for model reasoning.";
+          $("stage-status").textContent = "LIVE";
+        } catch (error) {
+          status.textContent = error.message;
+          $("stage-status").textContent = "ERROR";
+        } finally {
+          button.disabled = false;
+        }
+      }
+
       async function loadGraph(repo, build) {
         $("build-button").disabled = true;
         $("stage-status").textContent = build ? "BUILDING" : "LOADING";
@@ -1656,6 +1857,7 @@ Select a source to inspect a bounded excerpt.</pre>
         state.query = event.target.value;
         applyQuery();
       });
+      $("review-button").addEventListener("click", runReview);
       window.addEventListener("resize", () => {
         if (state.atlas) renderAll();
       });

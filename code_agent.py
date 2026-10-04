@@ -113,6 +113,37 @@ def run_python(code_or_file, cwd="."):
         return "Error: execution timed out after 30 seconds."
 
 
+def local_review(graph, prompt):
+    stats = graph.get("stats", {})
+    files = [node.get("file", "") for node in graph.get("nodes", []) if node.get("kind") == "file"]
+    functions = [node for node in graph.get("nodes", []) if node.get("kind") == "function"]
+    test_files = [path for path in files if "test" in path.lower()]
+    unresolved = max(0, stats.get("call_sites", 0) - stats.get("linked_calls", 0))
+    warnings = []
+    if not test_files:
+        warnings.append("没有发现测试文件")
+    if stats.get("errors"):
+        warnings.append(f"有 {stats['errors']} 个文件解析不完整")
+    if unresolved:
+        warnings.append(f"有 {unresolved} 个调用点无法静态定位")
+    warnings = warnings or ["没有发现结构性告警"]
+    events = [
+        {"phase": "建立代码地图", "tool": "build_graph", "state": "done", "detail": f"读取 {stats.get('files', 0)} 个文件"},
+        {"phase": "定位审查证据", "tool": "query_graph", "state": "done", "detail": f"找到 {len(functions)} 个函数"},
+        {"phase": "整理审查结论", "tool": "answer", "state": "done", "detail": "生成带证据的审查摘要"},
+    ]
+    answer = "\n".join(
+        [
+            "本地代码库审查已完成。",
+            f"任务：{prompt}",
+            f"范围：{stats.get('files', 0)} 个文件、{len(functions)} 个函数、{stats.get('edges', 0)} 条关系。",
+            "结构提醒：" + "；".join(warnings) + "。",
+            "建议：先从图中的高连接模块和未覆盖测试的文件开始复核。",
+        ]
+    )
+    return {"mode": "local", "answer": answer, "events": events, "stats": stats}
+
+
 def api_key():
     key = (
         os.getenv("OPENCODE_API_KEY")
@@ -148,8 +179,8 @@ class CodeAgent:
         self.client = client or OpenAI(
             api_key=api_key(),
             base_url="https://opencode.ai/zen/go/v1",
-            timeout=90,
-            max_retries=1,
+            timeout=15,
+            max_retries=0,
             default_headers={
                 "User-Agent": "se-h1-code-agent/1.0",
                 "x-opencode-session": str(uuid.uuid4()),
@@ -164,6 +195,7 @@ class CodeAgent:
             "completion_tokens": 0,
             "total_tokens": 0,
         }
+        self.events = []
         self.tools = {
             "build_graph": (
                 self.graph.build,
@@ -249,6 +281,9 @@ class CodeAgent:
                 for call in message.tool_calls:
                     name = call.function.name
                     print(f"[{step}] {name}")
+                    self.events.append(
+                        {"phase": f"Agent step {step}", "tool": name, "state": "running", "detail": "tool call"}
+                    )
                     try:
                         result = self.tools[name][0](
                             **json.loads(call.function.arguments)
@@ -258,18 +293,38 @@ class CodeAgent:
                             if isinstance(result, str)
                             else json.dumps(result, ensure_ascii=False)
                         )
+                        self.events[-1]["state"] = "done"
+                        self.events[-1]["detail"] = result[:160].replace("\n", " ")
                     except Exception as error:
                         result = f"Tool error: {type(error).__name__}: {error}"
+                        self.events[-1]["state"] = "failed"
+                        self.events[-1]["detail"] = result
                     self.messages.append(
                         {"role": "tool", "tool_call_id": call.id, "content": result}
                     )
             elif choice.finish_reason == "stop":
+                self.events.append(
+                    {"phase": "Agent answer", "tool": "answer", "state": "done", "detail": "final response"}
+                )
                 return message.content or "Done."
             else:
                 raise RuntimeError(
                     f"Model stopped unexpectedly: {choice.finish_reason}"
                 )
         raise RuntimeError(f"Reached {self.max_steps} steps; task may be incomplete.")
+
+
+def review_repository(repo, prompt):
+    graph = CodeGraph(repo)
+    graph.build()
+    try:
+        agent = CodeAgent(repo=repo)
+        answer = agent.run(prompt)
+        return {"mode": "llm", "answer": answer, "events": agent.events, "stats": graph.graph["stats"]}
+    except Exception as error:
+        result = local_review(graph.graph, prompt)
+        result["fallback"] = f"{type(error).__name__}: {error}"
+        return result
 
 
 def serve(repo=".", port=8766):
@@ -286,6 +341,16 @@ def serve(repo=".", port=8766):
 
     class Handler(SimpleHTTPRequestHandler):
         def do_POST(self):
+            nonlocal current_graph, current_repo, graph_error
+            if urlsplit(self.path).path == "/api/review":
+                try:
+                    length = int(self.headers.get("Content-Length", 0))
+                    data = json.loads(self.rfile.read(length) or b"{}")
+                    prompt = str(data.get("prompt", "审查这个代码库的结构和风险")).strip()
+                    json_response(self, review_repository(current_repo, prompt))
+                except Exception as error:
+                    json_response(self, {"error": f"{type(error).__name__}: {error}"}, 400)
+                return
             if urlsplit(self.path).path == "/api/build":
                 try:
                     length = int(self.headers.get("Content-Length", 0))
@@ -309,8 +374,6 @@ def serve(repo=".", port=8766):
                         target = target if target.is_absolute() else root / target
                     g = CodeGraph(target)
                     g.build()
-                    nonlocal current_graph
-                    nonlocal current_repo, graph_error
                     current_graph = g.graph
                     current_repo = g.root
                     graph_error = None

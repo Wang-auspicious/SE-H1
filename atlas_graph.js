@@ -147,12 +147,86 @@
     )).filter(Boolean);
   }
 
+  // The root view is intentionally a small architecture map rather than a
+  // dump of every function.  Files are grouped into responsibilities using
+  // names that can be inferred from any checkout; the raw graph remains the
+  // source of truth behind every module.
+  function moduleSpec(file) {
+    const path = String(file.file || file.name || "").toLowerCase();
+    if (/agent_visualizer/.test(path)) {
+      return { label: "Interface", tag: "SURFACE", description: "browser and presentation surface" };
+    }
+    if (/atlas_graph/.test(path)) {
+      return { label: "Graph canvas", tag: "CANVAS", description: "layout and routed connections" };
+    }
+    if (/graph_view/.test(path)) {
+      return { label: "Legacy view", tag: "VIEW", description: "maintenance-only graph surface" };
+    }
+    if (/\.(html?|css|tsx?|jsx?)$/.test(path)) {
+      return { label: "Interface", tag: "SURFACE", description: "browser and presentation files" };
+    }
+    if (/(^|\/)(test|tests|spec|specs)(\/|$)|visual_regression|benchmark/.test(path)) {
+      return { label: "Verification", tag: "CHECKS", description: "tests and quality checks" };
+    }
+    if (/readme|design|requirement|\.md$|\.txt$|\.gitignore/.test(path)) {
+      return { label: "Project docs", tag: "DOCS", description: "project notes and configuration" };
+    }
+    if (/language|parser|syntax|grammar|tree.?sitter/.test(path)) {
+      return { label: "Language parser", tag: "PARSER", description: "language extraction rules" };
+    }
+    if (/graph|atlas|index|model/.test(path)) {
+      return { label: "Graph engine", tag: "GRAPH", description: "relationships, layout, and indexing" };
+    }
+    if (/agent|runner|server|api|service|tool/.test(path)) {
+      return { label: "Agent runtime", tag: "AGENT", description: "agent loop and local tools" };
+    }
+    return { label: "Project core", tag: "CORE", description: "application source" };
+  }
+
+  function makeModules(files, rawNodes, fileId) {
+    const buckets = new Map();
+    files.forEach((file) => {
+      const spec = moduleSpec(file);
+      const bucket = buckets.get(spec.label) || { ...spec, fileIds: [] };
+      bucket.fileIds.push(file.id);
+      buckets.set(spec.label, bucket);
+    });
+    const ordered = [...buckets.values()].sort((a, b) => {
+      const order = ["Interface", "Project docs", "Agent runtime", "Verification", "Graph engine", "Language parser", "Graph canvas", "Legacy view", "Project core"];
+      return order.indexOf(a.label) - order.indexOf(b.label) || a.label.localeCompare(b.label);
+    });
+    const moduleByFile = new Map();
+    const modules = ordered.map((bucket, index) => {
+      const id = -(index + 1);
+      const fileSet = new Set(bucket.fileIds);
+      const members = rawNodes.filter((node) => fileSet.has(fileId(node.id)));
+      bucket.fileIds.forEach((file) => moduleByFile.set(file, id));
+      return {
+        id,
+        label: bucket.label,
+        name: bucket.label,
+        kind: "module",
+        tag: bucket.tag,
+        description: bucket.description,
+        fileIds: [...bucket.fileIds],
+        files: files.filter((file) => fileSet.has(file.id)).map((file) => file.file || file.name),
+        members: members.map((node) => node.id),
+        children: bucket.fileIds.length,
+        parts: Math.max(bucket.fileIds.length, members.filter((node) => node.kind !== "file").length),
+        file: bucket.fileIds[0],
+        line: 1,
+      };
+    });
+    const moduleById = new Map(modules.map((module) => [module.id, module]));
+    return { modules, moduleByFile, moduleById };
+  }
+
   function projectView(mode, context) {
-    const { source, rawNodes, rawEdges, byId, children, files, fileId } = context;
+    const { source, rawNodes, rawEdges, byId, files, fileId } = context;
     const architecture = mode !== "files";
-    const nodes = architecture ? context.roots : context.files;
+    const nodes = architecture ? context.modules : context.files;
     const endpoint = architecture
-      ? (id) => context.rootEndpoint(id)
+      ? (id) => context.moduleOfRaw(id)
       : (id) => fileId(id);
     const edges = aggregateEdges(rawEdges, endpoint, byId);
     return {
@@ -167,8 +241,36 @@
   }
 
   function scopeView(rawId, context) {
-    const { byId, children, rawEdges, fileId } = context;
+    const { byId, children, rawEdges, fileId, moduleById, moduleOfRaw } = context;
     const selected = byId.get(rawId);
+    const module = moduleById.get(rawId);
+    if (module) {
+      const localFiles = new Set(module.fileIds);
+      const touching = rawEdges.filter((edge) => {
+        if (edge.kind === NON_RELATION) return false;
+        return localFiles.has(fileId(edge.source)) || localFiles.has(fileId(edge.target));
+      });
+      const endpoint = (id) => {
+        const file = fileId(id);
+        return localFiles.has(file) ? file : moduleOfRaw(id);
+      };
+      const edgeGroups = aggregateEdges(touching, endpoint, byId);
+      const used = new Set(module.fileIds);
+      edgeGroups.forEach((edge) => { used.add(edge.source); used.add(edge.target); });
+      const nodes = [...used].map((id) => {
+        if (localFiles.has(id)) return viewNode(id, byId, children, [id, ...descendants(id, children)]);
+        const outside = moduleById.get(id);
+        return outside ? { ...outside, outside: true } : undefined;
+      }).filter(Boolean);
+      return {
+        title: `Inside ${module.label}`,
+        scopeId: rawId,
+        mode: "scope",
+        nodes,
+        edges: edgeGroups,
+        stats: { module: module.label, files: module.fileIds.length, members: module.members.length }
+      };
+    }
     if (!selected) return { title: "Unknown scope", scopeId: rawId, nodes: [], edges: [] };
     const direct = children.get(rawId) || [];
     const local = new Set(direct);
@@ -224,6 +326,8 @@
     const fileId = makeFileLookup(rawNodes, byId);
     const files = rawNodes.filter((node) => node.kind === "file").sort((a, b) => a.id - b.id);
     const roots = fileRoots(files, byId, children);
+    const moduleData = makeModules(files, rawNodes, fileId);
+    const moduleOfRaw = (id) => moduleData.moduleByFile.get(fileId(id));
     const rootByFile = new Map();
     files.forEach((file) => {
       const direct = children.get(file.id) || [];
@@ -242,6 +346,9 @@
       children,
       files: fileView(files, byId, children),
       roots,
+      modules: moduleData.modules,
+      moduleById: moduleData.moduleById,
+      moduleOfRaw,
       fileId,
       rootEndpoint
     };
@@ -252,10 +359,14 @@
       rawEdges: [...rawEdges],
       roots,
       files: context.files,
+      modules: context.modules,
+      moduleById: context.moduleById,
+      moduleOfRaw: context.moduleOfRaw,
       projectView: (mode = "architecture") => projectView(mode, context),
       scopeView: (rawId) => scopeView(rawId, context),
-      label: (rawId) => qualifiedLabel(rawId, byId),
+      label: (rawId) => context.moduleById.get(rawId)?.label || qualifiedLabel(rawId, byId),
       ancestors: (rawId) => {
+        if (context.moduleById.has(rawId)) return [rawId];
         const result = [];
         let current = byId.get(rawId);
         while (current) {
@@ -340,8 +451,89 @@
     });
   }
 
+  function moduleLayout(view, width, height = 600) {
+    const compact = height < 420 || width < 760;
+    const cardWidth = Math.min(210, Math.max(140, (width - 80) / 3));
+    const cardHeight = compact ? 64 : 76;
+    const columns = width >= 500 ? 3 : width >= 320 ? 2 : 1;
+    const gap = columns === 1
+      ? 0
+      : Math.max(22, Math.min(70, (width - columns * cardWidth) / (columns - 1)));
+    const rowStep = compact ? 70 : 112;
+    const nodes = (view?.nodes || []).slice();
+    const edges = (view?.edges || []).filter((edge) => edge.source !== edge.target);
+    const degree = new Map(nodes.map((node) => [node.id, 0]));
+    edges.forEach((edge) => {
+      degree.set(edge.source, (degree.get(edge.source) || 0) + edge.count);
+      degree.set(edge.target, (degree.get(edge.target) || 0) + edge.count);
+    });
+    function rank(node) {
+      const label = String(node.label || "");
+      if (/Interface|Project docs/i.test(label)) return 0;
+      if (/Agent runtime|Verification/i.test(label)) return 1;
+      if (/Graph engine|Graph canvas/i.test(label)) return 2;
+      if (/Language parser|Legacy view/i.test(label)) return 3;
+      return 1;
+    }
+    const buckets = new Map();
+    nodes.sort((a, b) => rank(a) - rank(b) || (degree.get(b.id) || 0) - (degree.get(a.id) || 0) || a.id - b.id);
+    nodes.forEach((node) => {
+      const key = rank(node);
+      const bucket = buckets.get(key) || [];
+      bucket.push(node);
+      buckets.set(key, bucket);
+    });
+    const contentWidth = Math.max(width, columns * cardWidth + (columns - 1) * gap);
+    const positioned = new Map();
+    let row = 0;
+    [...buckets.keys()].sort((a, b) => a - b).forEach((key) => {
+      const bucket = buckets.get(key) || [];
+      for (let offset = 0; offset < bucket.length; offset += columns) {
+        const group = bucket.slice(offset, offset + columns);
+        const rowWidth = group.length * cardWidth + (group.length - 1) * gap;
+        const start = Math.max(compact ? 0 : 40, (contentWidth - rowWidth) / 2);
+        group.forEach((node, column) => {
+          positioned.set(node.id, { ...node, x: start + column * (cardWidth + gap), y: (compact ? 12 : 24) + row * rowStep, width: cardWidth, height: cardHeight });
+        });
+        row += 1;
+      }
+    });
+    const routed = [];
+    edges.forEach((edge) => {
+      const source = positioned.get(edge.source);
+      const target = positioned.get(edge.target);
+      if (!source || !target) return;
+      const lanes = Math.min(6, Math.max(1, edge.count));
+      for (let lane = 0; lane < lanes; lane += 1) {
+        const offset = (lane - (lanes - 1) / 2) * 10;
+        const down = target.y > source.y;
+        const points = [];
+        if (down) {
+          const start = [source.x + source.width / 2 + offset, source.y + source.height];
+          const end = [target.x + target.width / 2 + offset, target.y];
+          const mid = (start[1] + end[1]) / 2;
+          const bundle = (Math.abs(edge.source * 37 + edge.target * 17) % 7 - 3) * 18;
+          const laneX = Math.max(24, Math.min(contentWidth - 24, (start[0] + end[0]) / 2 + bundle + offset * 1.6));
+          points.push(start, [start[0], start[1] + 18], [laneX, mid], [end[0], end[1] - 18], end);
+        } else {
+          const start = [source.x + source.width / 2 + offset, source.y];
+          const end = [target.x + target.width / 2 + offset, target.y + target.height];
+          const mid = (start[1] + end[1]) / 2;
+          const bundle = (Math.abs(edge.source * 37 + edge.target * 17) % 7 - 3) * 18;
+          const laneX = Math.max(24, Math.min(contentWidth - 24, (start[0] + end[0]) / 2 + bundle + offset * 1.6));
+          points.push(start, [start[0], start[1] - 18], [laneX, mid], [end[0], end[1] + 18], end);
+        }
+        const routedPoints = compactPoints(points);
+        const middle = routedPoints[Math.floor(routedPoints.length / 2)] || [0, 0];
+        routed.push({ ...edge, lane, lanes, bundle: edge.id, points: routedPoints, path: roundedPath(routedPoints), badge: { x: middle[0], y: middle[1] } });
+      }
+    });
+    return { nodes: [...positioned.values()], edges: routed, width: contentWidth, height: Math.max(compact ? 252 : 300, (compact ? 28 : 44) + row * rowStep), moduleMode: true };
+  }
+
   function layout(view, options = {}) {
     const width = Math.max(360, Number(options.width) || 1000);
+    if (view?.mode === "architecture") return moduleLayout(view, width, Number(options.height) || 600);
     const columns = Math.max(1, Math.min(8, Number(options.columns) || 4));
     const inputNodes = (view && view.nodes) || [];
     const inputEdges = (view && view.edges) || [];
