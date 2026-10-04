@@ -513,14 +513,14 @@
           const end = [target.x + target.width / 2 + offset, target.y];
           const mid = (start[1] + end[1]) / 2;
           const bundle = (Math.abs(edge.source * 37 + edge.target * 17) % 7 - 3) * 18;
-          const laneX = Math.max(24, Math.min(contentWidth - 24, (start[0] + end[0]) / 2 + bundle + offset * 1.6));
+          const laneX = Math.max(24, Math.min(contentWidth - 24, start[0] + (end[0] - start[0]) * 0.3 + bundle + offset * 1.6));
           points.push(start, [start[0], start[1] + 18], [laneX, mid], [end[0], end[1] - 18], end);
         } else {
           const start = [source.x + source.width / 2 + offset, source.y];
           const end = [target.x + target.width / 2 + offset, target.y + target.height];
           const mid = (start[1] + end[1]) / 2;
           const bundle = (Math.abs(edge.source * 37 + edge.target * 17) % 7 - 3) * 18;
-          const laneX = Math.max(24, Math.min(contentWidth - 24, (start[0] + end[0]) / 2 + bundle + offset * 1.6));
+          const laneX = Math.max(24, Math.min(contentWidth - 24, start[0] + (end[0] - start[0]) * 0.3 + bundle + offset * 1.6));
           points.push(start, [start[0], start[1] - 18], [laneX, mid], [end[0], end[1] + 18], end);
         }
         const routedPoints = compactPoints(points);
