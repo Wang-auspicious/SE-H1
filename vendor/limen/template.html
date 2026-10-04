@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Architecture map</title>
+<!-- ARCHMAP:CSS -->
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#" aria-label="Picture overview"><span class="brand-mark" aria-hidden="true">◈</span><span>Picture<small>Project atlas</small></span></a>
+  <div class="search">
+    <input id="search-input" type="search" autocomplete="off" spellcheck="false" placeholder="Find features, journeys, places or files…" aria-label="Search features, journeys, places and sources" role="combobox" aria-expanded="false" aria-controls="search-results" aria-autocomplete="list">
+    <kbd class="search-key" aria-hidden="true">/</kbd>
+    <ul id="search-results" class="results" role="listbox" aria-label="Search results" hidden></ul>
+  </div>
+  <div class="project-state" id="project-state" aria-label="Picture revision"></div>
+  <button type="button" id="explorer-toggle" class="tbtn" aria-expanded="true" aria-controls="explorer">Explore</button>
+  <button type="button" id="diag-toggle" class="tbtn" aria-expanded="false" aria-controls="drawer">Map notes</button>
+  <button type="button" id="panel-toggle" class="tbtn" aria-expanded="true" aria-controls="panel">Details</button>
+</header>
+<main class="main" id="main">
+  <aside class="explorer" id="explorer" aria-label="Explore project">
+    <div class="explorer-head"><p class="eyebrow">PROJECT INDEX</p><h2>Explore the project</h2><p>Pick specified work to see where it sits in the code.</p></div>
+    <div class="explorer-tabs" id="explorer-tabs" role="group" aria-label="Explore by"></div>
+    <div class="explorer-list" id="overlays" aria-label="Project index"></div>
+    <div class="explorer-foot">A local picture. Feature state lives in the spec.</div>
+  </aside>
+  <section class="stage" aria-labelledby="level-title">
+    <nav class="crumbs" id="crumbs" aria-label="Level"></nav>
+    <div class="level-head" id="level-head"></div>
+    <details class="map-key"><summary>Map key <span>Connections &amp; source coverage</span></summary><div class="legend" id="legend"></div></details>
+    <div class="selection-bar" id="selection-bar"><p class="ov-note" id="overlay-note" aria-live="polite"></p></div>
+    <div class="viewport" id="viewport">
+      <div class="sizer" id="sizer">
+        <div class="canvas" id="canvas">
+          <svg class="edges" id="edges" aria-hidden="true"></svg>
+          <div class="blocks" id="blocks" role="group" aria-label="Codebase places"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <aside class="panel" id="panel" aria-label="Details"><div class="panel-body" id="panel-body"></div></aside>
+</main>
+<section class="drawer" id="drawer" aria-label="Diagnostics" hidden></section>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+<div class="announcer" id="announcer" role="status" aria-live="polite"></div>
+<noscript><p class="noscript">This map needs JavaScript.</p></noscript>
+<!-- ARCHMAP:DATA -->
+<!-- ARCHMAP:JS -->
+</body>
+</html>

@@ -57,6 +57,8 @@ python code_agent.py . "修复并测试这个函数"
 - `code_graph.py`：增量解析、调用关系、缓存和离线 HTML 生成。
 - `languages.py`：各语言的 Tree-sitter 提取规则。
 - `agent_visualizer.html`、`atlas_graph.js`：本地图谱的交互展示模板与确定性布局、路由逻辑。
+- `picture.py`、`picture_ui.js`、`picture_ui.css`：把真实 CodeGraph 适配到 Limen Picture 的架构地图界面，并保留 H1 的源码证据与单 Agent 入口。
+- `vendor/limen/`：Limen Picture 的离线 viewer、样式和数据契约；保留上游 MIT 许可证。
 - `graph_view.html`：保留的旧版源码关系图入口。
 - `DESIGN.md`：架构边界和验证记录。
 
@@ -68,6 +70,14 @@ python code_agent.py . --graph
 ```
 
 构建输出会写入 `.code-graph/graph.json` 和 `.code-graph/graph.html`。页面应能加载 `/api/graph`，节点悬停可查看关系，模块点击可进入局部图，`Esc` 返回全景；`/api/source` 只能返回当前图谱中的安全源码片段。
+
+## Limen Picture 界面适配
+
+H1 复用了 Limen 的 Picture viewer 交互规范：全景模块图、彩色关系线、搜索、面包屑下钻、右侧详情、来源证据和响应式画布。适配层只负责把 CodeGraph 的真实文件、符号、调用和导入关系投影成 `architecture-map-model/2`；布局、路由和交互逻辑保留在 `vendor/limen/` 的上游实现中。
+
+运行本地服务访问 `/agent` 时，点击节点详情里的“查看源码”会读取 `/api/source` 的安全片段；点击“审查 / 工具”可以运行单 Agent 审查或下载 `h1-evidence.json`。离线生成的 `.code-graph/picture.html` 也可以直接打开，但源码和审查按钮需要本地服务。
+
+上游来源：[`overment/limen`](https://github.com/overment/limen)，MIT License。H1 没有复制 Limen 的 CLI、Git worktree 或模型运行时，只复用了 Picture viewer 的界面和数据契约。
 
 ## 边界
 

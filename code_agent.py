@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from openai import OpenAI, APIError, APIStatusError
 from code_graph import CodeGraph, excluded
+from picture import render_picture
 
 
 SYSTEM_PROMPT = """You are a concise coding agent that maps repositories into graphs.
@@ -404,11 +405,15 @@ def serve(repo=".", port=8766):
                     json_response(self, {"error": f"Cannot read source: {error}"}, 500)
                 return
             if request_path in ("/agent", "/atlas", "/visualizer", "/architecture"):
-                vis_path = Path(__file__).parent / "agent_visualizer.html"
-                if not vis_path.is_file():
-                    self.send_error(500, "agent_visualizer.html is missing")
-                    return
-                body = vis_path.read_bytes()
+                body = render_picture(current_graph or {"name": "H1", "nodes": [], "edges": [], "stats": {}}, live=True).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            if request_path == "/picture.html":
+                body = render_picture(current_graph or {"name": "H1", "nodes": [], "edges": [], "stats": {}}, live=False).encode("utf-8")
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Content-Length", str(len(body)))
@@ -505,7 +510,9 @@ def main():
             graph = CodeGraph(args.repo or ".", args.output)
             print(json.dumps(graph.build(), ensure_ascii=False, indent=2))
             if args.open and (graph.output / "graph.html").is_file():
-                webbrowser.open((graph.output / "graph.html").as_uri())
+                picture = graph.output / "picture.html"
+                picture.write_text(render_picture(graph.graph, live=False), encoding="utf-8")
+                webbrowser.open(picture.as_uri())
         else:
             serve(args.repo or ".", port=args.port)
     except APIStatusError as error:
