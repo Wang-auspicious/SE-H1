@@ -8,3 +8,4 @@ __pycache__/
 *.pem
 auth.json
 reference.mp4
+node_modules/

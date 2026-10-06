@@ -25,6 +25,9 @@ ASSETS = {
     "studio.js": "application/javascript; charset=utf-8",
     "vendor/limen/viewer.css": "text/css; charset=utf-8",
     "vendor/limen/viewer.js": "application/javascript; charset=utf-8",
+    # The viewer's TypeScript build output. Kept beside the upstream JavaScript
+    # so the equivalence test can load both and diff them.
+    "viewer/viewer.js": "application/javascript; charset=utf-8",
 }
 
 EMPTY_GRAPH = {"name": "H1", "nodes": [], "edges": [], "stats": {}, "errors": []}

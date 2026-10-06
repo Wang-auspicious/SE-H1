@@ -1,0 +1,14 @@
+{
+  "name": "codeatlas-viewer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TypeScript implementation of the architecture-map viewer",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
