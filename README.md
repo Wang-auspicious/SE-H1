@@ -13,6 +13,24 @@
 
 界面全中文。主题可切换（深色优先），架构图跟随开关。服务只读取本地代码，不上传源码。
 
+## 展示
+
+<img src="docs/01-map-root.png" width="720" alt="根层架构图">
+
+仓库根层：14 个位置、33 条连接。虚线块是「无需解析」的非代码文件，不是解析失败。
+
+<img src="docs/02-map-studio-js.png" width="420" alt="下钻到 studio.js">
+
+点进 `studio.js`：38 个函数和它们之间的调用关系，指向层外的边收束成「层外」ghost 块。
+
+<img src="docs/03-chat-callers.png" width="760" alt="对话回答 renderSessions 的调用方">
+
+问「`renderSessions` 是谁调用的」：结论文末列出 5 个调用点各自的 `file:line` 和场景。
+
+<img src="docs/04-chat-once-only.png" width="420" alt="对话回答只被调用一次的函数">
+
+追问「哪些函数只被调用一次」：agent 自己报出 `truncated: true`，说明这张表只覆盖可见边。
+
 ## 运行
 
 ```powershell
@@ -27,10 +45,12 @@ python code_agent.py . --port 8768
 没有模型 key 时**同样可以完整使用**：界面右上角会标成「离线 · 本地静态审查」，对话走本地图结构审查，结论依然带可点开的源码位置。配置 key 后走真实的多步工具循环：
 
 ```powershell
-$env:OPENCODE_API_KEY = "your-key"
-$env:OPENCODE_MODEL = "deepseek-v4.1-flash"   # 可选
+$env:DEEPSEEK_API_KEY = "your-key"
+$env:DEEPSEEK_MODEL   = "deepseek-flash"   # 可选，默认就是这个；也可用 deepseek-v4-pro
 python code_agent.py . --port 8768
 ```
+
+走 DeepSeek 官方接口（`https://api.deepseek.com`，OpenAI 兼容），所以只用 `openai` SDK，没换客户端。模型默认 `deepseek-flash`（1M 上下文，支持 tool calls），`deepseek-v4-pro` 更强但贵约 3 倍。设 `DEEPSEEK_BASE_URL` 可指向别的兼容端点。
 
 只构建图谱、不起服务：
 
@@ -106,14 +126,14 @@ python code_agent.py . --graph
 
 ### 关于 `vendor/limen/`
 
-架构图不是我自己写的，它来自上游项目 [`overment/limen`](https://github.com/overment/limen) 的 `picture/viewer/`，提交 `62c8c0b`，MIT License，© Adam Gospodarczyk。`viewer.css` 1726 行、`viewer.js` 2876 行。许可证随代码一起放在 `vendor/limen/LICENSE`。
+架构图不是我自己写的，它来自上游项目 [`overment/limen`](https://github.com/overment/limen) 的 `picture/viewer/`，提交 `62c8c0b`，MIT License，© Adam Gospodarczyk。`viewer.css` 1943 行、`viewer.js` 3091 行（含下述本地改动）。许可证随代码一起放在 `vendor/limen/LICENSE`。
 
 我做的是适配，不是重写。`picture.py`（本项目）把 CodeGraph 转成 viewer 的 `architecture-map-model/2` 模型，并把它包成一个惰性 `<template>`，另外附带一份「文件 → 图上的位置 id」索引，供对话跳转用。
 
 对 vendored 文件的改动全部记录在两个文件开头的注释里，分三类：
 
 1. **活在 shadow root 里**（`viewer.css` 3 处、`viewer.js` 5 处）：`:root` → `:host`，`html, body` 与 `body` 合并进 `:host`；`$()` 经由模块级 `root` 查询；`document.activeElement` → `root.activeElement`；`document.title` 只在独立运行时设置；`onKey` 在宿主不可见时直接返回，把 Esc 和 `/` 让给外壳；结尾的 `init()` 换成 `PictureViewer.mount()`，并加了 `refresh()` 与一次性监听守卫。
-2. **适配窗格**（1 处）：布局原本只按宽度缩放，因为 viewer 原本独占一个窗口。塞进窗格后高度才是稀缺的那一维，所以改成同时按高度缩放，整层一屏可读；超出下限就滚动。
+2. **适配窗格**（1 处）：布局原本只按宽度缩放，因为它原本独占一个窗口，塞进窗格后继续只按宽度适配——`scale = min(1, (viewportWidth - 36) / canvasWidth)`，没有下限。中途试过「低于可读阈值就改为滚动」的下限（`PANE_MIN_SCALE`），它会让深层级横向溢出一大片空白，于是撤掉了。`GEO.minScale` 和 `READABLE_SCALE` 是那次尝试留下的死常量。
 3. **中文界面**（`template.html` 全部文案 + `viewer.js` 约 100 条字符串）：kind / relation / status 这些**名字**不动——它们驱动配色查表——只翻译显示时的标签；`plural()` 去掉英文复数，改用中文量词。
 
 地图本身的布局、下钻、ghost 块、边提升、索引、详情面板——一行没动。
@@ -134,4 +154,4 @@ python code_agent.py . --port 8768
 
 静态解析无法覆盖所有动态调用，未能唯一解析的关系会被省略并计入统计；图谱是静态近似，不是运行时事实。`run_python` 是超时受限的本地子进程，不等同于操作系统级沙箱；处理不可信仓库时仍应使用专用隔离环境。离线审查不做语义理解，只从图结构推导结论。
 
-架构图的缩放下限是 0.65：比根层更深的层级如果块太多，仍会需要滚动，这时滚动比把字缩到看不清更诚实。点块下钻会写 URL hash，所以浏览器后退键是返回上一层，不是离开页面。
+架构图只按宽度适配、没有缩放下限，所以块多的深层级（例如 `studio.js` 那层的 38 个块）会整体等比缩小，字跟着一起变小。这是当前版本的一处已知取舍：加回下限就得让深层级横向滚动。点块下钻会写 URL hash，所以浏览器后退键是返回上一层，不是离开页面。

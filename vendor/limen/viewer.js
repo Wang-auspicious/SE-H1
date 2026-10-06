@@ -9,9 +9,10 @@
      5. the trailing `init()` becomes `window.PictureViewer.mount(host, template)`,
         plus `build()` resetting the per-mount entries of `S` and the document
         listeners becoming one-shot so `refresh()` can rebuild in place
-     6. the layout also fits the pane's height, not just its width, so a level
-        is readable in one screen; PANE_MIN_SCALE replaces GEO.minScale as the
-        floor for that fit
+     6. nothing here. A previous edit fitted the pane's height too and floored
+        the scale at PANE_MIN_SCALE so a level stayed readable; it made deep
+        levels overflow sideways, so the width-only fit was restored. GEO and
+        minScale / READABLE_SCALE below are leftovers from that attempt
      7. reader-facing text translated to Chinese. The model's own kind /
         relation / status names are untouched because they drive the colour
         lookups; REL_LABELS / KIND_LABELS / STATUS_LABELS / OVERLAY_LABELS /
@@ -48,15 +49,15 @@
 	}
 	var FALLBACK_SLOTS = 6;
 	var GEO = {
-		blockW: 208,
-		blockH: 94,
-		ghostH: 60,
-		gapX: 34,
+		blockW: 224,
+		blockH: 76,
+		ghostH: 52,
+		gapX: 36,
 		dummyW: 8,
 		dummySep: 12,
-		pad: 48,
-		frameTop: 36,
-		framePad: 18,
+		pad: 32,
+		frameTop: 40,
+		framePad: 20,
 		arrow: 9,
 		lane: 4,
 		minScale: 0.85,
@@ -208,6 +209,18 @@
 		p.appendChild(el("code", null, text));
 		return p;
 	}
+	// One key/value pair as a single flex item, so a wrapped row of pairs can
+	// never break between a key and the value it labels.
+	function metaPair(dl, key, value, code) {
+		var pair = el("div", "meta-pair"),
+			dd = el("dd");
+		pair.appendChild(el("dt", null, key));
+		if (code) dd.appendChild(el("code", null, value));
+		else dd.textContent = value;
+		pair.appendChild(dd);
+		dl.appendChild(pair);
+		return pair;
+	}
 	function section(box, title) {
 		var s = el("section", "d-sec");
 		s.appendChild(el("h3", null, title));
@@ -244,8 +257,9 @@
 	}
 
 	function renderProjectState(tag) {
-		var box = $("project-state"),
-			revision = str(M.project.revision),
+		var box = $("project-state");
+		if (!box) return;
+		var revision = str(M.project.revision),
 			tip = str(tag.getAttribute("data-tip"));
 		clear(box);
 		var rev = el("span", "project-revision", revision ? "快照 " : "未记录快照");
@@ -559,7 +573,7 @@
 	// x positions come from order-preserving least squares (pool adjacent violators).
 
 	function layout(level, perRow) {
-		var W = Math.max(2, Math.min(3, perRow));
+		var W = Math.max(2, Math.min(6, perRow));
 		var items = [],
 			byId = new Map();
 		function add(node, band) {
@@ -981,6 +995,20 @@
 				});
 				want = sum / ns.length;
 				wt = it.dummy ? 2 : 1;
+			} else {
+				// Shift isolated floating cards inward towards connected nodes in row
+				var connectedSum = 0, connectedCount = 0;
+				row.forEach(function (other) {
+					var otherNs = side < 0 ? other.up : side > 0 ? other.down : other.up.concat(other.down);
+					if (otherNs.length) {
+						connectedSum += other.cx;
+						connectedCount++;
+					}
+				});
+				if (connectedCount) {
+					want = connectedSum / connectedCount;
+					wt = 0.5;
+				}
 			}
 			s.push(want - o);
 			w.push(wt);
@@ -1167,14 +1195,9 @@
 		// The margins cover the sizer's ceil() rounding and the ghost band, which
 		// are not part of Lo.height: without them a fitted level still leaves a
 		// few pixels of scroll.
-		var fitW = (vw - 12) / Lo.width;
-		var fitH = vh ? (vh - 20) / Lo.height : 1;
-		var scale = Math.min(1, fitW, fitH);
-		// The floor only restrains the height. Horizontal overflow is never
-		// acceptable — a side-scrollbar means the map is wider than the space it
-		// was given — whereas a tall level may run past the fold and scroll down.
-		var floor = hostEl && hostEl.dataset.fit === "all" ? 0 : READABLE_SCALE;
-		if (scale < floor) scale = Math.min(floor, fitW);
+		// Width scaling: ensure the entire diagram fits 100% inside the available stage width!
+		var fitW = (vw - 36) / Lo.width;
+		var scale = Math.min(1, fitW);
 		level.scale = scale;
 		D.canvas.style.width = Lo.width + "px";
 		D.canvas.style.height = Lo.height + "px";
@@ -1184,6 +1207,53 @@
 		drawEdges();
 		drawBlocks();
 		updateSelection();
+		renderStageFeatures(level);
+	}
+
+	function renderStageFeatures(level) {
+		var sf = $("stage-features");
+		if (!sf) return;
+		// Image 3: "点进来以后是没有底部的"
+		if (level.focus) {
+			sf.style.display = "none";
+			return;
+		}
+		sf.style.display = "flex";
+		var grid = $("sf-grid");
+		if (!grid) return;
+		clear(grid);
+		var features = M.features || [];
+		features.forEach(function (f) {
+			var card = button("sf-card");
+			card.dataset.id = f.id;
+			var on = !!S.overlay && S.overlay === f;
+			if (on) card.classList.add("selected");
+			card.setAttribute("aria-pressed", String(on));
+			var head = el("div", "sf-head");
+			var kind = el("span", "sf-kind");
+			kind.innerHTML = '<i class="sf-icon">◆</i> 特性';
+			var st = el("span", "sf-status", zh(STATUS_LABELS, f.status) || "已解析");
+			head.appendChild(kind);
+			head.appendChild(st);
+			var title = el("span", "sf-title", f.title);
+			card.appendChild(head);
+			card.appendChild(title);
+			card.title = f.summary || f.title;
+			card.addEventListener("mouseenter", function () {
+				S.ovHover = f;
+				highlight();
+			});
+			card.addEventListener("mouseleave", function () {
+				if (S.ovHover === f) {
+					S.ovHover = null;
+					highlight();
+				}
+			});
+			card.addEventListener("click", function () {
+				selectOverlay(S.overlay === f ? null : f);
+			});
+			grid.appendChild(card);
+		});
 	}
 
 	function drawEdges() {
@@ -1307,6 +1377,10 @@
 		b.style.top = f(it.y) + "px";
 		b.style.width = it.w + "px";
 		b.style.height = it.h + "px";
+		// The card's type scale, handed to the stylesheet as its own height.
+		// Nothing inside a card carries a fixed font size, so the text fills
+		// whatever box the layout gave it instead of floating in an empty one.
+		b.style.setProperty("--card-h", it.h + "px");
 		var head = el("span", "b-head");
 		head.appendChild(el("span", "b-kind", ghost ? "层外" : zh(KIND_LABELS, n.kind)));
 		head.appendChild(badge(n.status));
@@ -1650,6 +1724,14 @@
 		D.ovItems.forEach(function (b, key) {
 			b.setAttribute("aria-pressed", String(!!S.overlay && S.overlay.key === key));
 		});
+		var grid = $("sf-grid");
+		if (grid) {
+			Array.from(grid.children).forEach(function (card) {
+				var on = !!S.overlay && S.overlay.id === card.dataset.id;
+				card.classList.toggle("selected", on);
+				card.setAttribute("aria-pressed", String(on));
+			});
+		}
 	}
 
 	function selectOverlay(o) {
@@ -2275,8 +2357,7 @@
 		var st = section(box, "计数"),
 			dl = el("dl", "d-meta");
 		function row(k, v) {
-			dl.appendChild(el("dt", null, k));
-			dl.appendChild(el("dd", null, v));
+			metaPair(dl, k, v);
 		}
 		row("顶层块", String(M.roots.length));
 		row("全部块", String(M.nodes.length));
@@ -2305,8 +2386,7 @@
 		});
 		st.appendChild(dl);
 		renderMemberships(box, str(p.rootId));
-		sourceList(box, strList(p.sources));
-		metaList(box, obj(p.meta));
+		metaList(box, obj(p.meta), strList(p.sources));
 		if (M.generatedAt) box.appendChild(el("p", "d-foot", "生成时间 " + M.generatedAt));
 	}
 
@@ -2352,18 +2432,24 @@
 		s.appendChild(list);
 	}
 
-	function metaList(box, meta) {
+	// Sources ride the metadata row instead of taking a section of their own:
+	// both answer "where did this come from", and one wrapped row is shorter
+	// than two stacked blocks.
+	function metaList(box, meta, sources) {
 		var keys = Object.keys(meta).filter(function (k) {
 			var v = meta[k];
 			return v != null && typeof v !== "object";
 		});
-		if (!keys.length) return;
+		var srcs = (sources || []).filter(Boolean).slice(0, LIMIT.list);
+		if (!keys.length && !srcs.length) return;
 		var dl = el("dl", "d-meta");
-		keys.forEach(function (k) {
-			dl.appendChild(el("dt", null, k));
-			dl.appendChild(el("dd", null, str(meta[k])));
+		srcs.forEach(function (s) {
+			metaPair(dl, "来源", str(s), true);
 		});
-		section(box, "元数据").appendChild(dl);
+		keys.forEach(function (k) {
+			metaPair(dl, k, str(meta[k]));
+		});
+		section(box, srcs.length ? "来源与元数据" : "元数据").appendChild(dl);
 	}
 
 	function renderNodePanel(box, n) {
@@ -2385,7 +2471,6 @@
 		if (n.bodyHtml) box.appendChild(prose(n.bodyHtml));
 		else if (!n.summary) box.appendChild(el("p", "d-empty", "无描述。"));
 		renderMemberships(box, n.id);
-		sourceList(box, n.sources);
 		if (n.kids.length) {
 			var ps = section(box, "组成部分（" + n.kids.length + "）"),
 				ul = el("ul", "d-parts");
@@ -2407,7 +2492,7 @@
 		connSection(box, "入向连接", c.inc, false, n);
 		if (c.inside) box.appendChild(el("p", "d-note", "本块各组成部分之间有 " + plural(c.inside, "条连接") + "。"));
 		if (n.source) box.appendChild(codeLine("d-foot", n.source));
-		metaList(box, n.meta);
+		metaList(box, n.meta, n.sources);
 	}
 
 	// Edges that cross the border of `n`'s subtree.
@@ -2533,17 +2618,22 @@
 
 	function setExplorer(open) {
 		D.main.classList.toggle("explorer-closed", !open);
-		D.explorerToggle.setAttribute("aria-expanded", String(open));
+		if (D.explorerToggle) D.explorerToggle.setAttribute("aria-expanded", String(open));
 		if (open && window.innerWidth <= 760) setPanel(false);
 		scheduleRelayout();
 	}
 
 	function setPanel(open) {
 		D.main.classList.toggle("panel-closed", !open);
-		D.panelToggle.setAttribute("aria-expanded", String(open));
+		if (D.panelToggle) D.panelToggle.setAttribute("aria-expanded", String(open));
+		var btn = $("panel-toggle-btn");
+		if (btn) {
+			btn.textContent = open ? "›" : "‹";
+			btn.title = open ? "收起详情栏" : "展开详情栏";
+		}
 		if (open && window.innerWidth <= 760) {
 			D.main.classList.add("explorer-closed");
-			D.explorerToggle.setAttribute("aria-expanded", "false");
+			if (D.explorerToggle) D.explorerToggle.setAttribute("aria-expanded", "false");
 		}
 		scheduleRelayout();
 	}
@@ -2682,8 +2772,9 @@
 	}
 
 	function renderDiagButton() {
-		var b = D.diagToggle,
-			counts = levelCounts();
+		var b = D.diagToggle;
+		if (!b) return;
+		var counts = levelCounts();
 		clear(b);
 		b.appendChild(el("span", null, "地图说明"));
 		if (!counts.length) b.appendChild(el("span", "dcount lv-none", "0"));
@@ -2889,32 +2980,47 @@
 		if (root === document) document.title = projectTitle() + " · 架构图";
 		renderProjectState(tag);
 
-		D.search.addEventListener("input", function () {
-			S.results = searchNodes(D.search.value);
-			S.active = S.results.length ? 0 : -1;
-			renderResults();
-		});
-		D.search.addEventListener("keydown", onSearchKey);
-		D.search.addEventListener("blur", function () {
-			setTimeout(function () {
-				if (root.activeElement !== D.search) {
-					D.results.hidden = true;
-					D.search.setAttribute("aria-expanded", "false");
-				}
-			}, 0);
-		});
-		D.search.addEventListener("focus", function () {
-			if (D.search.value.trim()) renderResults();
-		});
-		D.diagToggle.addEventListener("click", function () {
-			setDrawer(D.drawer.hidden);
-		});
-		D.explorerToggle.addEventListener("click", function () {
-			setExplorer(D.main.classList.contains("explorer-closed"));
-		});
-		D.panelToggle.addEventListener("click", function () {
-			setPanel(D.main.classList.contains("panel-closed"));
-		});
+		if (D.search) {
+			D.search.addEventListener("input", function () {
+				S.results = searchNodes(D.search.value);
+				S.active = S.results.length ? 0 : -1;
+				renderResults();
+			});
+			D.search.addEventListener("keydown", onSearchKey);
+			D.search.addEventListener("blur", function () {
+				setTimeout(function () {
+					if (root.activeElement !== D.search) {
+						D.results.hidden = true;
+						D.search.setAttribute("aria-expanded", "false");
+					}
+				}, 0);
+			});
+			D.search.addEventListener("focus", function () {
+				if (D.search.value.trim()) renderResults();
+			});
+		}
+		if (D.diagToggle) {
+			D.diagToggle.addEventListener("click", function () {
+				setDrawer(D.drawer.hidden);
+			});
+		}
+		if (D.explorerToggle) {
+			D.explorerToggle.addEventListener("click", function () {
+				setExplorer(D.main.classList.contains("explorer-closed"));
+			});
+		}
+		if (D.panelToggle) {
+			D.panelToggle.addEventListener("click", function () {
+				setPanel(D.main.classList.contains("panel-closed"));
+			});
+		}
+		var toggleBtn = $("panel-toggle-btn");
+		if (toggleBtn) {
+			toggleBtn.addEventListener("click", function () {
+				var isClosed = D.main.classList.contains("panel-closed");
+				setPanel(isClosed);
+			});
+		}
 		// init() runs again on refresh(), so the document-level wiring and the
 		// observer must not stack: a second keydown listener would make Escape
 		// navigate two levels at once.
@@ -2974,6 +3080,13 @@
 		// Re-run the fit after the shell changed the scale floor.
 		refit: function () {
 			if (hostEl) renderLevel();
+		},
+		// Highlight or un-highlight a feature on hover
+		hoverFeature: function (id) {
+			if (!hostEl || !M) return;
+			var feat = id ? M.overlayByKey.get("feature:" + id) : null;
+			S.ovHover = feat;
+			highlight();
 		},
 	};
 })();

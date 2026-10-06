@@ -197,7 +197,30 @@
       if (list) out.push(`</${list}>`);
       list = null;
     };
-    for (const line of escapeHtml(source).split("\n")) {
+    // GFM tables. The agent reaches for one whenever it has per-call-site or
+    // per-file evidence, and a pipe row that falls through to the paragraph
+    // branch is a wall of pipes the reader has to parse by hand.
+    const cells = (line) =>
+      line
+        .replace(/^\s*\|/, "")
+        .replace(/\|\s*$/, "")
+        .split("|")
+        .map((cell) => cell.trim());
+    const isDelimiter = (line) =>
+      /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/.test(line);
+    const table = (head, rows) => {
+      const th = head.map((cell) => `<th>${inline(cell)}</th>`).join("");
+      const body = rows
+        .map((row) => `<tr>${row.map((cell) => `<td>${inline(cell)}</td>`).join("")}</tr>`)
+        .join("");
+      return (
+        `<div class="tbl"><table><thead><tr>${th}</tr></thead>` +
+        `<tbody>${body}</tbody></table></div>`
+      );
+    };
+    const lines = escapeHtml(source).split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
       if (fenced) {
         if (line.trimStart().startsWith("```")) {
           out.push(`<pre><code>${buffer.join("\n")}</code></pre>`);
@@ -209,6 +232,15 @@
       if (line.trimStart().startsWith("```")) {
         closeList();
         fenced = true;
+        continue;
+      }
+      if (/^\s*\|/.test(line) && isDelimiter(lines[i + 1] || "")) {
+        closeList();
+        const rows = [];
+        let j = i + 2;
+        while (j < lines.length && /^\s*\|/.test(lines[j])) rows.push(cells(lines[j++]));
+        out.push(table(cells(line), rows));
+        i = j - 1;
         continue;
       }
       const heading = /^#{1,3}\s+(.*)$/.exec(line);
@@ -225,9 +257,11 @@
           list = want;
         }
         out.push(`<li>${inline((bullet || numbered)[1])}</li>`);
-      } else if (/^>\s?/.test(line)) {
+      } else if (/^&gt;\s?/.test(line)) {
+        // escapeHtml() runs first, so the markdown `>` is already `&gt;` here;
+        // matching the raw character is why quotes never rendered.
         closeList();
-        out.push(`<blockquote>${inline(line.replace(/^>\s?/, ""))}</blockquote>`);
+        out.push(`<blockquote>${inline(line.replace(/^&gt;\s?/, ""))}</blockquote>`);
       } else if (!line.trim()) {
         closeList();
       } else {
@@ -276,47 +310,198 @@
   // Shell-owned integration styling for the vendored viewer. Kept out of
   // vendor/limen/viewer.css so upstream rules and ours stay distinguishable.
   const PICTURE_SKIN = `
-    /* The index panel and the map answer the same question, and the map answers
-       it better. Dropping the panel is also what lets one screen hold the map.
-       .main has to be re-templated for two tracks: hiding a grid item makes the
-       ones after it shift down a track, and the viewer's own explorer-closed
-       rule leaves a zero-width first track that the stage would land in.
-       Both rules are appended after viewer.css, so they win at equal weight. */
-    .explorer, #explorer-toggle { display: none; }
-    .main { grid-template-columns: minmax(0, 1fr) 360px; }
-    .main.panel-closed { grid-template-columns: minmax(0, 1fr) 0; }
-    .stage { padding-inline: 24px; }
+    .explorer, #explorer-toggle, .top { display: none !important; }
+    .main {
+      grid-template-columns: minmax(0, 1fr) 380px;
+      min-height: 100vh;
+      height: auto;
+      width: 100vw;
+      overflow: visible !important;
+    }
+    .main.panel-closed {
+      grid-template-columns: minmax(0, 1fr) 38px !important;
+    }
+    .main.panel-closed .panel {
+      width: 38px !important;
+      min-width: 38px !important;
+    }
+    .main.panel-closed .panel-body {
+      display: none !important;
+    }
+    .stage {
+      padding-inline: 16px;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      height: auto;
+      min-width: 0;
+      overflow: visible !important;
+      scrollbar-width: none !important;
+    }
+    .stage::-webkit-scrollbar { display: none !important; }
 
-    /* The map used to spend 387px of a 950px screen on chrome. Everything
-       below is about giving that space back to the map, which is the reason
-       the view exists at all. */
-    .top { padding: 3px 14px; min-height: 0; }
-    .top .tbtn, .top .search input { padding-block: 3px; }
-    .brand small { display: none; }               /* the tab already says 架构图 */
-    .project-state { display: none; }             /* "未记录快照" answers nothing */
-    .crumbs { padding: 4px 20px; }
-    .level-head { padding: 6px 20px 8px; }
-    .level-head h1, .lh-title { font-size: 15px; margin: 0; letter-spacing: 0; }
-    .lh-sum { margin: 2px 0 0; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .lh-stats { margin: 3px 0 0; font-size: 11px; }
-    .lh-sum { display: none; }                     /* the same sentence is in 详情 */
-    /* At the root the breadcrumb is a single word, and the level head already
-       names it; it only earns its row once there is somewhere to go back to. */
+    .stage-top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 14px 20px 4px;
+      min-height: 40px;
+    }
+    .stage-top-bar .crumbs {
+      margin-right: auto;
+      padding: 0;
+    }
+    .stage-chat-btn {
+      padding: 5px 14px;
+      border-radius: 6px;
+      background: #21262d;
+      border: 1px solid #30363d;
+      color: #f0f6fc;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .stage-chat-btn:hover {
+      background: #30363d;
+      border-color: #8b949e;
+    }
+
+    .crumbs { padding: 0; }
+    .level-head { padding: 8px 20px 4px; }
+    .level-head h1, .lh-title { font-size: 18px; font-weight: 700; margin: 0; letter-spacing: -0.01em; color: #fff; }
+    .lh-sum { display: none; }
+    .lh-stats { margin: 4px 0 0; font-size: 12px; color: var(--text-muted); }
     #crumbs:has(> :only-child) { display: none; }
-    .map-key { margin: 0 20px 4px; }
-    /* Its default text points at the index panel, which is gone. */
+
+    /* Open legend matching reference video */
+    .map-key { margin: 4px 20px 8px; border: none; background: transparent; }
+    .map-key > summary { display: none; }
+    .map-key .legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 14px;
+      padding: 6px 0 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .lg-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .lg-label {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-right: 2px;
+    }
+    .lg-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--surface, #171b22);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      font-size: 11.5px;
+      line-height: 1.4;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .lg-item:hover {
+      background: var(--surface-2, #1f252e);
+      border-color: rgba(255, 255, 255, 0.35);
+    }
+    .lg-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin: 4px 0 0;
+      width: 100%;
+    }
+
     .selection-bar { display: none; }
-    /* Level fits the pane down to a readable floor; past it the map scrolls
-       rather than shrinking into illegibility. */
-    #viewport { overflow: auto; }
-    /* The canvas is shrunk with transform: scale(), and a transform does not
-       change the layout box — so the unwrapped canvas still reports its full
-       height and the viewport clips the tail of the map. Clipping here instead
-       keeps the measured height equal to the fitted one. */
-    #sizer { overflow: hidden; }
-    /* Places the current conversation actually cited from. This is the whole
-       point of having the map next to the chat: it shows where a conclusion
-       came from, not just what the repository contains. */
+
+    /* Whole stage scrolls with the page */
+    #viewport {
+      flex: 1 0 auto;
+      min-height: min-content;
+      overflow: visible !important;
+      scrollbar-width: none !important;
+    }
+    #viewport::-webkit-scrollbar { display: none !important; }
+    #sizer { overflow: visible !important; margin: 0 auto; }
+
+    /* Block surface only. Type and padding belong to the card's own scale,
+       which the vendored viewer derives from --card-h; pinning them here in
+       px would win the cascade and undo that. */
+    .block {
+      border-radius: 9px;
+      border: 1.5px solid var(--border, #30363d);
+      background: #161b22;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    }
+    .b-kind {
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #8b949e;
+    }
+    .b-title {
+      font-weight: 650;
+      line-height: 1.3;
+      color: #f0f6fc;
+    }
+
+    /* Details panel styling - full height, scrolls with the page */
+    .panel {
+      width: 380px;
+      min-height: 100vh;
+      height: auto;
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+      background: var(--surface, #171b22);
+      display: flex;
+      flex-direction: column;
+      overflow: visible !important;
+      scrollbar-width: none !important;
+    }
+    .panel::-webkit-scrollbar { display: none !important; }
+    .panel-top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 10px 12px 0;
+    }
+    .panel-collapse-btn {
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #c9d1d9;
+      font-size: 16px;
+      font-weight: bold;
+      line-height: 1;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .panel-collapse-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+      color: #fff;
+    }
+    .panel-body {
+      flex: 1;
+      overflow: visible !important;
+      scrollbar-width: none !important;
+    }
+    .panel-body::-webkit-scrollbar { display: none !important; }
+
+    /* Cited node highlighting */
     .block.cited {
       border-color: var(--accent);
       box-shadow: 0 0 0 2px var(--accent-soft);
@@ -336,77 +521,14 @@
     const root = $("picture-host").shadowRoot;
     if (!root) return;
     root.append(pictureSkin.cloneNode(true));
+    root.getElementById("stage-chat-btn")?.addEventListener("click", () => setView("chat"));
     if (citedObserver) citedObserver.disconnect();
     // Blocks are rebuilt on every level change, so watch the container rather
     // than marking once. Adding a class is not a childList change, so no loop.
     citedObserver = new MutationObserver(markCited);
     citedObserver.observe(root.getElementById("blocks"), { childList: true });
     markCited();
-    renderBand();
   }
-
-  /* ------------------------------------------- cross-cutting concerns */
-
-  // The viewer already knows how to light the places a feature names: selecting
-  // one from the hash is its own mechanism. The band only supplies the picker,
-  // so the lighting itself stays upstream code.
-  function renderBand() {
-    const root = $("picture-host").shadowRoot;
-    const tag = root && root.getElementById("archmap-data");
-    let features = [];
-    if (tag) {
-      try {
-        features = JSON.parse(tag.textContent).features || [];
-      } catch {
-        features = [];
-      }
-    }
-    const row = $("feature-row");
-    row.replaceChildren();
-    bandVisible = features.length > 0;
-    for (const feature of features) {
-      const card = el("button", "fcard");
-      card.type = "button";
-      card.dataset.id = feature.id;
-      if (!feature.touches || !feature.touches.length) card.dataset.empty = "true";
-      card.append(
-        el("em", null, feature.status === "stub" ? "关注点 · 无" : "关注点"),
-        el("b", null, feature.title),
-        el("span", null, feature.summary),
-      );
-      card.addEventListener("click", () => selectFeature(feature.id));
-      row.append(card);
-    }
-    syncBand();
-  }
-
-  function selectFeature(id) {
-    const target = "#?feature=" + encodeURIComponent(id);
-    // Assigning the same hash fires nothing, so step off it first to toggle.
-    location.hash = location.hash === target ? "#" : target;
-  }
-
-  let bandVisible = false;
-
-  // At the root the hash carries no path; drilling adds one. A drilled level is
-  // about one block's insides, where a list of project-wide concerns does not
-  // belong — and the band would also take height from a level that wants it.
-  function atRoot() {
-    return !location.hash.replace(/^#/, "").split("?")[0];
-  }
-
-  function syncBand() {
-    const match = /[#?]feature=([^&]*)/.exec(location.hash);
-    const active = match ? decodeURIComponent(match[1]) : "";
-    for (const card of $("feature-row").children) {
-      card.setAttribute("aria-pressed", String(card.dataset.id === active));
-    }
-    $("feature-band").hidden = !bandVisible || !atRoot();
-  }
-
-  // Drilling into a block rewrites the hash without the feature, so the band
-  // has to follow the viewer rather than own the selection.
-  window.addEventListener("hashchange", syncBand);
 
   /* ----------------------------------------- what the conversation cites */
 
@@ -677,9 +799,14 @@
     for (const button of $("view-switch").children) {
       button.classList.toggle("on", button.dataset.view === view);
     }
-    // The picture viewer sizes itself from a ResizeObserver on its own viewport,
-    // so it needs no nudge when the pane becomes visible again.
-    if (view === "chat") promptInput.focus();
+    try {
+      localStorage.setItem("codeatlas.view", view);
+    } catch {}
+    if (view === "chat") {
+      promptInput.focus();
+    } else if (view === "picture") {
+      setTimeout(() => PictureViewer?.refit?.(), 30);
+    }
   }
 
   $("view-switch").addEventListener("click", (event) => {
@@ -799,4 +926,12 @@
   PictureViewer.mount($("picture-host"), $("picture-markup"));
   skinPicture();
   refreshStatus();
+
+  // Default to picture architecture map view on launch
+  const savedView = localStorage.getItem("codeatlas.view");
+  if (savedView === "chat" && !location.hash) {
+    setView("chat");
+  } else {
+    setView("picture");
+  }
 })();

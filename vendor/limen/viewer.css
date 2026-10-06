@@ -363,21 +363,30 @@ button.crumb:hover {
 
 .main {
 	display: grid;
-	grid-template-columns: 272px minmax(0, 1fr) 360px;
-	min-height: 0;
+	grid-template-columns: 0 minmax(0, 1fr) 380px;
+	min-height: 100vh;
 	min-width: 0;
+	height: auto;
+	width: 100%;
 	position: relative;
+	overflow: visible !important;
 }
 .main.panel-closed {
-	grid-template-columns: 272px minmax(0, 1fr) 0;
+	grid-template-columns: 0 minmax(0, 1fr) 38px !important;
+}
+.main.panel-closed .panel {
+	width: 38px !important;
+	min-width: 38px !important;
+}
+.main.panel-closed .panel-body {
+	display: none !important;
 }
 .main.explorer-closed {
-	grid-template-columns: 0 minmax(0, 1fr) 360px;
+	grid-template-columns: 0 minmax(0, 1fr) 380px;
 }
 .main.panel-closed.explorer-closed {
-	grid-template-columns: 0 minmax(0, 1fr) 0;
+	grid-template-columns: 0 minmax(0, 1fr) 38px !important;
 }
-.main.panel-closed .panel,
 .main.explorer-closed .explorer {
 	display: none;
 }
@@ -385,7 +394,65 @@ button.crumb:hover {
 	display: flex;
 	flex-direction: column;
 	min-width: 0;
-	min-height: 0;
+	min-height: 100vh;
+	height: auto;
+	overflow: visible !important;
+	scrollbar-width: none !important;
+}
+.stage::-webkit-scrollbar {
+	display: none !important;
+}
+.stage-top-bar {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	padding: 12px 24px 0;
+	min-height: 38px;
+}
+.stage-top-bar .crumbs {
+	margin-right: auto;
+	padding: 0;
+}
+.stage-chat-btn {
+	padding: 5px 14px;
+	border-radius: 6px;
+	background: #21262d;
+	border: 1px solid #30363d;
+	color: #f0f6fc;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+.stage-chat-btn:hover {
+	background: #30363d;
+	border-color: #8b949e;
+}
+.panel-top-bar {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	padding: 10px 12px 0;
+}
+.panel-collapse-btn {
+	width: 26px;
+	height: 26px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 6px;
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	color: #c9d1d9;
+	font-size: 16px;
+	font-weight: bold;
+	line-height: 1;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+.panel-collapse-btn:hover {
+	background: rgba(255, 255, 255, 0.16);
+	color: #fff;
 }
 .explorer {
 	min-height: 0;
@@ -687,8 +754,8 @@ button.crumb:hover {
 }
 .viewport {
 	flex: 1 1 auto;
-	min-height: 0;
-	overflow: auto;
+	min-height: min-content;
+	overflow: visible;
 	position: relative;
 	background-image: radial-gradient(var(--border) 0.75px, transparent 0.75px);
 	background-size: 18px 18px;
@@ -727,12 +794,22 @@ button.crumb:hover {
 	position: absolute;
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
-	padding: 7px 10px 6px;
+	justify-content: space-between;
+	/* Card type is derived from the card's own height, never a fixed px size.
+	   blockEl() writes --card-h per block and every size inside the card is em,
+	   so a tall card and a short ghost card each fill themselves exactly. The
+	   divisor is the card's own height budget in em - the head row (whichever
+	   of the kind chip and the status badge is taller), the title, the footer,
+	   and the vertical padding and gaps:
+	   0.78*1.3 + 1.3*1.3 + 0.82*1.3 + 2*0.45 + 2*0.22 = 5.11. A line-height
+	   below 1.3 clips the descenders of the -webkit-line-clamp box. */
+	font-size: calc(var(--card-h, 76px) / 5.11);
+	gap: 0.22em;
+	padding: 0.45em 0.92em;
 	text-align: left;
 	background: var(--surface);
-	border: 1px solid var(--border);
-	border-radius: 8px;
+	border: 1.5px solid var(--border);
+	border-radius: 9px;
 	box-shadow: var(--shadow);
 	cursor: pointer;
 	pointer-events: auto;
@@ -744,6 +821,12 @@ button.crumb:hover {
 }
 .block:hover {
 	border-color: var(--border-strong);
+	background: #1c2128;
+}
+/* A card with no footer row has nothing to push against, so space-between
+   bunches what little it has at the top and leaves the rest empty. */
+.block:not(:has(.b-foot)) {
+	justify-content: center;
 }
 .block.has-kids {
 	overflow: visible;
@@ -772,19 +855,20 @@ button.crumb:hover {
 	min-width: 0;
 }
 .b-kind {
-	font-size: 10.5px;
-	font-weight: 600;
+	font-size: 0.78em;
+	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
-	color: var(--muted);
+	color: #8b949e;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
 .b-title {
-	font-size: 13.5px;
+	font-size: 1.3em;
 	font-weight: 650;
-	line-height: 1.25;
+	line-height: 1.3;
+	color: #f0f6fc;
 	display: -webkit-box;
 	-webkit-line-clamp: 2;
 	-webkit-box-orient: vertical;
@@ -795,14 +879,14 @@ button.crumb:hover {
 	margin-top: auto;
 	display: flex;
 	justify-content: space-between;
-	font-size: 11.5px;
+	font-size: 0.82em;
 	color: var(--muted);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
 .b-open {
-	font-size: 15px;
+	font-size: 1.1em;
 	line-height: 1;
 	color: var(--accent);
 }
@@ -853,7 +937,6 @@ button.crumb:hover {
 }
 .block.ghost .b-title {
 	font-weight: 600;
-	font-size: 13px;
 	-webkit-line-clamp: 1;
 }
 .block.ghost .b-kind {
@@ -891,9 +974,9 @@ button.crumb:hover {
 	border-radius: 999px;
 	background: var(--ovc);
 	color: var(--surface);
-	font-size: 10.5px;
+	font-size: 0.7em;
 	font-weight: 700;
-	line-height: 18px;
+	line-height: 1.7em;
 	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
 	overflow: hidden;
@@ -1035,6 +1118,13 @@ button.crumb:hover {
 
 /* --------------------------------------------------------- tags & badges */
 
+/* Inside a card the chip rides the card's own type scale, not the page's. */
+.block .badge {
+	font-size: 0.72em;
+	/* keeps the head row no taller than the kind chip, which is what the
+	   card's height budget above assumes */
+	line-height: 1.3;
+}
 .badge {
 	flex: none;
 	display: inline-block;
@@ -1112,8 +1202,14 @@ button.crumb:hover {
 .panel {
 	background: var(--surface);
 	border-left: 1px solid var(--border);
-	overflow: auto;
+	overflow: visible !important;
+	scrollbar-width: none !important;
 	min-width: 0;
+	min-height: 100vh;
+	height: auto;
+}
+.panel::-webkit-scrollbar {
+	display: none !important;
 }
 .panel-body {
 	padding: 16px 18px 40px;
@@ -1177,7 +1273,20 @@ button.crumb:hover {
 	font-weight: 500;
 }
 .d-sec {
-	margin-top: 16px;
+	margin-top: 10px;
+}
+/* A section whose only content is "无。" has nothing to stack, so its heading
+   and that note share one line instead of spending two rows on a zero. */
+.d-sec:has(> .d-empty) {
+	margin-top: 5px;
+}
+.d-sec:has(> .d-empty) h3 {
+	display: inline;
+	margin: 0;
+}
+.d-sec:has(> .d-empty) .d-empty {
+	display: inline;
+	margin: 0 0 0 8px;
 }
 .d-sec h3 {
 	margin: 0 0 6px;
@@ -1192,6 +1301,11 @@ button.crumb:hover {
 	list-style: none;
 	margin: 0;
 	padding: 0;
+}
+.d-sources {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px 14px;
 }
 .d-sources li {
 	padding: 2px 0;
@@ -1226,12 +1340,19 @@ button.crumb:hover {
 	font-size: 12px;
 	color: var(--accent);
 }
+/* Pairs flow across the pane and wrap, instead of one pair per row: five
+   fields that used to take five rows now take one or two. */
 .d-meta {
-	display: grid;
-	grid-template-columns: auto 1fr;
-	gap: 2px 12px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 3px 16px;
 	margin: 0;
 	font-size: 12.5px;
+}
+.d-meta .meta-pair {
+	display: flex;
+	gap: 5px;
+	min-width: 0;
 }
 .d-meta dt {
 	color: var(--muted);
@@ -1530,7 +1651,7 @@ button.crumb:hover {
 	box-shadow: 0 3px 10px rgba(16, 24, 40, 0.035);
 }
 .block .b-title {
-	font-size: 13px;
+	font-size: 1.3em;
 }
 .block.ov-carrier {
 	border-style: dashed;
@@ -1542,12 +1663,12 @@ button.crumb:hover {
 	position: absolute;
 	bottom: 5px;
 	left: 10px;
-	font-size: 9px;
+	font-size: 0.62em;
 	color: var(--muted);
 }
 .b-parent {
 	margin-top: auto;
-	font-size: 9px;
+	font-size: 0.62em;
 	color: var(--muted);
 	white-space: nowrap;
 	overflow: hidden;
@@ -1591,12 +1712,8 @@ button.crumb:hover {
 	border-color: var(--jour-border);
 }
 .membership {
-	flex-wrap: wrap;
-	gap: 4px;
-	padding-block: 9px;
-}
-.membership .index-kind {
-	flex-basis: 100%;
+	gap: 8px;
+	padding-block: 3px;
 }
 .membership.ov-feature .index-kind {
 	color: var(--feat);
@@ -1719,6 +1836,100 @@ button.crumb:hover {
 	.selection-bar {
 		padding: 10px 16px;
 	}
+}
+
+.stage-features {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 10px 24px 14px;
+	background: transparent;
+	border-top: 1px dashed rgba(255, 255, 255, 0.12);
+	z-index: 10;
+	flex-shrink: 0;
+}
+
+.sf-header {
+	font-size: 11.5px;
+	color: var(--muted, #8b949e);
+	letter-spacing: 0.03em;
+}
+
+.sf-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 10px;
+}
+
+.sf-card {
+	min-width: 130px;
+	height: 48px;
+	padding: 6px 12px;
+	background: #14111d;
+	border: 1px solid #3b264e;
+	border-radius: 8px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	text-align: left;
+	cursor: pointer;
+	transition: all 0.18s ease;
+}
+
+.sf-card:hover {
+	background: #1e152d;
+	border-color: #a855f7;
+	box-shadow: 0 0 16px rgba(168, 85, 247, 0.25);
+	transform: translateY(-1px);
+}
+
+.sf-card.selected,
+.sf-card[aria-pressed="true"] {
+	border-color: #c084fc;
+	background: #251739;
+	box-shadow: 0 0 20px rgba(192, 132, 252, 0.35);
+}
+
+.sf-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+}
+
+.sf-kind {
+	font-size: 9.5px;
+	font-weight: 700;
+	color: #c084fc;
+	letter-spacing: 0.05em;
+	display: flex;
+	align-items: center;
+	gap: 3px;
+}
+
+.sf-icon {
+	font-style: normal;
+	font-size: 8.5px;
+}
+
+.sf-status {
+	font-size: 8.5px;
+	padding: 1px 5px;
+	border-radius: 999px;
+	background: rgba(16, 185, 129, 0.16);
+	color: #34d399;
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+.sf-title {
+	font-size: 13px;
+	font-weight: 600;
+	color: #f3f4f6;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	line-height: 1.3;
 }
 
 @media (prefers-reduced-motion: reduce) {

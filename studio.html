@@ -16,13 +16,13 @@
       }
     </script>
   </head>
-  <body data-view="chat">
+  <body data-view="picture">
     <div class="studio">
       <header class="titlebar">
         <span class="brand"><i></i>CodeAtlas</span>
         <nav class="views" id="view-switch">
-          <button type="button" data-view="chat" class="on">对话</button>
-          <button type="button" data-view="picture">架构图</button>
+          <button type="button" data-view="chat">对话</button>
+          <button type="button" data-view="picture" class="on">架构图</button>
         </nav>
         <span class="spacer"></span>
         <button type="button" class="tbtn-ghost" id="fit-button" aria-pressed="false"
@@ -68,10 +68,6 @@
 
         <section class="pane" id="pane-picture">
           <div id="picture-host"></div>
-          <div class="band" id="feature-band" hidden>
-            <p class="band-hint">横切关注点 · 选中一个，图上只点亮它涉及的文件</p>
-            <div class="band-row" id="feature-row"></div>
-          </div>
         </section>
       </main>
     </div>

@@ -184,31 +184,22 @@ def local_review(graph, prompt):
     return {"mode": "local", "answer": "\n".join(lines), "events": events, "stats": stats}
 
 
+# DeepSeek's own endpoint. It is OpenAI-compatible, so the SDK is unchanged;
+# only the base URL, the model name and the key's env var differ from a
+# generic OpenAI client.
+DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+DEFAULT_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-flash")
+
+
 def api_key():
-    key = (
-        os.getenv("OPENCODE_API_KEY")
-        or os.getenv("OPENCODE_GO_API_KEY")
-        or os.getenv("DEEPSEEK_API_KEY")
-        or os.getenv("OPENAI_API_KEY")
-    )
-    if not key:
-        paths = [
-            Path(os.getenv("XDG_DATA_HOME", str(Path.home() / ".local/share")))
-            / "opencode/auth.json",
-            Path(os.getenv("APPDATA", str(Path.home() / "AppData/Roaming")))
-            / "opencode/auth.json",
-            Path.home() / ".codex/auth.json",
-        ]
-        for p in paths:
-            try:
-                key = json.loads(p.read_text("utf-8"))["opencode-go"]["key"]
-                if key:
-                    break
-            except (OSError, ValueError, KeyError, TypeError):
-                pass
+    # Deliberately only DEEPSEEK_API_KEY. A bare OPENAI_API_KEY in the
+    # environment would otherwise be sent to api.deepseek.com and come back as
+    # an auth failure that reads like a bad DeepSeek key.
+    key = os.getenv("DEEPSEEK_API_KEY")
     if not key:
         raise ValueError(
-            "Set OPENCODE_API_KEY or connect OpenCode Go in OpenCode. Use --graph without a key."
+            "Set DEEPSEEK_API_KEY to run the agent, or --graph / no key at all "
+            "for the local static review."
         )
     return key
 
@@ -226,15 +217,11 @@ class CodeAgent:
         self.graph = graph or CodeGraph(repo, output)
         self.client = client or OpenAI(
             api_key=api_key(),
-            base_url="https://opencode.ai/zen/go/v1",
-            timeout=15,
-            max_retries=0,
-            default_headers={
-                "User-Agent": "se-h1-code-agent/1.0",
-                "x-opencode-session": str(uuid.uuid4()),
-            },
+            base_url=DEEPSEEK_BASE_URL,
+            timeout=60,
+            max_retries=1,
         )
-        self.model = model or os.getenv("OPENCODE_MODEL", "deepseek-v4.1-flash")
+        self.model = model or DEFAULT_MODEL
         self.max_steps = max_steps
         self.messages = [{"role": "system", "content": SYSTEM_PROMPT}]
         self.step_count = 0
@@ -408,6 +395,10 @@ def make_server(repo=".", port=8766, output=None):
             self.send_response(status)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(payload)))
+            # The shell, the stylesheet and the map fragment all change while the
+            # server stays up. Without this the browser happily re-serves the map
+            # it cached before a fix, which reads as the fix not having landed.
+            self.send_header("Cache-Control", "no-store, must-revalidate")
             self.end_headers()
             self.wfile.write(payload)
 
@@ -520,7 +511,7 @@ def make_server(repo=".", port=8766, output=None):
             if request_path == "/api/status":
                 json_response(self, {
                     "mode": "llm" if key_available() else "local",
-                    "model": os.getenv("OPENCODE_MODEL", "deepseek-v4.1-flash"),
+                    "model": os.getenv("DEEPSEEK_MODEL", DEFAULT_MODEL),
                     "repo": str(root),
                     "sessions": len(SESSIONS),
                     "stats": (graph or {}).get("stats", {}),
@@ -614,7 +605,10 @@ def main():
     parser.add_argument(
         "--output", help="Output directory (default: <repo>/.code-graph)"
     )
-    parser.add_argument("--model", help="OpenCode Go model ID")
+    parser.add_argument(
+        "--model",
+        help=f"DeepSeek model ID (default: {DEFAULT_MODEL}; also deepseek-v4-pro)",
+    )
     args = parser.parse_args()
     try:
         if args.task:
@@ -632,12 +626,12 @@ def main():
             serve(args.repo or ".", port=args.port, output=args.output)
     except APIStatusError as error:
         print(
-            f"OpenCode Go HTTP {error.status_code}; check your key, subscription and model.",
+            f"DeepSeek HTTP {error.status_code}; check DEEPSEEK_API_KEY and the model ID.",
             file=sys.stderr,
         )
         return 1
     except APIError as error:
-        print(f"OpenCode Go connection failed: {type(error).__name__}", file=sys.stderr)
+        print(f"DeepSeek connection failed: {type(error).__name__}", file=sys.stderr)
         return 1
     except (OSError, ValueError, RuntimeError) as error:
         print(str(error), file=sys.stderr)
