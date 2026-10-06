@@ -123,7 +123,7 @@ python code_agent.py . --graph
 | `picture.py` | 本项目 | 把 CodeGraph 投影成 `architecture-map-model/2` |
 | `studio.html` / `studio.css` / `studio.js` | 本项目 | 工作台外壳：标题栏、会话列表、对话渲染、composer、主题、视图切换，以及两个视图之间的跳转 |
 | `vendor/limen/` | **第三方** | 架构图 viewer（见下） |
-| `notebook/homework1_agent.ipynb` | 本项目 | 手工练习：从一次裸 Chat Completions 出发，逐步加上 `read_file` / `write_file` / `run_python`、图谱工具和 compact，用来把 agent 的机制拆开看 |
+| `notebook/` | 本项目 | 手工练习：从一次裸 Chat Completions 出发，逐步加上 `read_file` / `write_file` / `run_python`、图谱工具和 compact，用来把 agent 的机制拆开看。`homework1_agent.html` 是它导出的只读版本，不用装 Jupyter 也能看 |
 
 ### 关于 `vendor/limen/`
 
