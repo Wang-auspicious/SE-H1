@@ -73,6 +73,10 @@ def picture_model(graph):
                                 "end": source.get("end", line), "graph_id": source["id"]}))
     edges = []
     for index, edge in enumerate(graph.get("edges", [])):
+        # `contains` links a file to its own symbols. At the level where that file
+        # is one block the edge collapses into a self-loop, which the viewer drops,
+        # so the hierarchy it encodes is already carried by nesting. Verified: adding
+        # it back produced 0 visible relations at every level.
         if edge["kind"] == "contains" or edge["source"] not in by_id or edge["target"] not in by_id:
             continue
         source, target = by_id[edge["source"]], by_id[edge["target"]]

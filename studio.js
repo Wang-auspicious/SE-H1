@@ -286,6 +286,26 @@
     .main { grid-template-columns: minmax(0, 1fr) 360px; }
     .main.panel-closed { grid-template-columns: minmax(0, 1fr) 0; }
     .stage { padding-inline: 24px; }
+
+    /* The map used to spend 387px of a 950px screen on chrome. Everything
+       below is about giving that space back to the map, which is the reason
+       the view exists at all. */
+    .top { padding: 3px 14px; min-height: 0; }
+    .top .tbtn, .top .search input { padding-block: 3px; }
+    .brand small { display: none; }               /* the tab already says 架构图 */
+    .project-state { display: none; }             /* "未记录快照" answers nothing */
+    .crumbs { padding: 4px 20px; }
+    .level-head { padding: 6px 20px 8px; }
+    .level-head h1, .lh-title { font-size: 15px; margin: 0; letter-spacing: 0; }
+    .lh-sum { margin: 2px 0 0; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lh-stats { margin: 3px 0 0; font-size: 11px; }
+    .lh-sum { display: none; }                     /* the same sentence is in 详情 */
+    /* At the root the breadcrumb is a single word, and the level head already
+       names it; it only earns its row once there is somewhere to go back to. */
+    #crumbs:has(> :only-child) { display: none; }
+    .map-key { margin: 0 20px 4px; }
+    /* Its default text points at the index panel, which is gone. */
+    .selection-bar { display: none; }
     /* Reserve the scrollbar gutter so fitting the height cannot change the
        width, which would otherwise relayout into a different fit. */
     #viewport { scrollbar-gutter: stable; }
