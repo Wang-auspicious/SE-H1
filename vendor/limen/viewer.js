@@ -61,6 +61,7 @@
 	};
 	var LIMIT = { results: 12, tip: 8, list: 150, diagGroup: 300 };
 	var ANIM_MS = 180;
+	var READABLE_SCALE = 0.8; // below this block titles stop being readable
 
 	var root = document; // swapped for the shadow root on mount
 	var hostEl = null;
@@ -1156,8 +1157,13 @@
 		// In a pane the height is the scarce axis, so fit that too and let the
 		// whole level be readable at once instead of scrolling. The floor keeps
 		// labels legible; a level larger than that scrolls, which is honest.
+		// Fit the whole level when that stays legible, and stop there. Past the
+		// floor a level scrolls instead of shrinking: 38 symbol blocks cannot be
+		// both fully visible and readable on one screen, and unreadable is worse
+		// than scrolled. The root level of a repository fits well inside this.
 		var vh = D.viewport.clientHeight || 0;
 		var scale = Math.min(1, (vw - 4) / Lo.width, vh ? (vh - 8) / Lo.height : 1);
+		if (scale < READABLE_SCALE) scale = READABLE_SCALE;
 		level.scale = scale;
 		D.canvas.style.width = Lo.width + "px";
 		D.canvas.style.height = Lo.height + "px";
@@ -1691,7 +1697,7 @@
 	function renderOverlayPanel(box, o) {
 		var journey = o.kind === "journey";
 		var tags = el("div", "d-tags");
-		tags.appendChild(el("span", "tag ov-tag ov-" + o.kind, o.kind));
+		tags.appendChild(el("span", "tag ov-tag ov-" + o.kind, zh(OVERLAY_LABELS, o.kind)));
 		tags.appendChild(badge(o.status));
 		box.appendChild(tags);
 		box.appendChild(el("h2", "d-title", o.title));

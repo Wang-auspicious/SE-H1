@@ -94,18 +94,76 @@ def picture_model(graph):
     diagnostics = [dict(level="warn", code="source.partial", message=e["reason"],
                         source=e["file"]) for e in graph.get("errors", [])]
     summary = "来源可查的代码地图：目录、文件与符号。基于静态分析，动态调用可能缺失。"
+    file_places = {node["meta"]["file"]: node["id"] for node in nodes
+                   if node.get("meta", {}).get("kind") == "file"}
     return dict(schema="architecture-map-model/2", project=dict(
         id="h1", rootId="h1", title=graph.get("name", "H1"), status="partial",
         summary=summary, descriptionHtml=f"<p>{summary}</p>", sources=[],
         meta={STAT_NAMES.get(k, k): v for k, v in graph.get("stats", {}).items()}),
         nodes=nodes, edges=edges,
-        features=[], journeys=[], diagnostics=diagnostics)
+        features=features_from_graph(graph, file_places), journeys=[], diagnostics=diagnostics)
 
 
 def viewer_revision():
     """Hash of the viewer this adapter targets, so a viewer change is visible."""
     paths = [Path(__file__), *(VENDOR / name for name in ("template.html", "viewer.css", "viewer.js"))]
     return hashlib.sha256(b"".join(path.read_bytes() for path in paths)).hexdigest()
+
+
+def features_from_graph(graph, place_of):
+    """Cross-cutting concerns, each naming the places that answer a review question.
+
+    All six are derived from edges and node kinds rather than from file names, so
+    they mean the same thing in any repository. Selecting one lights exactly the
+    files it lists; it never draws a block or a link of its own.
+    """
+    nodes = graph.get("nodes", [])
+    by_id = {node["id"]: node for node in nodes}
+    files = [node for node in nodes if node.get("kind") == "file"]
+
+    def places(paths):
+        return [place_of[path] for path in sorted(set(paths)) if path in place_of]
+
+    def files_on(*kinds):
+        """Files touched by edges of these kinds. Endpoints are usually symbols,
+        so each one is folded up to the file it lives in."""
+        wanted = set(kinds)
+        return sorted({
+            by_id[edge[end]]["file"]
+            for edge in graph.get("edges", [])
+            if edge["kind"] in wanted and edge["source"] in by_id and edge["target"] in by_id
+            for end in ("source", "target")
+            if by_id[edge[end]].get("file")
+        })
+
+    calls = files_on("calls")
+    imports = files_on("imports")
+    inherits = files_on("inherits")
+    tests = [node["file"] for node in files if "test" in node["file"].lower()]
+    broken = [error["file"] for error in graph.get("errors", [])]
+    classes = [node["file"] for node in nodes if node.get("kind") == "class"]
+
+    specs = [
+        ("call-flow", "调用流", f"{len(calls)} 个文件参与调用关系", "调用图上的活动面",
+         "这些文件在调用图上有入边或出边，是最值得先读的一批。", calls),
+        ("module-boundary", "模块边界", f"{len(imports)} 个文件跨文件引用", "依赖从哪里穿过",
+         "这些文件通过 import 连到别的文件，边界和耦合都发生在这里。", imports),
+        ("inheritance", "继承关系", f"{len(inherits)} 个文件参与继承", "类层次在哪",
+         "这些文件里出现了继承关系，改父类会影响到它们。", inherits),
+        ("type-definition", "类型定义", f"{len(classes)} 个类定义位置", "抽象在哪落地",
+         "这些文件定义了类，是理解抽象层级的入口。", classes),
+        ("verification", "验证", f"{len(tests)} 个测试文件", "结论有没有被验证",
+         "这些是测试文件。它们为空，说明当前仓库没有任何自动化验证。", tests),
+        ("parse-gap", "解析盲区", f"{len(broken)} 个文件解析不完整", "静态分析的缺口",
+         "这些文件没能完整解析，静态分析对它们的结论要打折看。", broken),
+    ]
+
+    return [
+        dict(id=key, kind="feature", title=title, status="ready" if touched else "stub",
+             summary=summary, bodyHtml=f"<p>{detail}</p>",
+             sources=sorted(set(touched)), touches=places(touched))
+        for key, title, summary, tag, detail, touched in specs
+    ]
 
 
 def place_index(model):

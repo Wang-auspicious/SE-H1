@@ -354,6 +354,69 @@ body[data-view="picture"] #pane-chat {
 /* #picture-host is deliberately not styled here. An outer document rule
    outranks the shadow's own :host rule, so setting `display` on it would
    replace the viewer's grid with plain flow and unclip its stage. */
+#pane-picture {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.band {
+  padding: 8px 24px 10px;
+  border-top: 1px solid var(--rule);
+}
+
+.band-hint {
+  margin-bottom: 7px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.band-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fcard {
+  padding: 6px 10px 7px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r6);
+  background: var(--panel);
+  text-align: left;
+  transition: background var(--fast), border-color var(--fast), opacity var(--fast);
+}
+
+.fcard:hover {
+  background: var(--subtle);
+  border-color: var(--rule-strong);
+}
+
+.fcard[aria-pressed="true"] {
+  border-color: var(--clay);
+}
+
+.fcard[data-empty="true"] {
+  opacity: 0.55;
+}
+
+.fcard em {
+  display: block;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-style: normal;
+  letter-spacing: 0.07em;
+}
+
+.fcard b {
+  display: block;
+  margin: 1px 0 2px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.fcard span {
+  color: var(--text-muted);
+  font-size: 11px;
+}
 
 /* The vendored viewer keys off prefers-color-scheme, which cannot see the
    shell's manual toggle. A rule in this document outranks the shadow's own

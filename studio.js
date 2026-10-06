@@ -306,9 +306,9 @@
     .map-key { margin: 0 20px 4px; }
     /* Its default text points at the index panel, which is gone. */
     .selection-bar { display: none; }
-    /* The whole level is always scaled to fit, so the map never scrolls. One
-       scrollbar belongs to the details panel at the far right, not here. */
-    #viewport { overflow: hidden; }
+    /* Level fits the pane down to a readable floor; past it the map scrolls
+       rather than shrinking into illegibility. */
+    #viewport { overflow: auto; }
     /* The canvas is shrunk with transform: scale(), and a transform does not
        change the layout box — so the unwrapped canvas still reports its full
        height and the viewport clips the tail of the map. Clipping here instead
@@ -342,7 +342,61 @@
     citedObserver = new MutationObserver(markCited);
     citedObserver.observe(root.getElementById("blocks"), { childList: true });
     markCited();
+    renderBand();
   }
+
+  /* ------------------------------------------- cross-cutting concerns */
+
+  // The viewer already knows how to light the places a feature names: selecting
+  // one from the hash is its own mechanism. The band only supplies the picker,
+  // so the lighting itself stays upstream code.
+  function renderBand() {
+    const root = $("picture-host").shadowRoot;
+    const tag = root && root.getElementById("archmap-data");
+    let features = [];
+    if (tag) {
+      try {
+        features = JSON.parse(tag.textContent).features || [];
+      } catch {
+        features = [];
+      }
+    }
+    const row = $("feature-row");
+    row.replaceChildren();
+    $("feature-band").hidden = !features.length;
+    for (const feature of features) {
+      const card = el("button", "fcard");
+      card.type = "button";
+      card.dataset.id = feature.id;
+      if (!feature.touches || !feature.touches.length) card.dataset.empty = "true";
+      card.append(
+        el("em", null, feature.status === "stub" ? "关注点 · 无" : "关注点"),
+        el("b", null, feature.title),
+        el("span", null, feature.summary),
+      );
+      card.addEventListener("click", () => selectFeature(feature.id));
+      row.append(card);
+    }
+    syncBand();
+  }
+
+  function selectFeature(id) {
+    const target = "#?feature=" + encodeURIComponent(id);
+    // Assigning the same hash fires nothing, so step off it first to toggle.
+    location.hash = location.hash === target ? "#" : target;
+  }
+
+  function syncBand() {
+    const match = /[#?]feature=([^&]*)/.exec(location.hash);
+    const active = match ? decodeURIComponent(match[1]) : "";
+    for (const card of $("feature-row").children) {
+      card.setAttribute("aria-pressed", String(card.dataset.id === active));
+    }
+  }
+
+  // Drilling into a block rewrites the hash without the feature, so the band
+  // has to follow the viewer rather than own the selection.
+  window.addEventListener("hashchange", syncBand);
 
   /* ----------------------------------------- what the conversation cites */
 
