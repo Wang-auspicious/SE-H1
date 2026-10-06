@@ -61,7 +61,6 @@
 	};
 	var LIMIT = { results: 12, tip: 8, list: 150, diagGroup: 300 };
 	var ANIM_MS = 180;
-	var PANE_MIN_SCALE = 0.65; // below this the block labels stop being readable
 
 	var root = document; // swapped for the shadow root on mount
 	var hostEl = null;
@@ -1159,7 +1158,6 @@
 		// labels legible; a level larger than that scrolls, which is honest.
 		var vh = D.viewport.clientHeight || 0;
 		var scale = Math.min(1, (vw - 4) / Lo.width, vh ? (vh - 8) / Lo.height : 1);
-		if (scale < PANE_MIN_SCALE) scale = PANE_MIN_SCALE;
 		level.scale = scale;
 		D.canvas.style.width = Lo.width + "px";
 		D.canvas.style.height = Lo.height + "px";
@@ -1756,7 +1754,7 @@
 			b.dataset.key = "place:" + i;
 			if (journey) b.appendChild(el("span", "ov-num", String(i + 1)));
 			if (p.node) {
-				b.appendChild(el("span", "kind-chip " + kindClass(p.node.kind), zh(KIND_LABELS, p.node.kind)));
+				b.appendChild(el("span", "kind-chip " + kindClass(p.node.kind)));
 				b.appendChild(el("span", "d-link-title", p.node.title));
 				b.appendChild(badge(p.node.status));
 			} else {
@@ -2379,7 +2377,7 @@
 				var b = button("d-link", null, function () {
 					navigate(n, k);
 				});
-				b.appendChild(el("span", "kind-chip " + kindClass(k.kind), zh(KIND_LABELS, k.kind)));
+				b.appendChild(el("span", "kind-chip " + kindClass(k.kind)));
 				b.appendChild(el("span", "d-link-title", k.title));
 				b.appendChild(badge(k.status));
 				li.appendChild(b);

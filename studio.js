@@ -306,9 +306,14 @@
     .map-key { margin: 0 20px 4px; }
     /* Its default text points at the index panel, which is gone. */
     .selection-bar { display: none; }
-    /* Reserve the scrollbar gutter so fitting the height cannot change the
-       width, which would otherwise relayout into a different fit. */
-    #viewport { scrollbar-gutter: stable; }
+    /* The whole level is always scaled to fit, so the map never scrolls. One
+       scrollbar belongs to the details panel at the far right, not here. */
+    #viewport { overflow: hidden; }
+    /* The canvas is shrunk with transform: scale(), and a transform does not
+       change the layout box — so the unwrapped canvas still reports its full
+       height and the viewport clips the tail of the map. Clipping here instead
+       keeps the measured height equal to the fitted one. */
+    #sizer { overflow: hidden; }
     /* Places the current conversation actually cited from. This is the whole
        point of having the map next to the chat: it shows where a conclusion
        came from, not just what the repository contains. */
