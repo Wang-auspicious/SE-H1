@@ -123,20 +123,11 @@ python code_agent.py . --graph
 | `picture.py` | 本项目 | 把 CodeGraph 投影成 `architecture-map-model/2` |
 | `studio.html` / `studio.css` / `studio.js` | 本项目 | 工作台外壳：标题栏、会话列表、对话渲染、composer、主题、视图切换，以及两个视图之间的跳转 |
 | `vendor/limen/` | **第三方** | 架构图 viewer（见下） |
+| `notebook/homework1_agent.ipynb` | 本项目 | 手工练习：从一次裸 Chat Completions 出发，逐步加上 `read_file` / `write_file` / `run_python`、图谱工具和 compact，用来把 agent 的机制拆开看 |
 
 ### 关于 `vendor/limen/`
 
-架构图不是我自己写的，它来自上游项目 [`overment/limen`](https://github.com/overment/limen) 的 `picture/viewer/`，提交 `62c8c0b`，MIT License，© Adam Gospodarczyk。`viewer.css` 1943 行、`viewer.js` 3091 行（含下述本地改动）。许可证随代码一起放在 `vendor/limen/LICENSE`。
-
-我做的是适配，不是重写。`picture.py`（本项目）把 CodeGraph 转成 viewer 的 `architecture-map-model/2` 模型，并把它包成一个惰性 `<template>`，另外附带一份「文件 → 图上的位置 id」索引，供对话跳转用。
-
-对 vendored 文件的改动全部记录在两个文件开头的注释里，分三类：
-
-1. **活在 shadow root 里**（`viewer.css` 3 处、`viewer.js` 5 处）：`:root` → `:host`，`html, body` 与 `body` 合并进 `:host`；`$()` 经由模块级 `root` 查询；`document.activeElement` → `root.activeElement`；`document.title` 只在独立运行时设置；`onKey` 在宿主不可见时直接返回，把 Esc 和 `/` 让给外壳；结尾的 `init()` 换成 `PictureViewer.mount()`，并加了 `refresh()` 与一次性监听守卫。
-2. **适配窗格**（1 处）：布局原本只按宽度缩放，因为它原本独占一个窗口，塞进窗格后继续只按宽度适配——`scale = min(1, (viewportWidth - 36) / canvasWidth)`，没有下限。中途试过「低于可读阈值就改为滚动」的下限（`PANE_MIN_SCALE`），它会让深层级横向溢出一大片空白，于是撤掉了。`GEO.minScale` 和 `READABLE_SCALE` 是那次尝试留下的死常量。
-3. **中文界面**（`template.html` 全部文案 + `viewer.js` 约 100 条字符串）：kind / relation / status 这些**名字**不动——它们驱动配色查表——只翻译显示时的标签；`plural()` 去掉英文复数，改用中文量词。
-
-地图本身的布局、下钻、ghost 块、边提升、索引、详情面板——一行没动。
+架构图 viewer 来自 [`overment/limen`](https://github.com/overment/limen) 的 `picture/viewer/` @ `62c8c0b`（MIT License，© Adam Gospodarczyk，许可证见 `vendor/limen/LICENSE`）；我只做了 shadow root 嵌入、窗格适配和中文文案三处适配，改动记在两个文件开头的注释里，地图本身的布局和下钻一行没动。`picture.py` 负责把 CodeGraph 转成它要的 `architecture-map-model/2` 模型。
 
 ## 验证
 
