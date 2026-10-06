@@ -153,14 +153,14 @@
   // source of truth behind every module.
   function moduleSpec(file) {
     const path = String(file.file || file.name || "").toLowerCase();
-    if (/agent_visualizer/.test(path)) {
-      return { label: "Interface", tag: "SURFACE", description: "browser and presentation surface" };
+    if (/studio/.test(path)) {
+      return { label: "Studio shell", tag: "SHELL", description: "chat surface, sessions, and the view switch" };
+    }
+    if (/atlas_view/.test(path)) {
+      return { label: "Atlas view", tag: "VIEW", description: "mounted repository graph and inspector" };
     }
     if (/atlas_graph/.test(path)) {
       return { label: "Graph canvas", tag: "CANVAS", description: "layout and routed connections" };
-    }
-    if (/graph_view/.test(path)) {
-      return { label: "Legacy view", tag: "VIEW", description: "maintenance-only graph surface" };
     }
     if (/\.(html?|css|tsx?|jsx?)$/.test(path)) {
       return { label: "Interface", tag: "SURFACE", description: "browser and presentation files" };

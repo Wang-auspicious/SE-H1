@@ -3,15 +3,32 @@ import json
 import os
 import subprocess
 import sys
+import threading
+import time
 import uuid
 import webbrowser
-from http.server import SimpleHTTPRequestHandler, HTTPServer
+from collections import defaultdict
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from openai import OpenAI, APIError, APIStatusError
 from code_graph import CodeGraph, excluded
-from picture import render_picture
+
+
+BASE = Path(__file__).parent
+
+# The atlas view fetches /api/graph itself, so the shell page needs no data injection.
+ASSETS = {
+    "studio.css": "text/css; charset=utf-8",
+    "studio.js": "application/javascript; charset=utf-8",
+    "atlas.css": "text/css; charset=utf-8",
+    "atlas_view.js": "application/javascript; charset=utf-8",
+    "atlas_graph.js": "application/javascript; charset=utf-8",
+}
+
+MAX_SESSIONS = 4
+MAX_RUNS = 4
 
 
 SYSTEM_PROMPT = """You are a concise coding agent that maps repositories into graphs.
@@ -115,11 +132,21 @@ def run_python(code_or_file, cwd="."):
 
 
 def local_review(graph, prompt):
+    """Offline review: every claim is derived from the graph and cites file:line."""
     stats = graph.get("stats", {})
-    files = [node.get("file", "") for node in graph.get("nodes", []) if node.get("kind") == "file"]
-    functions = [node for node in graph.get("nodes", []) if node.get("kind") == "function"]
+    nodes = graph.get("nodes", [])
+    files = [node.get("file", "") for node in nodes if node.get("kind") == "file"]
+    functions = [node for node in nodes if node.get("kind") == "function"]
     test_files = [path for path in files if "test" in path.lower()]
     unresolved = max(0, stats.get("call_sites", 0) - stats.get("linked_calls", 0))
+    degree = defaultdict(int)
+    for edge in graph.get("edges", []):
+        degree[edge["source"]] += 1
+        degree[edge["target"]] += 1
+    hot = sorted(
+        (node for node in nodes if degree.get(node.get("id"))),
+        key=lambda node: (-degree[node["id"]], node.get("file", ""), node.get("line", 1)),
+    )[:5]
     warnings = []
     if not test_files:
         warnings.append("没有发现测试文件")
@@ -133,16 +160,26 @@ def local_review(graph, prompt):
         {"phase": "定位审查证据", "tool": "query_graph", "state": "done", "detail": f"找到 {len(functions)} 个函数"},
         {"phase": "整理审查结论", "tool": "answer", "state": "done", "detail": "生成带证据的审查摘要"},
     ]
-    answer = "\n".join(
-        [
-            "本地代码库审查已完成。",
-            f"任务：{prompt}",
-            f"范围：{stats.get('files', 0)} 个文件、{len(functions)} 个函数、{stats.get('edges', 0)} 条关系。",
-            "结构提醒：" + "；".join(warnings) + "。",
-            "建议：先从图中的高连接模块和未覆盖测试的文件开始复核。",
+    lines = [
+        "本地代码库审查已完成。",
+        f"任务：{prompt}",
+        f"范围：{stats.get('files', 0)} 个文件、{len(functions)} 个函数、{stats.get('edges', 0)} 条关系。",
+        "结构提醒：" + "；".join(warnings) + "。",
+    ]
+    if hot:
+        lines.append("关系最密集的位置（点开即可读源码）：")
+        lines += [
+            f"- {node.get('file', '')}:{node.get('line', 1)} · {node.get('name', '')} · "
+            f"{degree[node['id']]} 条关系"
+            for node in hot
         ]
-    )
-    return {"mode": "local", "answer": answer, "events": events, "stats": stats}
+    if graph.get("errors"):
+        lines.append("解析不完整的文件：")
+        lines += [f"- {error['file']}:1 · {error['reason']}" for error in graph["errors"][:5]]
+    if test_files:
+        lines.append("测试文件：" + "、".join(f"{path}:1" for path in test_files[:5]))
+    lines.append("建议：先从上面这些高连接位置和未覆盖测试的文件开始复核。")
+    return {"mode": "local", "answer": "\n".join(lines), "events": events, "stats": stats}
 
 
 def api_key():
@@ -174,9 +211,17 @@ def api_key():
     return key
 
 
+def key_available():
+    try:
+        api_key()
+    except ValueError:
+        return False
+    return True
+
+
 class CodeAgent:
-    def __init__(self, client=None, model=None, max_steps=8, repo=".", output=None):
-        self.graph = CodeGraph(repo, output)
+    def __init__(self, client=None, model=None, max_steps=8, repo=".", output=None, graph=None):
+        self.graph = graph or CodeGraph(repo, output)
         self.client = client or OpenAI(
             api_key=api_key(),
             base_url="https://opencode.ai/zen/go/v1",
@@ -256,7 +301,16 @@ class CodeAgent:
             raise ValueError("Path is outside the repository or excluded.")
         return path
 
-    def run(self, user_prompt):
+    def emit(self, payload, on_event=None):
+        """Record an event for the tool trail and forward it to a live listener."""
+        self.events.append(payload)
+        if on_event:
+            on_event(payload)
+
+    def run(self, user_prompt, on_event=None):
+        def emit(payload):
+            self.emit(payload, on_event)
+
         self.messages.append({"role": "user", "content": user_prompt})
         for step in range(1, self.max_steps + 1):
             self.step_count += 1
@@ -282,9 +336,15 @@ class CodeAgent:
                 for call in message.tool_calls:
                     name = call.function.name
                     print(f"[{step}] {name}")
-                    self.events.append(
-                        {"phase": f"Agent step {step}", "tool": name, "state": "running", "detail": "tool call"}
-                    )
+                    event = {
+                        "t": "tool",
+                        "id": call.id,
+                        "phase": f"Agent step {step}",
+                        "tool": name,
+                        "state": "running",
+                        "detail": call.function.arguments[:200],
+                    }
+                    emit(event)
                     try:
                         result = self.tools[name][0](
                             **json.loads(call.function.arguments)
@@ -294,19 +354,15 @@ class CodeAgent:
                             if isinstance(result, str)
                             else json.dumps(result, ensure_ascii=False)
                         )
-                        self.events[-1]["state"] = "done"
-                        self.events[-1]["detail"] = result[:160].replace("\n", " ")
+                        emit({**event, "state": "done", "detail": result[:200].replace("\n", " ")})
                     except Exception as error:
                         result = f"Tool error: {type(error).__name__}: {error}"
-                        self.events[-1]["state"] = "failed"
-                        self.events[-1]["detail"] = result
+                        emit({**event, "state": "failed", "detail": result})
                     self.messages.append(
                         {"role": "tool", "tool_call_id": call.id, "content": result}
                     )
             elif choice.finish_reason == "stop":
-                self.events.append(
-                    {"phase": "Agent answer", "tool": "answer", "state": "done", "detail": "final response"}
-                )
+                emit({"t": "answer", "text": message.content or "Done."})
                 return message.content or "Done."
             else:
                 raise RuntimeError(
@@ -315,48 +371,105 @@ class CodeAgent:
         raise RuntimeError(f"Reached {self.max_steps} steps; task may be incomplete.")
 
 
-def review_repository(repo, prompt):
-    graph = CodeGraph(repo)
-    graph.build()
-    try:
-        agent = CodeAgent(repo=repo)
-        answer = agent.run(prompt)
-        return {"mode": "llm", "answer": answer, "events": agent.events, "stats": graph.graph["stats"]}
-    except Exception as error:
-        result = local_review(graph.graph, prompt)
-        result["fallback"] = f"{type(error).__name__}: {error}"
-        return result
+SESSIONS = {}
+SESSIONS_LOCK = threading.Lock()
+RUNS = threading.Semaphore(MAX_RUNS)
 
 
-def serve(repo=".", port=8766):
+def session_entry(session_id):
+    """Return the mutable record for a session, evicting the least recently used."""
+    with SESSIONS_LOCK:
+        entry = SESSIONS.get(session_id)
+        if entry is None:
+            if len(SESSIONS) >= MAX_SESSIONS:
+                oldest = min(SESSIONS, key=lambda key: SESSIONS[key]["seen"])
+                SESSIONS.pop(oldest, None)
+            entry = SESSIONS[session_id] = {"agent": None, "lock": threading.Lock(), "seen": 0.0}
+        entry["seen"] = time.monotonic()
+        return entry
+
+
+def make_server(repo=".", port=8766, output=None):
+    """Bind the studio server. Tests pass port 0 and read server_address."""
     root = Path(repo).resolve() if repo else Path(".").resolve()
-    current_graph = None
-    current_repo = root
-    graph_error = None
+    state = {"repo": root, "builder": None, "graph": None, "error": None}
+    state_lock = threading.Lock()
     try:
-        g = CodeGraph(root)
-        g.build()
-        current_graph = g.graph
+        builder = CodeGraph(root, output)
+        builder.build()
+        state.update(builder=builder, graph=builder.graph)
     except Exception as error:
-        graph_error = f"{type(error).__name__}: {error}"
+        state["error"] = f"{type(error).__name__}: {error}"
 
     class Handler(SimpleHTTPRequestHandler):
-        def do_POST(self):
-            nonlocal current_graph, current_repo, graph_error
-            if urlsplit(self.path).path == "/api/review":
-                try:
-                    length = int(self.headers.get("Content-Length", 0))
-                    data = json.loads(self.rfile.read(length) or b"{}")
-                    prompt = str(data.get("prompt", "审查这个代码库的结构和风险")).strip()
-                    json_response(self, review_repository(current_repo, prompt))
-                except Exception as error:
-                    json_response(self, {"error": f"{type(error).__name__}: {error}"}, 400)
+        def body(self, payload, content_type, status=200):
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def read_json(self):
+            length = int(self.headers.get("Content-Length", 0))
+            return json.loads(self.rfile.read(length) or b"{}")
+
+        def chat(self):
+            """Stream one agent turn as newline-delimited JSON events."""
+            data = self.read_json()
+            prompt = str(data.get("prompt", "")).strip()
+            if not prompt:
+                json_response(self, {"error": "prompt is required"}, 400)
                 return
-            if urlsplit(self.path).path == "/api/build":
+            session_id = str(data.get("session") or "").strip() or uuid.uuid4().hex
+            self.send_response(200)
+            self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+            self.close_connection = True
+            write_lock = threading.Lock()
+
+            def emit(event):
+                with write_lock:
+                    self.wfile.write((json.dumps(event, ensure_ascii=False) + "\n").encode("utf-8"))
+                    self.wfile.flush()
+
+            try:
+                emit({"t": "session", "session": session_id})
+                with RUNS:
+                    with state_lock:
+                        builder, graph, current = state["builder"], state["graph"], state["repo"]
+                    if not key_available():
+                        # No model key: stream the local static review instead of failing.
+                        result = local_review(graph or {}, prompt)
+                        for event in result["events"]:
+                            emit({"t": "tool", **event})
+                        emit({"t": "answer", "text": result["answer"]})
+                        emit({"t": "done", "mode": "local", "steps": 0, "tokens": 0})
+                        return
+                    entry = session_entry(session_id)
+                    with entry["lock"]:
+                        if entry["agent"] is None:
+                            entry["agent"] = CodeAgent(repo=str(current), graph=builder)
+                        agent = entry["agent"]
+                        agent.run(prompt, on_event=emit)
+                        emit({"t": "done", "mode": "llm", "steps": agent.step_count,
+                              "tokens": agent.token_usage["total_tokens"]})
+            except (BrokenPipeError, ConnectionResetError):
+                pass  # The browser went away mid-run; the agent stops at the next step.
+            except Exception as error:
                 try:
-                    length = int(self.headers.get("Content-Length", 0))
-                    data = json.loads(self.rfile.read(length) or b"{}")
-                    target = data.get("repo", ".").strip()
+                    emit({"t": "error", "error": f"{type(error).__name__}: {error}"})
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+
+        def do_POST(self):
+            path = urlsplit(self.path).path
+            if path == "/api/chat":
+                self.chat()
+                return
+            if path == "/api/build":
+                try:
+                    target = str(self.read_json().get("repo", ".")).strip()
                     if target.startswith(("http://", "https://", "git@")):
                         name = (
                             target.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git")
@@ -371,32 +484,49 @@ def serve(repo=".", port=8766):
                             )
                         target = dest
                     else:
-                        target = Path(target)
-                        target = target if target.is_absolute() else root / target
-                    g = CodeGraph(target)
-                    g.build()
-                    current_graph = g.graph
-                    current_repo = g.root
-                    graph_error = None
-                    json_response(self, g.graph)
-                except Exception as e:
-                    graph_error = f"{type(e).__name__}: {e}"
-                    json_response(self, {"error": graph_error}, 400)
+                        candidate = Path(target)
+                        if not candidate.is_absolute():
+                            candidate = state["repo"] / candidate
+                        target = str(candidate)
+                    builder = CodeGraph(target)
+                    builder.build()
+                    with state_lock:
+                        state.update(repo=builder.root, builder=builder,
+                                     graph=builder.graph, error=None)
+                    with SESSIONS_LOCK:
+                        SESSIONS.clear()  # Live agents still hold the previous graph.
+                    json_response(self, builder.graph)
+                except Exception as error:
+                    message = f"{type(error).__name__}: {error}"
+                    with state_lock:
+                        state["error"] = message
+                    json_response(self, {"error": message}, 400)
                 return
             self.send_error(404)
 
         def do_GET(self):
             request_path = urlsplit(self.path).path
             query = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
+            with state_lock:
+                graph, error, root = state["graph"], state["error"], state["repo"]
             if request_path == "/api/graph":
-                if current_graph is None:
-                    json_response(self, {"error": graph_error or "Graph is unavailable"}, 500)
+                if graph is None:
+                    json_response(self, {"error": error or "Graph is unavailable"}, 500)
                 else:
-                    json_response(self, current_graph)
+                    json_response(self, graph)
+                return
+            if request_path == "/api/status":
+                json_response(self, {
+                    "mode": "llm" if key_available() else "local",
+                    "model": os.getenv("OPENCODE_MODEL", "deepseek-v4.1-flash"),
+                    "repo": str(root),
+                    "sessions": len(SESSIONS),
+                    "stats": (graph or {}).get("stats", {}),
+                })
                 return
             if request_path == "/api/source":
                 try:
-                    json_response(self, source_excerpt(current_graph, current_repo, query))
+                    json_response(self, source_excerpt(graph, root, query))
                 except FileNotFoundError as error:
                     json_response(self, {"error": str(error)}, 404)
                 except (PermissionError, ValueError) as error:
@@ -404,53 +534,24 @@ def serve(repo=".", port=8766):
                 except OSError as error:
                     json_response(self, {"error": f"Cannot read source: {error}"}, 500)
                 return
-            if request_path in ("/agent", "/atlas", "/visualizer", "/architecture"):
-                body = render_picture(current_graph or {"name": "H1", "nodes": [], "edges": [], "stats": {}}, live=True).encode("utf-8")
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
-                self.send_header("Content-Length", str(len(body)))
-                self.end_headers()
-                self.wfile.write(body)
-                return
-            if request_path == "/picture.html":
-                body = render_picture(current_graph or {"name": "H1", "nodes": [], "edges": [], "stats": {}}, live=False).encode("utf-8")
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
-                self.send_header("Content-Length", str(len(body)))
-                self.end_headers()
-                self.wfile.write(body)
-                return
-            if request_path == "/atlas_graph.js":
-                script_path = Path(__file__).parent / "atlas_graph.js"
-                if not script_path.is_file():
-                    self.send_error(500, "atlas_graph.js is missing")
+            name = request_path.lstrip("/")
+            if name in ASSETS:
+                asset = BASE / name
+                if not asset.is_file():
+                    self.send_error(500, f"{name} is missing")
                     return
-                body = script_path.read_bytes()
-                self.send_response(200)
-                self.send_header("Content-Type", "application/javascript; charset=utf-8")
-                self.send_header("Content-Length", str(len(body)))
-                self.end_headers()
-                self.wfile.write(body)
+                self.body(asset.read_bytes(), ASSETS[name])
                 return
-            if request_path == "/":
-                self.send_response(302)
-                self.send_header("Location", "/agent")
-                self.end_headers()
-                return
-            if request_path == "/graph.html":
-                template = (Path(__file__).parent / "graph_view.html").read_text(
-                    "utf-8"
+            if request_path in ("/", "/index.html"):
+                page = (BASE / "studio.html").read_text("utf-8").replace(
+                    "<!--__ATLAS__-->", (BASE / "atlas_view.html").read_text("utf-8")
                 )
-                payload = json.dumps(
-                    current_graph
-                    or {"name": "Code Atlas", "nodes": [], "edges": [], "stats": {}},
-                    ensure_ascii=False,
-                ).replace("<", "\\u003c")
-                body = template.replace("__GRAPH_DATA__", payload).encode("utf-8")
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.body(page.encode("utf-8"), "text/html; charset=utf-8")
+                return
+            if request_path in ("/agent", "/atlas", "/visualizer", "/architecture"):
+                self.send_response(302)
+                self.send_header("Location", "/")
                 self.end_headers()
-                self.wfile.write(body)
                 return
             super().do_GET()
 
@@ -458,22 +559,30 @@ def serve(repo=".", port=8766):
             pass
 
     httpd = None
-    for p in range(port, port + 20):
+    for candidate in range(port, port + 20):
         try:
-            httpd = HTTPServer(("127.0.0.1", p), Handler)
-            port = p
+            httpd = ThreadingHTTPServer(("127.0.0.1", candidate), Handler)
             break
         except OSError:
             continue
     if not httpd:
         raise RuntimeError("No free port available for server.")
-    url = f"http://127.0.0.1:{port}"
-    print(f"CodeAgent visualizer running at {url}/agent")
-    webbrowser.open(url + "/agent")
+    # One chat turn holds its connection open for the whole run, so requests must not queue behind it.
+    httpd.daemon_threads = True
+    return httpd, state
+
+
+def serve(repo=".", port=8766, output=None):
+    httpd, _ = make_server(repo, port, output)
+    url = f"http://127.0.0.1:{httpd.server_address[1]}"
+    print(f"CodeAtlas Studio running at {url}")
+    webbrowser.open(url)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
         pass
+    finally:
+        httpd.server_close()
 
 
 def main():
@@ -485,9 +594,8 @@ def main():
     parser.add_argument(
         "--graph", action="store_true", help="Build locally without an LLM or API key"
     )
-    parser.add_argument("--open", action="store_true", help="Open the generated HTML")
     parser.add_argument(
-        "--serve", action="store_true", help="Start local visualizer server (default)"
+        "--serve", action="store_true", help="Start the studio server (default)"
     )
     parser.add_argument(
         "--port", type=int, default=8766, help="Server port (default: 8766)"
@@ -509,12 +617,8 @@ def main():
         elif args.graph:
             graph = CodeGraph(args.repo or ".", args.output)
             print(json.dumps(graph.build(), ensure_ascii=False, indent=2))
-            if args.open and (graph.output / "graph.html").is_file():
-                picture = graph.output / "picture.html"
-                picture.write_text(render_picture(graph.graph, live=False), encoding="utf-8")
-                webbrowser.open(picture.as_uri())
         else:
-            serve(args.repo or ".", port=args.port)
+            serve(args.repo or ".", port=args.port, output=args.output)
     except APIStatusError as error:
         print(
             f"OpenCode Go HTTP {error.status_code}; check your key, subscription and model.",

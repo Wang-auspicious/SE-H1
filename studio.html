@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CodeAtlas Studio · SE-H1</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="studio.css" />
+    <script>
+      // Resolve the theme before first paint so the page never flashes the wrong one.
+      try {
+        document.documentElement.dataset.theme =
+          localStorage.getItem("codeatlas.theme") || "dark";
+      } catch (error) {
+        document.documentElement.dataset.theme = "dark";
+      }
+    </script>
+  </head>
+  <body data-view="chat">
+    <div class="studio">
+      <header class="titlebar">
+        <span class="brand"><i></i>CodeAtlas</span>
+        <span class="repo-chip" id="repo-chip" title="当前分析目录">.</span>
+        <nav class="views" id="view-switch">
+          <button type="button" data-view="chat" class="on">对话</button>
+          <button type="button" data-view="atlas">架构图</button>
+        </nav>
+        <span class="spacer"></span>
+        <span class="status" id="status-chip"><i></i><span id="status-text">连接中…</span></span>
+        <button type="button" class="icon" id="theme-button" aria-label="切换主题">☾</button>
+      </header>
+
+      <aside class="sidebar">
+        <button type="button" class="new-chat" id="new-chat">＋ 新对话</button>
+        <div class="sessions" id="sessions"></div>
+        <div class="sidebar-foot">
+          <input id="repo-input" value="." aria-label="仓库路径" placeholder="本地路径或仓库地址" />
+          <button type="button" class="rebuild" id="build-button">重新构图</button>
+          <p class="hint" id="mode-hint"></p>
+        </div>
+      </aside>
+
+      <main class="main">
+        <section class="pane" id="pane-chat">
+          <div class="workspace">
+            <p class="eyebrow">ACTIVE WORK</p>
+            <h1 id="chat-title">新的代码审查</h1>
+            <p class="lede" id="chat-lede">
+              向当前仓库提问。每条结论都会附带对应的 file:line 证据，点开即可读源码。
+            </p>
+          </div>
+          <div class="stream" id="stream"><div class="flow" id="flow"></div></div>
+          <div class="composer-seat">
+            <form class="composer" id="composer">
+              <textarea id="prompt" rows="1" aria-label="提问"
+                placeholder="描述一个任务或提一个问题"></textarea>
+              <div class="composer-row">
+                <span class="chip" id="model-chip">本地</span>
+                <span class="spacer"></span>
+                <button type="submit" class="send" id="send" aria-label="发送">↑</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section class="pane" id="pane-atlas">
+          <div class="atlas-view" id="atlas-host"></div>
+        </section>
+      </main>
+    </div>
+
+    <!--__ATLAS__-->
+
+    <dialog id="source-dialog" aria-labelledby="source-title">
+      <div class="dialog-head">
+        <h2 id="source-title">源码</h2>
+        <button type="button" class="icon" id="source-close" aria-label="关闭">✕</button>
+      </div>
+      <pre id="source-body"></pre>
+    </dialog>
+
+    <script src="atlas_graph.js"></script>
+    <script src="atlas_view.js"></script>
+    <script src="studio.js"></script>
+  </body>
+</html>

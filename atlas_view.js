@@ -1,829 +1,10 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>SE-H1 · Live Code Atlas</title>
-    <style>
-      :root {
-        --bg: #0e0f12;
-        --panel: #15191d;
-        --soft: #1b2025;
-        --feature: #1e1522;
-        --line: #30363d;
-        --text: #f0f6fc;
-        --muted: #8b949e;
-        --faint: #6e7681;
-        --blue: #58a6ff;
-        --cyan: #2dd4bf;
-        --amber: #d29922;
-        --green: #3fb950;
-        --violet: #bc8cff;
-        --pink: #db61a2;
-        --red: #f85149;
-      }
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-      html,
-      body {
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        background: var(--bg);
-        color: var(--text);
-      }
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        user-select: none;
-        -webkit-font-smoothing: antialiased;
-      }
-      button,
-      input {
-        font: inherit;
-      }
-      button {
-        color: inherit;
-      }
-      .app {
-        width: 100vw;
-        height: 100vh;
-        display: flex;
-        overflow: hidden;
-      }
-      .main-stage {
-        min-width: 0;
-        flex: 1;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        position: relative;
-        border-right: 1px solid var(--line);
-        overflow: hidden;
-      }
-      .top-header {
-        height: 145px;
-        flex: 0 0 145px;
-        padding: 12px 23px 7px;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        background: var(--bg);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        z-index: 4;
-      }
-      .header-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        min-height: 25px;
-      }
-      .title-group {
-        display: flex;
-        align-items: center;
-        gap: 9px;
-      }
-      .project-name {
-        font-size: 21px;
-        line-height: 25px;
-        font-weight: 700;
-        letter-spacing: -0.02em;
-        white-space: nowrap;
-      }
-      .status-pill,
-      .mini-status {
-        border: 1px solid rgba(63, 185, 80, 0.45);
-        border-radius: 999px;
-        color: #5eea83;
-        background: rgba(46, 160, 67, 0.12);
-        font:
-          600 10px ui-monospace,
-          SFMono-Regular,
-          Menlo,
-          monospace;
-        padding: 2px 8px;
-        letter-spacing: 0.04em;
-      }
-      .header-actions {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-      .repo-input,
-      .search-input {
-        height: 29px;
-        border: 1px solid var(--line);
-        border-radius: 7px;
-        background: var(--panel);
-        color: var(--text);
-        outline: none;
-        padding: 0 10px;
-        font-size: 12px;
-      }
-      .repo-input {
-        width: 215px;
-      }
-      .search-input {
-        width: 176px;
-      }
-      .repo-input:focus,
-      .search-input:focus {
-        border-color: var(--blue);
-        box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.12);
-      }
-      .repo-input::placeholder,
-      .search-input::placeholder {
-        color: var(--faint);
-      }
-      .build-button {
-        height: 29px;
-        border: 1px solid #b76427;
-        border-radius: 7px;
-        padding: 0 12px;
-        cursor: pointer;
-        color: #fff;
-        background: #c85a32;
-        font-weight: 700;
-        font-size: 12px;
-      }
-      .build-button:hover {
-        background: #dd6b3d;
-      }
-      .build-button:disabled {
-        opacity: 0.55;
-        cursor: wait;
-      }
-      .project-desc {
-        color: var(--muted);
-        font-size: 14px;
-        line-height: 19px;
-      }
-      .stats {
-        color: var(--muted);
-        font-size: 12px;
-        line-height: 17px;
-      }
-      .legend-row {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 6px;
-        color: var(--muted);
-        font-size: 11px;
-      }
-      .legend-label {
-        margin-right: 1px;
-        color: var(--muted);
-      }
-      .legend-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        height: 24px;
-        padding: 0 9px;
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        background: rgba(21, 25, 29, 0.86);
-        color: #c9d1d9;
-        cursor: pointer;
-        font-size: 11px;
-      }
-      .legend-pill:hover,
-      .legend-pill.active {
-        border-color: #68727c;
-        color: #fff;
-        background: var(--soft);
-      }
-      .legend-swatch {
-        width: 16px;
-        height: 2px;
-        display: inline-block;
-        border-radius: 2px;
-      }
-      .hint {
-        color: var(--faint);
-        font-size: 11px;
-        font-style: italic;
-      }
-      .canvas-container {
-        position: relative;
-        flex: 1 1 auto;
-        min-height: 0;
-        overflow: hidden;
-        background: var(--bg);
-        background-image:
-          linear-gradient(rgba(88, 166, 255, 0.045) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(88, 166, 255, 0.045) 1px, transparent 1px);
-        background-size: 28px 28px;
-        scrollbar-color: #3a434d #101317;
-      }
-      #graph-svg,
-      #bridge-svg {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        overflow: visible;
-        pointer-events: none;
-      }
-      #graph-svg {
-        z-index: 1;
-        pointer-events: auto;
-      }
-      #bridge-svg {
-        z-index: 2;
-      }
-      #nodes-container {
-        position: absolute;
-        inset: 0;
-        z-index: 3;
-        pointer-events: none;
-      }
-      .module-card {
-        position: absolute;
-         width: 220px;
-        height: 82px;
-        padding: 10px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        border: 1px solid var(--line);
-         border-radius: 10px;
-        background: var(--panel);
-         box-shadow: 0 5px 18px rgba(0, 0, 0, 0.42);
-        pointer-events: auto;
-        cursor: pointer;
-        transition:
-          opacity 0.25s ease,
-          transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-          border-color 0.2s ease,
-          background 0.2s ease,
-          box-shadow 0.2s ease;
-      }
-      .module-card:hover,
-      .module-card.selected {
-        transform: translateY(-2px);
-        border-color: var(--blue);
-        background: #1c2129;
-        box-shadow:
-          0 0 16px rgba(88, 166, 255, 0.2),
-          0 8px 24px rgba(0, 0, 0, 0.5);
-      }
-      .module-card.dimmed {
-        opacity: 0.12 !important;
-        pointer-events: none;
-      }
-      .module-card.outside {
-        height: 54px;
-        border-style: dashed;
-        padding: 8px 10px;
-      }
-      .card-top,
-      .card-bottom {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        flex-shrink: 0;
-      }
-      .card-type {
-        color: #7d8590;
-        font:
-          600 9px ui-monospace,
-          SFMono-Regular,
-          Menlo,
-          monospace;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-      }
-      .card-title {
-        min-height: 16px;
-        flex: 1 1 auto;
-        display: flex;
-        align-items: center;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        color: #f0f6fc;
-        font-size: 15px;
-        font-weight: 600;
-        letter-spacing: -0.01em;
-      }
-      .card-bottom {
-        color: var(--muted);
-        font:
-          10px ui-monospace,
-          SFMono-Regular,
-          Menlo,
-          monospace;
-      }
-      .card-arrow {
-        color: var(--blue);
-        font-size: 14px;
-      }
-      .wire {
-        fill: none;
-        stroke-width: 1.8;
-        opacity: 0.82;
-        filter: drop-shadow(0 0 2px rgba(88, 166, 255, 0.18));
-        transition:
-          opacity 0.25s ease,
-          stroke-width 0.2s ease;
-        pointer-events: stroke;
-      }
-      .wire:hover,
-      .wire.highlighted {
-        stroke-width: 2.5;
-        opacity: 1;
-      }
-      .wire-calls {
-        stroke-dasharray: 2 8;
-        animation: wire-flow 1.45s linear infinite;
-      }
-      .wire-imports {
-        stroke-dasharray: 7 5;
-        animation: wire-flow 2.4s linear infinite;
-      }
-      @keyframes wire-flow {
-        to {
-          stroke-dashoffset: -36px;
-        }
-      }
-      .wire.dimmed {
-        opacity: 0.08 !important;
-      }
-      .wire-badge {
-        pointer-events: none;
-      }
-      .wire-badge.dimmed {
-        opacity: 0.08;
-      }
-      .feature-bridge {
-        fill: none;
-        stroke: var(--pink);
-        stroke-width: 1.8;
-        stroke-dasharray: 5 4;
-        opacity: 0.9;
-        animation: bridge-flow 1.6s linear infinite;
-      }
-      @keyframes bridge-flow {
-        to {
-          stroke-dashoffset: -28;
-        }
-      }
-      .scene-transition #graph-svg,
-      .scene-transition #nodes-container {
-        opacity: 0;
-      }
-      .bottom-features-panel {
-         height: 185px;
-         flex: 0 0 185px;
-         padding: 8px 24px 0;
-        border-top: 1px solid #252b31;
-        background: var(--bg);
-        z-index: 4;
-      }
-      .features-title {
-        color: var(--muted);
-        font-size: 11px;
-        margin-bottom: 8px;
-      }
-      .features-title strong {
-        color: #c9d1d9;
-      }
-      .features-grid {
-        display: grid;
-        grid-template-columns: repeat(6, minmax(0, 1fr));
-        gap: 16px 34px;
-      }
-      .feature-card {
-        min-width: 0;
-        height: 64px;
-        padding: 7px 12px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        border: 1px solid #5a3567;
-        border-radius: 8px;
-        background: var(--feature);
-        cursor: pointer;
-        transition:
-          opacity 0.25s ease,
-          transform 0.2s ease,
-          border-color 0.2s ease,
-          box-shadow 0.2s ease;
-      }
-      .feature-card:hover,
-      .feature-card.selected {
-        transform: translateY(-1px);
-        border-color: #d2a8ff;
-        box-shadow: 0 0 16px rgba(210, 168, 255, 0.22);
-      }
-      .feature-card.dimmed {
-        opacity: 0.12;
-      }
-      .feature-top {
-        display: flex;
-        justify-content: space-between;
-        gap: 8px;
-        color: #d2a8ff;
-        font:
-          700 9px ui-monospace,
-          SFMono-Regular,
-          Menlo,
-          monospace;
-      }
-      .feature-top span:last-child {
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        text-align: right;
-      }
-      .feature-name {
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        color: #f0f6fc;
-        font-size: 13px;
-        font-weight: 600;
-      }
-      .inspector-panel {
-        width: 374px;
-        flex: 0 0 374px;
-        height: 100%;
-        overflow: auto;
-        padding: 15px 18px;
-        display: flex;
-        flex-direction: column;
-        gap: 18px;
-        background: var(--panel);
-      }
-      .inspector-badge {
-        display: inline-flex;
-        width: fit-content;
-        padding: 2px 8px;
-        margin-bottom: 8px;
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        color: var(--muted);
-        font:
-          700 10px ui-monospace,
-          SFMono-Regular,
-          Menlo,
-          monospace;
-        text-transform: uppercase;
-      }
-      .inspector-title {
-        font-size: 23px;
-        line-height: 27px;
-      }
-      .inspector-namespace {
-        margin-top: 2px;
-        color: var(--muted);
-        font:
-          12px ui-monospace,
-          SFMono-Regular,
-          Menlo,
-          monospace;
-      }
-      .inspector-desc {
-        margin-top: 17px;
-        color: #e5e9ed;
-        font-size: 13px;
-        line-height: 19px;
-      }
-      .inspector-section {
-        border-top: 1px solid var(--line);
-        padding-top: 12px;
-      }
-      .inspector-section h3 {
-        margin-bottom: 9px;
-        color: var(--muted);
-        font:
-          700 11px ui-monospace,
-          SFMono-Regular,
-          Menlo,
-          monospace;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-      .metric-row {
-        display: flex;
-        justify-content: space-between;
-        gap: 16px;
-        color: var(--muted);
-        font-size: 12px;
-        line-height: 20px;
-      }
-      .metric-row strong {
-        color: #f0f6fc;
-        font:
-          600 12px ui-monospace,
-          SFMono-Regular,
-          Menlo,
-          monospace;
-        text-align: right;
-      }
-      .source-list,
-      .relation-list {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-      .source-item,
-      .relation-item {
-        color: #c9d1d9;
-        font-size: 12px;
-        line-height: 17px;
-      }
-      .source-item {
-        cursor: pointer;
-        padding: 4px 6px;
-        border-radius: 5px;
-        transition:
-          background 0.18s ease,
-          color 0.18s ease;
-      }
-      .source-item:hover {
-        color: #fff;
-        background: #202830;
-      }
-      .source-preview {
-        max-height: 190px;
-        overflow: auto;
-        margin-top: 8px;
-        padding: 8px;
-        border: 1px solid rgba(48, 54, 61, 0.8);
-        border-radius: 6px;
-        background: #101419;
-        color: #9da7b1;
-        white-space: pre-wrap;
-        font:
-          10px/15px ui-monospace,
-          SFMono-Regular,
-          Menlo,
-          monospace;
-      }
-      .review-input {
-        width: 100%;
-        min-height: 64px;
-        resize: vertical;
-        padding: 8px;
-        border: 1px solid var(--line);
-        border-radius: 7px;
-        background: #101419;
-        color: var(--text);
-        outline: none;
-        user-select: text;
-        font-size: 12px;
-        line-height: 17px;
-      }
-      .review-input:focus { border-color: var(--blue); }
-      .review-button {
-        width: 100%;
-        height: 29px;
-        margin-top: 7px;
-        border: 1px solid #b76427;
-        border-radius: 7px;
-        background: #c85a32;
-        color: #fff;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: 700;
-      }
-      .review-button:disabled { opacity: 0.55; cursor: wait; }
-      .review-flow { display: flex; flex-direction: column; gap: 5px; margin-top: 9px; }
-      .review-step {
-        display: grid;
-        grid-template-columns: 18px minmax(0, 1fr) auto;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 7px;
-        border-radius: 6px;
-        background: #1a2026;
-        color: var(--muted);
-        font-size: 11px;
-        opacity: 0;
-        transform: translateY(4px);
-        animation: review-in 0.28s ease forwards;
-      }
-      .review-step b { color: var(--text); font-weight: 600; }
-      .review-step em { color: var(--green); font-style: normal; font-size: 10px; }
-      .review-step.failed em { color: var(--red); }
-      .review-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
-      .review-step.failed .review-dot { background: var(--red); }
-      .review-output {
-        max-height: 180px;
-        overflow: auto;
-        margin-top: 8px;
-        padding: 8px;
-        border: 1px solid rgba(48, 54, 61, 0.8);
-        border-radius: 6px;
-        background: #101419;
-        color: #c9d1d9;
-        white-space: pre-wrap;
-        user-select: text;
-        font: 10px/15px ui-monospace, SFMono-Regular, Menlo, monospace;
-      }
-      .review-status { margin-top: 6px; color: var(--muted); font-size: 11px; }
-      @keyframes review-in { to { opacity: 1; transform: translateY(0); } }
-      .relation-item {
-        padding-bottom: 6px;
-        border-bottom: 1px solid rgba(48, 54, 61, 0.5);
-      }
-      .relation-kind {
-        color: var(--blue);
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      }
-      .empty-state {
-        color: var(--faint);
-        font-size: 12px;
-      }
-      @media (max-width: 1100px) {
-        .inspector-panel {
-          width: 320px;
-          flex-basis: 320px;
-        }
-        .features-grid {
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-        }
-        .repo-input {
-          width: 160px;
-        }
-      }
-      @media (max-height: 850px) {
-        .top-header {
-          height: 145px;
-          flex-basis: 145px;
-          padding: 10px 16px 6px;
-          gap: 3px;
-        }
-        .project-desc {
-          font-size: 11px;
-          line-height: 14px;
-        }
-        .stats {
-          font-size: 11px;
-        }
-        .hint {
-          font-size: 10px;
-        }
-        .header-actions {
-          gap: 4px;
-        }
-        .repo-input {
-          width: 130px;
-        }
-        .search-input {
-          width: 140px;
-        }
-        .bottom-features-panel {
-          height: 185px;
-          flex-basis: 185px;
-          padding: 7px 20px 0;
-        }
-        .features-title {
-          margin-bottom: 6px;
-        }
-        .features-grid {
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 8px 16px;
-        }
-        .feature-card {
-          height: 58px;
-          padding: 6px 9px;
-        }
-        .feature-name {
-          font-size: 12px;
-        }
-        .module-card {
-          width: 155px;
-          padding: 7px 8px;
-        }
-      }
-      @media (max-width: 760px) {
-        .inspector-panel {
-          display: none;
-        }
-        .features-grid {
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-        .canvas-container {
-          overflow: auto;
-        }
-        .top-header {
-          padding-inline: 14px;
-        }
-        .repo-input {
-          width: 125px;
-        }
-        .search-input {
-          width: 130px;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="app">
-      <main class="main-stage">
-        <header class="top-header">
-          <div class="header-row">
-            <div class="title-group">
-              <span class="project-name" id="stage-title">SE-H1</span
-              ><span class="status-pill" id="stage-status">LIVE</span>
-            </div>
-            <div class="header-actions">
-              <input
-                class="repo-input"
-                id="repo-input"
-                value="."
-                aria-label="repository path"
-                placeholder="GitHub or local path"
-              /><button class="build-button" id="build-button">
-                Build graph</button
-              ><input
-                class="search-input"
-                id="search-input"
-                aria-label="search symbols"
-                placeholder="Search files or symbols"
-              />
-            </div>
-          </div>
-          <div class="project-desc" id="stage-desc">
-            A live map of this checkout: files, symbols, calls, and imports stay
-            attached to their source.
-          </div>
-          <div class="stats" id="stats-summary">
-            Loading the checked-out graph…
-          </div>
-          <div class="legend-row" id="connections-legend"></div>
-          <div class="legend-row" id="secondary-legend"></div>
-          <div class="hint">
-            Hover a node to isolate its neighborhood · click a file to inspect
-            symbols · Esc returns to the checkout
-          </div>
-        </header>
-        <section
-          class="canvas-container"
-          id="canvas-container"
-          aria-label="live repository graph"
-        >
-          <svg id="graph-svg" aria-hidden="true"></svg
-          ><svg id="bridge-svg" aria-hidden="true"></svg>
-          <div id="nodes-container"></div>
-        </section>
-        <section class="bottom-features-panel">
-          <div class="features-title">
-            <strong>cross-cutting views</strong> · hover to trace a concern
-            through the live graph
-          </div>
-          <div class="features-grid" id="features-grid"></div>
-        </section>
-      </main>
-      <aside class="inspector-panel" id="inspector-panel">
-        <div>
-          <div class="inspector-badge" id="inspector-badge">PROJECT · LIVE</div>
-          <h1 class="inspector-title" id="inspector-title">SE-H1</h1>
-          <div class="inspector-namespace" id="inspector-namespace">
-            local.checkout
-          </div>
-          <div class="inspector-desc" id="inspector-desc">
-            Build the graph to inspect the files and symbols in this checkout.
-          </div>
-        </div>
-        <section class="inspector-section">
-          <h3>Single-agent review</h3>
-          <textarea class="review-input" id="review-input">审查这个代码库的结构、调用关系和测试风险</textarea>
-          <button class="review-button" id="review-button">Run review</button>
-          <div class="review-status" id="review-status">The graph is the agent's first piece of evidence.</div>
-          <div class="review-flow" id="review-flow"></div>
-          <pre class="review-output" id="review-output">Run a review to see the tool trail and conclusion.</pre>
-        </section>
-        <section class="inspector-section">
-          <h3>Measures</h3>
-          <div id="metrics"></div>
-        </section>
-        <section class="inspector-section">
-          <h3>Sources</h3>
-          <div class="source-list" id="sources"></div>
-          <pre class="source-preview" id="source-preview">
-Select a source to inspect a bounded excerpt.</pre>
-        </section>
-        <section class="inspector-section">
-          <h3>Relations</h3>
-          <div class="relation-list" id="relations"></div>
-        </section>
-      </aside>
-    </div>
-    <script id="graph-data" type="application/json">
-      __GRAPH_DATA__
-    </script>
-    <script src="atlas_graph.js"></script>
-    <script>
+(function atlasView() {
       "use strict";
+      // The atlas shares a document with the chat studio, so it lives in its own
+      // shadow root: the global reset, the z-index scale and the SVG marker ids
+      // all stay contained instead of leaking into — or colliding with — the shell.
+      let host = null;
+      let shadow = null;
       const META = Object.freeze({
         calls: { color: "#58a6ff", dash: "" },
         imports: { color: "#d29922", dash: "6 4" },
@@ -847,7 +28,7 @@ Select a source to inspect a bounded excerpt.</pre>
         hover: null,
         query: "",
       };
-      const $ = (id) => document.getElementById(id);
+      const $ = (id) => shadow.querySelector("#" + id);
       const SVG_NS = "http://www.w3.org/2000/svg";
       const esc = (value) =>
         String(value ?? "").replace(
@@ -899,19 +80,6 @@ Select a source to inspect a bounded excerpt.</pre>
           state.atlas?.rawNodes.get(state.selection.id) ||
           null
         );
-      }
-
-      function embeddedGraph() {
-        const element = $("graph-data");
-        if (!element) return null;
-        const text = element.textContent.trim();
-        if (!text || text === "__GRAPH_DATA__") return null;
-        try {
-          const graph = JSON.parse(text);
-          return Array.isArray(graph.nodes) ? graph : null;
-        } catch {
-          return null;
-        }
       }
 
       function makeFeature(id, tag, name, detail, kind, modules) {
@@ -1089,8 +257,9 @@ Select a source to inspect a bounded excerpt.</pre>
           " parse errors</span>";
       }
 
-      function columnsFor(width) {
-        const compact = window.innerHeight < 850;
+      function columnsFor(width, height) {
+        // The pane is narrower than the window and the media queries cannot see it.
+        const compact = height < 850;
         const card = compact ? 164 : 188;
         const gap = compact ? 22 : 30;
         return Math.max(
@@ -1117,7 +286,7 @@ Select a source to inspect a bounded excerpt.</pre>
         state.layout = AtlasGraph.layout(view, {
           width,
           height: canvas.clientHeight,
-          columns: columnsFor(width),
+          columns: columnsFor(width, canvas.clientHeight),
         });
         const layout = state.layout;
         const graphWidth = Math.max(width, layout.width);
@@ -1378,8 +547,7 @@ Select a source to inspect a bounded excerpt.</pre>
 
       function setHover(hover) {
         state.hover = hover;
-        document
-          .querySelectorAll(".module-card,.wire")
+        shadow.querySelectorAll(".module-card,.wire")
           .forEach((element) =>
             element.classList.remove("dimmed", "highlighted"),
           );
@@ -1412,11 +580,11 @@ Select a source to inspect a bounded excerpt.</pre>
             }
           });
         }
-        document.querySelectorAll(".module-card").forEach((card) => {
+        shadow.querySelectorAll(".module-card").forEach((card) => {
           if (!activeNodes.has(card.dataset.nodeId))
             card.classList.add("dimmed");
         });
-        document.querySelectorAll(".wire").forEach((wire) => {
+        shadow.querySelectorAll(".wire").forEach((wire) => {
           if (!activeEdges.has(Number(wire.dataset.index)))
             wire.classList.add("dimmed");
           else if (hover.type === "edge") wire.classList.add("highlighted");
@@ -1425,7 +593,7 @@ Select a source to inspect a bounded excerpt.</pre>
 
       function setFeatureHover(feature) {
         state.hover = { type: "feature", feature };
-        document.querySelectorAll(".module-card").forEach((card) => {
+        shadow.querySelectorAll(".module-card").forEach((card) => {
           const node = state.layout.nodes.find(
             (item) => String(item.id) === card.dataset.nodeId,
           );
@@ -1436,7 +604,7 @@ Select a source to inspect a bounded excerpt.</pre>
               feature.modules.indexOf(owner) >= 0);
           card.classList.toggle("dimmed", !active);
         });
-        document.querySelectorAll(".wire").forEach((wire) => {
+        shadow.querySelectorAll(".wire").forEach((wire) => {
           const sourceOwner = moduleIdForRaw(Number(wire.dataset.from));
           const targetOwner = moduleIdForRaw(Number(wire.dataset.to));
           const active =
@@ -1451,8 +619,7 @@ Select a source to inspect a bounded excerpt.</pre>
 
       function clearHover() {
         state.hover = null;
-        document
-          .querySelectorAll(".module-card,.wire")
+        shadow.querySelectorAll(".module-card,.wire")
           .forEach((element) =>
             element.classList.remove("dimmed", "highlighted"),
           );
@@ -1463,7 +630,7 @@ Select a source to inspect a bounded excerpt.</pre>
 
       function applyQuery() {
         const query = state.query.trim().toLowerCase();
-        document.querySelectorAll(".module-card").forEach((card) => {
+        shadow.querySelectorAll(".module-card").forEach((card) => {
           card.classList.toggle(
             "dimmed",
             Boolean(query && !card.textContent.toLowerCase().includes(query)),
@@ -1709,8 +876,7 @@ Select a source to inspect a bounded excerpt.</pre>
       function selectNode(node) {
         state.selection = { type: "node", id: Number(node.id) };
         renderInspector();
-        document
-          .querySelectorAll(".module-card")
+        shadow.querySelectorAll(".module-card")
           .forEach((card) =>
             card.classList.toggle(
               "selected",
@@ -1727,12 +893,12 @@ Select a source to inspect a bounded excerpt.</pre>
       }
 
       function transition(callback) {
-        document.body.classList.add("scene-transition");
+        host.classList.add("is-transitioning");
         window.setTimeout(() => {
           callback();
           renderAll();
           requestAnimationFrame(() =>
-            document.body.classList.remove("scene-transition"),
+            host.classList.remove("is-transitioning"),
           );
         }, 130);
       }
@@ -1746,11 +912,12 @@ Select a source to inspect a bounded excerpt.</pre>
         });
       }
 
+      // Returns whether it consumed the step, so the shell knows if Esc is still its own.
       function goBack() {
         if (!state.scopeStack.length) {
           state.selection = { type: "project" };
           renderInspector();
-          return;
+          return false;
         }
         transition(() => {
           state.scopeStack.pop();
@@ -1761,56 +928,6 @@ Select a source to inspect a bounded excerpt.</pre>
               }
             : { type: "project" };
         });
-      }
-
-      function showReviewEvents(events) {
-        const flow = $("review-flow");
-        flow.innerHTML = "";
-        (events || []).forEach((item, index) => {
-          const row = document.createElement("div");
-          row.className = "review-step" + (item.state === "failed" ? " failed" : "");
-          row.style.animationDelay = `${index * 90}ms`;
-          const dot = document.createElement("span");
-          dot.className = "review-dot";
-          const detail = document.createElement("span");
-          const label = document.createElement("b");
-          label.textContent = `${item.phase || "Agent"} · ${item.tool || "step"}`;
-          detail.append(label, document.createTextNode(`  ${item.detail || ""}`));
-          const state = document.createElement("em");
-          state.textContent = item.state || "done";
-          row.append(dot, detail, state);
-          flow.append(row);
-        });
-      }
-
-      async function runReview() {
-        const button = $("review-button");
-        const status = $("review-status");
-        const output = $("review-output");
-        button.disabled = true;
-        $("stage-status").textContent = "REVIEW";
-        status.textContent = "Agent is collecting repository evidence…";
-        output.textContent = "";
-        try {
-          const response = await fetch("/api/review", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt: $("review-input").value.trim() }),
-          });
-          if (!response.ok) throw new Error("review endpoint returned HTTP " + response.status);
-          const result = await response.json();
-          showReviewEvents(result.events);
-          output.textContent = result.answer || "No conclusion returned.";
-          status.textContent = result.mode === "llm"
-            ? "LLM-backed review completed."
-            : "Local evidence review completed; add an API key for model reasoning.";
-          $("stage-status").textContent = "LIVE";
-        } catch (error) {
-          status.textContent = error.message;
-          $("stage-status").textContent = "ERROR";
-        } finally {
-          button.disabled = false;
-        }
       }
 
       async function loadGraph(repo, build) {
@@ -1833,43 +950,48 @@ Select a source to inspect a bounded excerpt.</pre>
           setGraph(await response.json());
           $("stage-status").textContent = "LIVE";
         } catch (error) {
-          const fallback = embeddedGraph();
-          if (!build && fallback) {
-            setGraph(fallback);
-            $("stage-status").textContent = "LOCAL";
-          } else {
-            $("stage-status").textContent = "ERROR";
-            $("stage-desc").textContent = error.message;
-          }
+          $("stage-status").textContent = "ERROR";
+          $("stage-desc").textContent = error.message;
         } finally {
           $("build-button").disabled = false;
         }
       }
 
-      $("build-button").addEventListener("click", () =>
-        loadGraph($("repo-input").value.trim() || ".", true),
-      );
-      $("repo-input").addEventListener("keydown", (event) => {
-        if (event.key === "Enter")
-          loadGraph($("repo-input").value.trim() || ".", true);
-      });
-      $("search-input").addEventListener("input", (event) => {
-        state.query = event.target.value;
-        applyQuery();
-      });
-      $("review-button").addEventListener("click", runReview);
-      window.addEventListener("resize", () => {
-        if (state.atlas) renderAll();
-      });
-      window.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") goBack();
-      });
-      function init() {
-        loadGraph(".", false);
+      function mount(element) {
+        host = element;
+        shadow = host.attachShadow({ mode: "open" });
+        const style = document.createElement("link");
+        style.rel = "stylesheet";
+        style.href = "atlas.css";
+        shadow.append(
+          style,
+          document.getElementById("atlas-markup").content.cloneNode(true),
+        );
+        $("build-button").addEventListener("click", () =>
+          loadGraph($("repo-input").value.trim() || ".", true),
+        );
+        $("repo-input").addEventListener("keydown", (event) => {
+          if (event.key === "Enter")
+            loadGraph($("repo-input").value.trim() || ".", true);
+        });
+        $("search-input").addEventListener("input", (event) => {
+          state.query = event.target.value;
+          applyQuery();
+        });
+        window.addEventListener("resize", () => {
+          if (state.atlas && host.offsetWidth) renderAll();
+        });
+        // The pane has no layout while the chat view is showing, so the first
+        // render has to wait for the stylesheet and for a real box to measure.
+        style.addEventListener("load", () => loadGraph(".", false));
       }
-      if (document.readyState === "loading")
-        window.addEventListener("DOMContentLoaded", init);
-      else init();
-    </script>
-  </body>
-</html>
+
+      window.AtlasView = {
+        mount,
+        show: () => {
+          if (state.atlas) renderAll();
+        },
+        escape: goBack,
+        refresh: () => loadGraph(".", false),
+      };
+})();

@@ -13,10 +13,6 @@ import languages
 from languages import LANGUAGES, EXCLUDED, parse_file
 
 
-TEMPLATE_NAME = "agent_visualizer.html"
-SCRIPT_NAME = "atlas_graph.js"
-
-
 def excluded(path):
     return bool(set(path.parts) & EXCLUDED) or path.name.startswith(".env") or path.name in {"auth.json", "credentials.json"} or path.suffix.lower() in {".pem", ".key", ".p12", ".pfx"}
 
@@ -54,17 +50,10 @@ class CodeGraph:
 
     def build(self):
         start = time.perf_counter()
-        template_path = Path(__file__).with_name(TEMPLATE_NAME)
-        template = template_path.read_text("utf-8")
-        script_path = template_path.with_name(SCRIPT_NAME)
-        atlas_script = script_path.read_text("utf-8") if script_path.is_file() else ""
+        # Only the analyzer itself can change the graph, so the revision covers just its sources.
         revision = hashlib.sha256(
-            Path(__file__).read_bytes()
-            + Path(languages.__file__).read_bytes()
-            + template.encode()
-            + atlas_script.encode()
+            Path(__file__).read_bytes() + Path(languages.__file__).read_bytes()
         ).hexdigest()
-        view = hashlib.sha256((template + atlas_script).encode()).hexdigest()
         cache_path = self.output / "cache.json"
         try:
             saved = json.loads(cache_path.read_text("utf-8"))
@@ -94,7 +83,7 @@ class CodeGraph:
             except (OSError, ValueError, LookupError, RuntimeError) as error:
                 errors.append(dict(file=name, reason=str(error)))
         manifest = [n["file"] for n in nodes.values() if n["kind"] == "file"]
-        if not parsed and saved.get("view") == view and fresh.keys() == saved.get("files", {}).keys() and manifest == saved.get("manifest") and (self.output / "graph.html").exists() and (self.output / SCRIPT_NAME).exists():
+        if not parsed and fresh.keys() == saved.get("files", {}).keys() and manifest == saved.get("manifest") and (self.output / "graph.json").exists():
             try:
                 self.graph = json.loads((self.output / "graph.json").read_text("utf-8"))
                 self.graph["stats"].update(parsed_now=0, cached=reused, seconds=round(time.perf_counter() - start, 3))
@@ -182,16 +171,12 @@ class CodeGraph:
                      nodes=len(nodes), edges=len(edges), call_sites=call_sites, linked_calls=linked_calls, parsed_now=parsed, cached=reused, errors=len(errors), seconds=round(time.perf_counter() - start, 3))
         self.graph = dict(name=self.root.name, stats=stats, nodes=list(nodes.values()), edges=list(edges.values()), errors=errors)
         self.output.mkdir(parents=True, exist_ok=True)
-        for name, value in (("graph.json", self.graph), ("cache.json", dict(revision=revision, view=view, root=str(self.root), manifest=manifest, files=fresh))):
+        for name, value in (("graph.json", self.graph), ("cache.json", dict(revision=revision, root=str(self.root), manifest=manifest, files=fresh))):
             (self.output / name).write_text(json.dumps(value, ensure_ascii=False, separators=(",", ":")), "utf-8")
-        payload = json.dumps(self.graph, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
-        body = template.replace("__GRAPH_DATA__", payload).replace("__ATLAS_GRAPH_SCRIPT__", "")
-        (self.output / SCRIPT_NAME).write_text(atlas_script, "utf-8")
-        (self.output / "graph.html").write_text(body, "utf-8")
         return self.summary()
 
     def summary(self):
-        return {**self.graph["stats"], "html": str(self.output / "graph.html"), "json": str(self.output / "graph.json"), "warnings": self.graph["errors"][:10]}
+        return {**self.graph["stats"], "json": str(self.output / "graph.json"), "warnings": self.graph["errors"][:10]}
 
     def query(self, query, limit=12):
         if self.graph is None:
