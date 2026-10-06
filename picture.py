@@ -99,7 +99,10 @@ def picture_model(graph):
     file_places = {node["meta"]["file"]: node["id"] for node in nodes
                    if node.get("meta", {}).get("kind") == "file"}
     return dict(schema="architecture-map-model/2", project=dict(
-        id="h1", rootId="h1", title=graph.get("name", "H1"), status="partial",
+        id="h1", rootId="h1", title=graph.get("name", "H1"),
+        # Was hardcoded "partial", which reported every repository as partly
+        # unparsed. It now says what actually happened.
+        status="partial" if graph.get("errors") else "ready",
         summary=summary, descriptionHtml=f"<p>{summary}</p>", sources=[],
         meta={STAT_NAMES.get(k, k): v for k, v in graph.get("stats", {}).items()}),
         nodes=nodes, edges=edges,

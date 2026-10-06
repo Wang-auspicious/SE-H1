@@ -1167,11 +1167,14 @@
 		// The margins cover the sizer's ceil() rounding and the ghost band, which
 		// are not part of Lo.height: without them a fitted level still leaves a
 		// few pixels of scroll.
-		var scale = Math.min(1, (vw - 12) / Lo.width, vh ? (vh - 20) / Lo.height : 1);
-		// The shell can drop the floor for a whole-map preview, which is what you
-		// want when the point is to see the shape rather than read a label.
+		var fitW = (vw - 12) / Lo.width;
+		var fitH = vh ? (vh - 20) / Lo.height : 1;
+		var scale = Math.min(1, fitW, fitH);
+		// The floor only restrains the height. Horizontal overflow is never
+		// acceptable — a side-scrollbar means the map is wider than the space it
+		// was given — whereas a tall level may run past the fold and scroll down.
 		var floor = hostEl && hostEl.dataset.fit === "all" ? 0 : READABLE_SCALE;
-		if (scale < floor) scale = floor;
+		if (scale < floor) scale = Math.min(floor, fitW);
 		level.scale = scale;
 		D.canvas.style.width = Lo.width + "px";
 		D.canvas.style.height = Lo.height + "px";

@@ -363,7 +363,7 @@
     }
     const row = $("feature-row");
     row.replaceChildren();
-    $("feature-band").hidden = !features.length;
+    bandVisible = features.length > 0;
     for (const feature of features) {
       const card = el("button", "fcard");
       card.type = "button";
@@ -386,12 +386,22 @@
     location.hash = location.hash === target ? "#" : target;
   }
 
+  let bandVisible = false;
+
+  // At the root the hash carries no path; drilling adds one. A drilled level is
+  // about one block's insides, where a list of project-wide concerns does not
+  // belong — and the band would also take height from a level that wants it.
+  function atRoot() {
+    return !location.hash.replace(/^#/, "").split("?")[0];
+  }
+
   function syncBand() {
     const match = /[#?]feature=([^&]*)/.exec(location.hash);
     const active = match ? decodeURIComponent(match[1]) : "";
     for (const card of $("feature-row").children) {
       card.setAttribute("aria-pressed", String(card.dataset.id === active));
     }
+    $("feature-band").hidden = !bandVisible || !atRoot();
   }
 
   // Drilling into a block rewrites the hash without the feature, so the band
