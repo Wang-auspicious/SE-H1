@@ -112,6 +112,7 @@
     renderHeader();
     if (!active.turns.length) flow.append(welcomeNode());
     for (const turn of active.turns) flow.append(turnNode(turn));
+    collectCited();
     scrollToEnd();
   }
 
@@ -272,11 +273,127 @@
     }
   }
 
+  // Shell-owned integration styling for the vendored viewer. Kept out of
+  // vendor/limen/viewer.css so upstream rules and ours stay distinguishable.
+  const PICTURE_SKIN = `
+    /* The index panel and the map answer the same question, and the map answers
+       it better. Dropping the panel is also what lets one screen hold the map.
+       .main has to be re-templated for two tracks: hiding a grid item makes the
+       ones after it shift down a track, and the viewer's own explorer-closed
+       rule leaves a zero-width first track that the stage would land in.
+       Both rules are appended after viewer.css, so they win at equal weight. */
+    .explorer, #explorer-toggle { display: none; }
+    .main { grid-template-columns: minmax(0, 1fr) 360px; }
+    .main.panel-closed { grid-template-columns: minmax(0, 1fr) 0; }
+    .stage { padding-inline: 24px; }
+    /* Reserve the scrollbar gutter so fitting the height cannot change the
+       width, which would otherwise relayout into a different fit. */
+    #viewport { scrollbar-gutter: stable; }
+    /* Places the current conversation actually cited from. This is the whole
+       point of having the map next to the chat: it shows where a conclusion
+       came from, not just what the repository contains. */
+    .block.cited {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-soft);
+    }
+    .block.cited .b-kind::after {
+      content: " · 结论涉及";
+      color: var(--accent);
+    }
+  `;
+  const pictureSkin = document.createElement("style");
+  pictureSkin.textContent = PICTURE_SKIN;
+  let citedObserver = null;
+
+  // The viewer rebuilds its whole shadow tree on refresh, so the skin and the
+  // citation marks have to be re-applied after every build, not once at mount.
+  function skinPicture() {
+    const root = $("picture-host").shadowRoot;
+    if (!root) return;
+    root.append(pictureSkin.cloneNode(true));
+    if (citedObserver) citedObserver.disconnect();
+    // Blocks are rebuilt on every level change, so watch the container rather
+    // than marking once. Adding a class is not a childList change, so no loop.
+    citedObserver = new MutationObserver(markCited);
+    citedObserver.observe(root.getElementById("blocks"), { childList: true });
+    markCited();
+  }
+
+  /* ----------------------------------------- what the conversation cites */
+
+  // file -> the lines of the answer that point at it. Rebuilt from the rendered
+  // transcript rather than accumulated, so it stays true after any re-render.
+  const cited = new Map();
+
+  function collectCited() {
+    cited.clear();
+    for (const prose of flow.querySelectorAll(".turn.assistant .prose")) {
+      for (const button of prose.querySelectorAll(".src")) {
+        const file = button.dataset.file;
+        if (!file) continue;
+        const owner = button.closest("li, p, h2, blockquote") || prose;
+        const line = owner.textContent.trim();
+        const lines = cited.get(file) || [];
+        if (line && !lines.includes(line)) lines.push(line);
+        cited.set(file, lines);
+      }
+    }
+    markCited();
+  }
+
+  function markCited() {
+    const root = $("picture-host").shadowRoot;
+    if (!root) return;
+    const names = new Set(cited.keys());
+    for (const block of root.querySelectorAll(".block")) {
+      const label = (block.querySelector(".b-title") || block).textContent.trim();
+      const hit = names.has(label) || [...names].some((file) => file.endsWith("/" + label));
+      block.classList.toggle("cited", hit);
+    }
+  }
+
+  // The adapter emits a file -> place-id map so the shell never has to know how
+  // the viewer addresses places.
+  function placeOf(file) {
+    const tag = $("picture-host").shadowRoot?.getElementById("file-places");
+    if (!tag) return null;
+    try {
+      return JSON.parse(tag.textContent)[file] || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function focusInMap(file) {
+    const id = placeOf(file);
+    $("source-dialog").close();
+    setView("picture");
+    if (!id) return;
+    // The viewer navigates from the hash, so driving it is two assignments:
+    // one to guarantee a change, one to land on the target.
+    const target = "#" + encodeURIComponent(id);
+    if (location.hash === target) location.hash = "";
+    location.hash = target;
+  }
+
+  // What the conversation said about this file, so the map's detail panel can
+  // answer "why does the agent care about this place?" and not only "what is it".
+  function renderSaid(file) {
+    const said = cited.get(file) || [];
+    const list = $("source-said");
+    list.replaceChildren();
+    for (const line of said) list.append(el("li", null, line));
+    $("source-note").hidden = !said.length;
+  }
+
   async function showSource(file, line) {
     const dialog = $("source-dialog");
     const body = $("source-body");
     $("source-title").textContent = `${file}:${line}`;
+    $("source-title").dataset.file = file;
+    $("source-map").hidden = !placeOf(file);
     body.textContent = "读取中…";
+    renderSaid(file);
     if (!dialog.open) dialog.showModal();
     try {
       const response = await fetch(
@@ -335,6 +452,7 @@
     live.prose.classList.remove("muted");
     live.prose.innerHTML = markdown(live.turn.text);
     linkify(live.prose);
+    collectCited();
     scrollToEnd();
   }
 
@@ -470,10 +588,9 @@
     for (const button of $("view-switch").children) {
       button.classList.toggle("on", button.dataset.view === view);
     }
-    // The pane measures 0x0 while it is hidden, so the atlas can only re-render
-    // once the browser has laid the atlas view out.
-    if (view === "atlas") requestAnimationFrame(() => AtlasView.show());
-    else promptInput.focus();
+    // The picture viewer sizes itself from a ResizeObserver on its own viewport,
+    // so it needs no nudge when the pane becomes visible again.
+    if (view === "chat") promptInput.focus();
   }
 
   $("view-switch").addEventListener("click", (event) => {
@@ -481,11 +598,19 @@
     if (button) setView(button.dataset.view);
   });
 
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && document.body.dataset.view === "atlas") AtlasView.escape();
-  });
+  // The adapter writes "view source" buttons into the viewer's detail panel;
+  // the vendored viewer knows nothing about /api/source, so the shell delegates.
+  $("picture-host").addEventListener(
+    "click",
+    (event) => {
+      const button = event.composedPath().find((node) => node.dataset && node.dataset.source);
+      if (button) showSource(button.dataset.source, Number(button.dataset.line || 1));
+    },
+  );
 
   $("source-close").addEventListener("click", () => $("source-dialog").close());
+
+  $("source-map").addEventListener("click", () => focusInMap($("source-title").dataset.file));
 
   /* ------------------------------------------------------------ status/theme */
 
@@ -509,14 +634,18 @@
       $("status-text").textContent = status.mode === "llm" ? status.model : "离线 · 本地静态审查";
       $("status-chip").dataset.mode = status.mode;
       $("model-chip").textContent = status.mode === "llm" ? status.model : "本地静态审查";
-      $("repo-chip").textContent = status.repo;
-      $("repo-chip").title = status.repo;
+      // Only fill the field in while the reader has not typed a target of their own.
+      if (!$("repo-input").value.trim() || $("repo-input").dataset.auto !== "done") {
+        $("repo-input").value = status.repo;
+        $("repo-input").dataset.auto = "done";
+      }
+      $("repo-input").title = status.repo;
       const stats = status.stats || {};
       $("mode-hint").textContent =
         `${stats.files || 0} 文件 · ${stats.functions || 0} 函数 · ` +
         `${stats.edges || 0} 关系 · ${stats.errors || 0} 解析失败`;
-    } catch {
-      $("status-text").textContent = "服务不可用";
+    } catch (error) {
+      $("status-text").textContent = `服务不可用：${error.message}`;
     }
   }
 
@@ -533,7 +662,14 @@
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
       await refreshStatus();
-      AtlasView.refresh();
+      // Both maps render server-injected data, so they need the fresh payload.
+      const fragment = await fetch("/api/picture");
+      if (fragment.ok) {
+        const template = document.createElement("template");
+        template.innerHTML = await fragment.text();
+        PictureViewer.refresh(template);
+        skinPicture();
+      }
     } catch (error) {
       $("mode-hint").textContent = `构图失败：${error.message}`;
     } finally {
@@ -552,6 +688,7 @@
   renderSessions();
   render();
   autosize();
-  AtlasView.mount($("atlas-host"));
+  PictureViewer.mount($("picture-host"), $("picture-markup"));
+  skinPicture();
   refreshStatus();
 })();

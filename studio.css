@@ -89,6 +89,16 @@ button {
   height: 100%;
 }
 
+/* The conversation list is only meaningful next to the conversation, so the
+   map view folds the column away and keeps the full width for the map. */
+body[data-view="picture"] .studio {
+  grid-template-columns: 0 1fr;
+}
+
+body[data-view="picture"] .sidebar {
+  display: none;
+}
+
 .titlebar {
   grid-area: titlebar;
   display: flex;
@@ -97,6 +107,54 @@ button {
   padding: 0 8px 0 14px;
   background: linear-gradient(to right, var(--sidebar) 0 264px, var(--page) 264px 100%);
   border-bottom: 1px solid var(--rule);
+}
+
+body[data-view="picture"] .titlebar {
+  background: var(--page);
+}
+
+.repo-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.repo-field input {
+  width: 200px;
+  padding: 4px 8px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r5);
+  background: var(--page);
+  font-size: 12px;
+  transition: width var(--fast), border-color var(--fast);
+}
+
+.repo-field input:focus {
+  width: 300px;
+  outline: none;
+  border-color: var(--rule-strong);
+}
+
+.titlebar .rebuild {
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r5);
+  color: var(--text-secondary);
+  font-size: 12px;
+  transition: background var(--fast), border-color var(--fast), color var(--fast);
+}
+
+.titlebar .rebuild:hover {
+  background: var(--rule);
+  border-color: var(--rule-strong);
+  color: var(--text);
+}
+
+.titlebar .rebuild:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .brand {
@@ -195,8 +253,7 @@ button {
   border-right: 1px solid var(--rule);
 }
 
-.new-chat,
-.rebuild {
+.new-chat {
   padding: 7px 10px;
   border: 1px solid var(--rule);
   border-radius: var(--r6);
@@ -206,8 +263,7 @@ button {
   transition: background var(--fast), border-color var(--fast);
 }
 
-.new-chat:hover,
-.rebuild:hover {
+.new-chat:hover {
   background: var(--rule);
   border-color: var(--rule-strong);
 }
@@ -270,27 +326,6 @@ button {
   opacity: 1;
 }
 
-.sidebar-foot {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-top: 10px;
-  border-top: 1px solid var(--rule);
-}
-
-#repo-input {
-  padding: 7px 9px;
-  border: 1px solid var(--rule);
-  border-radius: var(--r6);
-  background: var(--page);
-  font-size: 12px;
-}
-
-#repo-input:focus-visible {
-  outline: none;
-  border-color: var(--rule-strong);
-}
-
 .hint {
   color: var(--text-muted);
   font-size: 11px;
@@ -311,15 +346,53 @@ button {
   min-height: 0;
 }
 
-body[data-view="chat"] #pane-atlas,
-body[data-view="atlas"] #pane-chat {
+body[data-view="chat"] #pane-picture,
+body[data-view="picture"] #pane-chat {
   display: none;
 }
 
-.atlas-view {
-  display: block;
-  width: 100%;
-  height: 100%;
+/* #picture-host is deliberately not styled here. An outer document rule
+   outranks the shadow's own :host rule, so setting `display` on it would
+   replace the viewer's grid with plain flow and unclip its stage. */
+
+/* The vendored viewer keys off prefers-color-scheme, which cannot see the
+   shell's manual toggle. A rule in this document outranks the shadow's own
+   :host rule, so re-declaring the tokens here is enough to follow the switch.
+   The light values are the viewer's defaults; only dark needs restating. */
+html[data-theme="dark"] #picture-host {
+  color-scheme: dark;
+  --bg: #0e1116;
+  --surface: #171b22;
+  --surface-2: #1f252e;
+  --text: #e4e8ee;
+  --muted: #a0a9b6;
+  --faint: #6e7886;
+  --border: #2f3743;
+  --border-strong: #566172;
+  --accent: #60a5fa;
+  --accent-soft: rgba(96, 165, 250, 0.22);
+  --frame: #3a4452;
+  --frame-bg: rgba(140, 160, 190, 0.05);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --pill-bg: #171b22;
+  --hatch: rgba(251, 146, 60, 0.1);
+  --st-ready: #4ade80;
+  --st-ready-bg: rgba(74, 222, 128, 0.14);
+  --st-partial: #facc15;
+  --st-partial-bg: rgba(250, 204, 21, 0.14);
+  --st-stub: #fb923c;
+  --st-stub-bg: rgba(251, 146, 60, 0.16);
+  --st-x: #cbd5e1;
+  --st-x-bg: rgba(203, 213, 225, 0.12);
+  --feat: #70c6b9;
+  --feat-bg: #162c2a;
+  --feat-border: #397d74;
+  --jour: #eac38b;
+  --jour-bg: #2f271c;
+  --jour-border: #896c42;
+  --lv-error: #f87171;
+  --lv-warn: #facc15;
+  --lv-info: #94a3b8;
 }
 
 /* ------------------------------------------------------------- chat view */
@@ -653,15 +726,62 @@ dialog::backdrop {
 
 .dialog-head h2 {
   flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font: 500 12px/16px var(--mono);
 }
 
+.dbtn {
+  padding: 4px 10px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r5);
+  color: var(--text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+  transition: background var(--fast), color var(--fast), border-color var(--fast);
+}
+
+.dbtn:hover {
+  background: var(--clay);
+  border-color: var(--clay);
+  color: #fff;
+}
+
 #source-body {
-  max-height: 62vh;
+  max-height: 46vh;
   padding: 12px;
   overflow: auto;
   font: 12px/17px var(--mono);
   white-space: pre;
+}
+
+.dialog-note {
+  max-height: 28vh;
+  padding: 12px;
+  border-top: 1px solid var(--rule);
+  overflow: auto;
+}
+
+.dialog-note h3 {
+  margin-bottom: 7px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.dialog-note li {
+  margin-bottom: 6px;
+  font-size: 13px;
+  line-height: 19px;
+  list-style: none;
+}
+
+.dialog-note li b {
+  margin-right: 5px;
+  color: var(--clay);
+  font-weight: 500;
 }
 
 @media (max-width: 900px) {

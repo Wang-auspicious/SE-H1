@@ -69,7 +69,7 @@ class CodeGraph:
                 continue
             try:
                 if path.stat().st_size > 8_000_000:
-                    raise ValueError("Source exceeds 8 MB")
+                    raise ValueError("源文件超过 8 MB")
                 data = path.read_bytes()
                 digest = hashlib.sha256(data).hexdigest()
                 previous = saved.get("files", {}).get(name, {})
@@ -79,7 +79,7 @@ class CodeGraph:
                 fresh[name] = dict(hash=digest, facts=fact)
                 nodes.update((s["id"], dict(s)) for s in fact["symbols"])
                 if fact["partial"]:
-                    errors.append(dict(file=name, reason="Syntax errors; valid syntax retained"))
+                    errors.append(dict(file=name, reason="存在语法错误，已保留有效部分"))
             except (OSError, ValueError, LookupError, RuntimeError) as error:
                 errors.append(dict(file=name, reason=str(error)))
         manifest = [n["file"] for n in nodes.values() if n["kind"] == "file"]

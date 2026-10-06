@@ -169,10 +169,13 @@ class StudioPageTests(ServerTestCase):
 
         self.assertEqual(status, 200)
         self.assertTrue(content_type.startswith("text/html"))
-        # The atlas markup ships inside the page as an inert template.
-        self.assertIn('class="atlas-view"', page)
-        self.assertIn('id="atlas-markup"', page)
-        for marker in ("__ATLAS__", "__GRAPH_DATA__", "__ATLAS_GRAPH_SCRIPT__"):
+        # The viewer markup ships inside the page as an inert template, together
+        # with the file -> place-id index the shell navigates with.
+        self.assertIn('id="picture-host"', page)
+        self.assertIn('id="picture-markup"', page)
+        self.assertIn('id="archmap-data"', page)
+        self.assertIn('id="file-places"', page)
+        for marker in ("__PICTURE__", "__GRAPH_DATA__", "__ATLAS__"):
             self.assertNotIn(marker, page)
 
     def test_every_front_end_asset_is_served_with_the_right_type(self):
@@ -180,35 +183,125 @@ class StudioPageTests(ServerTestCase):
             port = self.serve(directory)
             for name, kind in (
                 ("studio.css", "text/css"),
-                ("atlas.css", "text/css"),
                 ("studio.js", "javascript"),
-                ("atlas_view.js", "javascript"),
-                ("atlas_graph.js", "javascript"),
+                ("vendor/limen/viewer.css", "text/css"),
+                ("vendor/limen/viewer.js", "javascript"),
             ):
                 status, content_type, body = self.get(port, f"/{name}")
                 self.assertEqual(status, 200, name)
                 self.assertIn(kind, content_type, name)
                 self.assertTrue(body, name)
 
+    def test_only_allowlisted_paths_are_served(self):
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / ".env").write_text("TOKEN=secret\n", "utf-8")
+            port = self.serve(directory)
+            # No directory fallback: an unrouted path must 404 rather than be
+            # read off disk, which is what keeps credentials off the wire.
+            for name in (".env", "code_agent.py", "vendor/limen/LICENSE", "../code_agent.py"):
+                status, _, _ = self.get(port, f"/{name}")
+                self.assertEqual(status, 404, name)
 
-class AtlasStyleTests(unittest.TestCase):
-    def selectors(self):
-        css = re.sub(r"/\*.*?\*/", "", (ROOT / "atlas.css").read_text("utf-8"), flags=re.S)
+    def test_the_interface_is_chinese(self):
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "main.py").write_text("def main():\n    return 1\n", "utf-8")
+            port = self.serve(directory)
+            _, _, page = self.get(port, "/")
+            _, _, fragment = self.get(port, "/api/picture")
+
+        shell = page.decode("utf-8")
+        atlas = fragment.decode("utf-8")
+        for label in ("对话", "架构图", "分析目录", "重新构图", "新对话"):
+            self.assertIn(label, shell, label)
+        for label in ("架构图", "图例", "详情", "项目索引", "地图说明"):
+            self.assertIn(label, atlas, label)
+        # Nothing may pull a resource off the network: the page has to work offline.
+        for text in (shell, atlas):
+            self.assertNotIn("cdn.prod.website-files.com", text)
+            self.assertNotIn('src="http', text)
+
+
+class ViewerScopeTests(unittest.TestCase):
+    """The vendored viewer is mounted in a shadow root, so its stylesheet must
+    not rely on selectors that only exist in a whole document."""
+
+    def selectors(self, name):
+        css = re.sub(r"/\*.*?\*/", "", (ROOT / "vendor" / "limen" / name).read_text("utf-8"), flags=re.S)
         preludes = re.findall(r"(?:^|[{};])\s*([^{}@;]+?)\s*\{", css)
         return [part.strip() for prelude in preludes for part in prelude.split(",")], css
 
-    def test_styles_target_the_shadow_host_not_the_document(self):
-        selectors, _ = self.selectors()
-        # Tokens and sizing have to sit on the host, or nothing inherits inward.
+    def test_viewer_css_targets_the_host_not_the_document(self):
+        selectors, _ = self.selectors("viewer.css")
         self.assertIn(":host", selectors)
-        # These would silently match nothing inside a shadow root.
         for dead in ("html", "body", ":root"):
             self.assertNotIn(dead, selectors)
 
-    def test_the_atlas_measures_its_pane_not_the_viewport(self):
-        _, css = self.selectors()
-        self.assertNotIn("100vw", css)
-        self.assertNotIn("100vh", css)
+    def test_viewer_js_reads_through_the_shadow_root(self):
+        source = (ROOT / "vendor" / "limen" / "viewer.js").read_text("utf-8")
+        js = re.sub(r"/\*.*?\*/", "", source, flags=re.S)  # the header explains the edits
+        self.assertIn("root.getElementById(id)", js)
+        self.assertIn('attachShadow({ mode: "open" })', js)
+        # Nothing may assume the viewer owns the document any more.
+        self.assertNotIn("document.getElementById", js)
+        self.assertNotIn("document.activeElement", js)
+        # init() re-runs on refresh, so its document-level wiring must be one-shot.
+        self.assertIn("if (!wired) {", js)
+        # and the level it was showing must be forgotten, or apply() compares
+        # against the old level, decides nothing changed, and skips the repaint
+        self.assertIn("S.level = null;", js)
+
+    def test_the_license_travels_with_the_vendored_code(self):
+        self.assertTrue((ROOT / "vendor" / "limen" / "LICENSE").is_file())
+        license_text = (ROOT / "vendor" / "limen" / "LICENSE").read_text("utf-8")
+        self.assertIn("MIT", license_text)
+
+
+class PictureAdapterTests(unittest.TestCase):
+    def test_projects_real_graph_into_the_viewer_model(self):
+        from picture import picture_model
+
+        graph = {
+            "name": "sample",
+            "stats": {"files": 1},
+            "nodes": [
+                {"id": 0, "kind": "file", "file": "main.py", "name": "main.py", "line": 1, "language": "python"},
+                {"id": 1, "kind": "function", "file": "main.py", "name": "main", "line": 4, "parent": 0, "language": "python"},
+            ],
+            "edges": [{"source": 0, "target": 1, "kind": "contains", "line": 4, "column": 0}],
+            "errors": [],
+        }
+        model = picture_model(graph)
+        self.assertEqual(model["schema"], "architecture-map-model/2")
+        self.assertEqual(len(model["nodes"]), 2)
+        self.assertEqual(model["nodes"][-1]["sources"], ["main.py"])
+
+    def test_every_file_gets_a_place_the_shell_can_navigate_to(self):
+        from picture import place_index, picture_model
+
+        graph = {
+            "name": "sample",
+            "stats": {},
+            "nodes": [
+                {"id": 0, "kind": "file", "file": "main.py", "name": "main.py", "line": 1, "language": "python"},
+                {"id": 1, "kind": "file", "file": "lib/util.py", "name": "util.py", "line": 1, "language": "python"},
+            ],
+            "edges": [],
+            "errors": [],
+        }
+        index = place_index(picture_model(graph))
+        self.assertEqual(sorted(index), ["lib/util.py", "main.py"])
+        self.assertTrue(all(value.startswith("place.") for value in index.values()))
+
+    def test_fragment_carries_the_model_and_the_viewer_stylesheet(self):
+        from picture import picture_fragment
+
+        fragment = picture_fragment({"name": "sample", "stats": {}, "nodes": [], "edges": [], "errors": []})
+        self.assertIn('id="picture-markup"', fragment)
+        self.assertIn('id="archmap-data"', fragment)
+        self.assertIn("vendor/limen/viewer.css", fragment)
+        self.assertNotIn("__GRAPH_DATA__", fragment)
+        # A model containing "</script>" must not be able to close the tag.
+        self.assertNotIn("</script><", fragment.replace("</script>\n", ""))
 
 
 class ChatStreamTests(ServerTestCase):

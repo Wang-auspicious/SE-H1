@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>架构图</title>
+<!-- ARCHMAP:CSS -->
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#" aria-label="架构总览"><span class="brand-mark" aria-hidden="true">◈</span><span>架构图<small>按层级浏览代码结构</small></span></a>
+  <div class="search">
+    <input id="search-input" type="search" autocomplete="off" spellcheck="false" placeholder="搜索特性、流程、位置或文件…" aria-label="搜索特性、流程、位置与来源" role="combobox" aria-expanded="false" aria-controls="search-results" aria-autocomplete="list">
+    <kbd class="search-key" aria-hidden="true">/</kbd>
+    <ul id="search-results" class="results" role="listbox" aria-label="搜索结果" hidden></ul>
+  </div>
+  <div class="project-state" id="project-state" aria-label="地图版本"></div>
+  <button type="button" id="explorer-toggle" class="tbtn" aria-expanded="true" aria-controls="explorer">索引</button>
+  <button type="button" id="diag-toggle" class="tbtn" aria-expanded="false" aria-controls="drawer">地图说明</button>
+  <button type="button" id="panel-toggle" class="tbtn" aria-expanded="true" aria-controls="panel">详情</button>
+</header>
+<main class="main" id="main">
+  <aside class="explorer" id="explorer" aria-label="浏览项目">
+    <div class="explorer-head"><p class="eyebrow">项目索引</p><h2>浏览项目</h2><p>选择一个指定工作项，查看它在代码中的位置。</p></div>
+    <div class="explorer-tabs" id="explorer-tabs" role="group" aria-label="浏览方式"></div>
+    <div class="explorer-list" id="overlays" aria-label="项目索引"></div>
+    <div class="explorer-foot">本地生成的地图。特性状态以规格文件为准。</div>
+  </aside>
+  <section class="stage" aria-labelledby="level-title">
+    <nav class="crumbs" id="crumbs" aria-label="层级"></nav>
+    <div class="level-head" id="level-head"></div>
+    <details class="map-key" open><summary>图例 <span>连接与来源覆盖</span></summary><div class="legend" id="legend"></div></details>
+    <div class="selection-bar" id="selection-bar"><p class="ov-note" id="overlay-note" aria-live="polite"></p></div>
+    <div class="viewport" id="viewport">
+      <div class="sizer" id="sizer">
+        <div class="canvas" id="canvas">
+          <svg class="edges" id="edges" aria-hidden="true"></svg>
+          <div class="blocks" id="blocks" role="group" aria-label="代码位置"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <aside class="panel" id="panel" aria-label="详情"><div class="panel-body" id="panel-body"></div></aside>
+</main>
+<section class="drawer" id="drawer" aria-label="诊断" hidden></section>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+<div class="announcer" id="announcer" role="status" aria-live="polite"></div>
+<noscript><p class="noscript">此地图需要启用 JavaScript。</p></noscript>
+<!-- ARCHMAP:DATA -->
+<!-- ARCHMAP:JS -->
+</body>
+</html>

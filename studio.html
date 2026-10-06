@@ -20,12 +20,16 @@
     <div class="studio">
       <header class="titlebar">
         <span class="brand"><i></i>CodeAtlas</span>
-        <span class="repo-chip" id="repo-chip" title="当前分析目录">.</span>
         <nav class="views" id="view-switch">
           <button type="button" data-view="chat" class="on">对话</button>
-          <button type="button" data-view="atlas">架构图</button>
+          <button type="button" data-view="picture">架构图</button>
         </nav>
         <span class="spacer"></span>
+        <label class="repo-field">
+          <span>分析目录</span>
+          <input id="repo-input" value="." aria-label="仓库路径" placeholder="本地路径或仓库地址" />
+        </label>
+        <button type="button" class="rebuild" id="build-button">重新构图</button>
         <span class="status" id="status-chip"><i></i><span id="status-text">连接中…</span></span>
         <button type="button" class="icon" id="theme-button" aria-label="切换主题">☾</button>
       </header>
@@ -33,17 +37,13 @@
       <aside class="sidebar">
         <button type="button" class="new-chat" id="new-chat">＋ 新对话</button>
         <div class="sessions" id="sessions"></div>
-        <div class="sidebar-foot">
-          <input id="repo-input" value="." aria-label="仓库路径" placeholder="本地路径或仓库地址" />
-          <button type="button" class="rebuild" id="build-button">重新构图</button>
-          <p class="hint" id="mode-hint"></p>
-        </div>
+        <p class="hint" id="mode-hint"></p>
       </aside>
 
       <main class="main">
         <section class="pane" id="pane-chat">
           <div class="workspace">
-            <p class="eyebrow">ACTIVE WORK</p>
+            <p class="eyebrow">当前任务</p>
             <h1 id="chat-title">新的代码审查</h1>
             <p class="lede" id="chat-lede">
               向当前仓库提问。每条结论都会附带对应的 file:line 证据，点开即可读源码。
@@ -63,24 +63,28 @@
           </div>
         </section>
 
-        <section class="pane" id="pane-atlas">
-          <div class="atlas-view" id="atlas-host"></div>
+        <section class="pane" id="pane-picture">
+          <div id="picture-host"></div>
         </section>
       </main>
     </div>
 
-    <!--__ATLAS__-->
+    <!--__PICTURE__-->
 
     <dialog id="source-dialog" aria-labelledby="source-title">
       <div class="dialog-head">
         <h2 id="source-title">源码</h2>
+        <button type="button" class="dbtn" id="source-map" hidden>在架构图中查看</button>
         <button type="button" class="icon" id="source-close" aria-label="关闭">✕</button>
       </div>
       <pre id="source-body"></pre>
+      <section class="dialog-note" id="source-note" hidden>
+        <h3>本次对话中提到这个地方的内容</h3>
+        <ul id="source-said"></ul>
+      </section>
     </dialog>
 
-    <script src="atlas_graph.js"></script>
-    <script src="atlas_view.js"></script>
+    <script src="vendor/limen/viewer.js"></script>
     <script src="studio.js"></script>
   </body>
 </html>

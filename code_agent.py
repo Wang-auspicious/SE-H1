@@ -14,18 +14,20 @@ from urllib.parse import parse_qs, urlsplit
 
 from openai import OpenAI, APIError, APIStatusError
 from code_graph import CodeGraph, excluded
+from picture import picture_fragment, picture_inner
 
 
 BASE = Path(__file__).parent
 
-# The atlas view fetches /api/graph itself, so the shell page needs no data injection.
+# An allowlist rather than a directory walk: no request path can escape it.
 ASSETS = {
     "studio.css": "text/css; charset=utf-8",
     "studio.js": "application/javascript; charset=utf-8",
-    "atlas.css": "text/css; charset=utf-8",
-    "atlas_view.js": "application/javascript; charset=utf-8",
-    "atlas_graph.js": "application/javascript; charset=utf-8",
+    "vendor/limen/viewer.css": "text/css; charset=utf-8",
+    "vendor/limen/viewer.js": "application/javascript; charset=utf-8",
 }
+
+EMPTY_GRAPH = {"name": "H1", "nodes": [], "edges": [], "stats": {}, "errors": []}
 
 MAX_SESSIONS = 4
 MAX_RUNS = 4
@@ -542,9 +544,15 @@ def make_server(repo=".", port=8766, output=None):
                     return
                 self.body(asset.read_bytes(), ASSETS[name])
                 return
+            if request_path == "/api/picture":
+                # The architecture-map fragment, so the shell can re-render the
+                # map in place after a rebuild instead of reloading the page.
+                fragment = picture_inner(graph or EMPTY_GRAPH).encode("utf-8")
+                self.body(fragment, "text/html; charset=utf-8")
+                return
             if request_path in ("/", "/index.html"):
                 page = (BASE / "studio.html").read_text("utf-8").replace(
-                    "<!--__ATLAS__-->", (BASE / "atlas_view.html").read_text("utf-8")
+                    "<!--__PICTURE__-->", picture_fragment(graph or EMPTY_GRAPH)
                 )
                 self.body(page.encode("utf-8"), "text/html; charset=utf-8")
                 return
@@ -553,7 +561,10 @@ def make_server(repo=".", port=8766, output=None):
                 self.send_header("Location", "/")
                 self.end_headers()
                 return
-            super().do_GET()
+            # Deliberately no directory fallback: everything the browser needs is
+            # routed above. Inheriting SimpleHTTPRequestHandler's file serving
+            # would publish the whole working directory, credentials included.
+            self.send_error(404)
 
         def log_message(self, *a):
             pass
