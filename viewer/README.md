@@ -32,6 +32,8 @@ python tests/equivalence_probe.py
 
 当前结果：根层 572 个元素、下钻 `studio.js` 后 1111 个元素，**零差异**。
 
+`tsc --noEmit` 在 `strict` 下 **0 错误**。类型不是装饰：模型边界（`prepare()`）把不可信的 JSON 收成 `VNode` / `VEdge` / `Overlay`，下游才允许直接读字段；剩下的地方由编译器逐条逼出来，每补一批就跑一次上面的差分测试。
+
 阴性对照：把产物里 `GEO.blockH` 从 76 改成 77，同一测试报出 **422 处差异**并定位到
 具体元素路径。测试不是摆设。
 

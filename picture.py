@@ -142,7 +142,13 @@ def picture_model(graph):
 
 def viewer_revision():
     """Hash of the viewer this adapter targets, so a viewer change is visible."""
-    paths = [Path(__file__), *(VENDOR / name for name in ("template.html", "viewer.css", "viewer.js"))]
+    paths = [
+        Path(__file__),
+        *(VENDOR / name for name in ("template.html", "viewer.css")),
+        # The viewer itself is the TypeScript build. Hashing the upstream
+        # copy here would leave the stamp unchanged when our port changes.
+        BASE / "viewer" / "viewer.js",
+    ]
     return hashlib.sha256(b"".join(path.read_bytes() for path in paths)).hexdigest()
 
 

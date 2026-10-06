@@ -122,12 +122,13 @@ python code_agent.py . --graph
 | `languages.py` | 本项目 | 各语言的 Tree-sitter 提取规则 |
 | `picture.py` | 本项目 | 把 CodeGraph 投影成 `architecture-map-model/2` |
 | `studio.html` / `studio.css` / `studio.js` | 本项目 | 工作台外壳：标题栏、会话列表、对话渲染、composer、主题、视图切换，以及两个视图之间的跳转 |
-| `vendor/limen/` | **第三方** | 架构图 viewer（见下） |
+| `viewer/` | 本项目 | 架构图 viewer 的 TypeScript 实现（`src/viewer.ts` → `viewer.js`） |
+| `vendor/limen/` | **第三方** | 上游 viewer 的 CSS/模板/许可证，外加原始 `viewer.js` 作为等价性参照 |
 | `notebook/` | 本项目 | 手工练习：从一次裸 Chat Completions 出发，逐步加上 `read_file` / `write_file` / `run_python`、图谱工具和 compact，用来把 agent 的机制拆开看。`homework1_agent.html` 是它导出的只读版本，不用装 Jupyter 也能看 |
 
 ### 关于 `vendor/limen/`
 
-架构图 viewer 来自 [`overment/limen`](https://github.com/overment/limen) 的 `picture/viewer/` @ `62c8c0b`（MIT License，© Adam Gospodarczyk，许可证见 `vendor/limen/LICENSE`）；我只做了 shadow root 嵌入、窗格适配和中文文案三处适配，改动记在两个文件开头的注释里，地图本身的布局和下钻一行没动。`picture.py` 负责把 CodeGraph 转成它要的 `architecture-map-model/2` 模型。
+架构图 viewer 起自 [`overment/limen`](https://github.com/overment/limen) 的 `picture/viewer/` @ `62c8c0b`（MIT License，© Adam Gospodarczyk，许可证见 `vendor/limen/LICENSE`），现在是用 TypeScript 重写的实现，在 `viewer/`。上游的 `viewer.js` 留在 `vendor/limen/` 作为参照物，`tests/equivalence_probe.py` 把同一份模型同时喂给两边、逐元素比对，确认渲染结果零差异。`picture.py` 负责把 CodeGraph 转成 `architecture-map-model/2` 模型。
 
 ## 验证
 

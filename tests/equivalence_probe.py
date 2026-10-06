@@ -84,11 +84,13 @@ def collect(playwright, chromium_path, use_build, drill=None):
     try:
         ctx = browser.new_context(viewport={"width": 1600, "height": 1000})
         page = ctx.new_page()
-        if use_build:
+        if not use_build:
+            # The page ships the TypeScript build; this run swaps the upstream
+            # copy in behind it, so the two renders can be compared.
             page.route(
-                "**/vendor/limen/viewer.js",
+                "**/viewer/viewer.js",
                 lambda route: route.fulfill(
-                    path=str(BUILD), content_type="application/javascript"
+                    path=str(UPSTREAM), content_type="application/javascript"
                 ),
             )
         page.goto(URL, wait_until="networkidle")

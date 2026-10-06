@@ -1,34 +1,4 @@
 "use strict";
-/* Vendored from overment/limen picture/viewer/viewer.js @ 62c8c0b (MIT).
-   Local edits, all of them about living inside a shadow root instead of owning
-   the document — the map itself is untouched:
-     1. module-level `root` (defaults to `document`) + `hostEl`, and `$` reads
-        through `root` so every lookup resolves inside the shadow tree
-     2. `document.activeElement` -> `root.activeElement` (8 sites)
-     3. `document.title` only when running standalone
-     4. `onKey` bails out while the host is hidden, so the shell keeps Esc and `/`
-     5. the trailing `init()` becomes `window.PictureViewer.mount(host, template)`,
-        plus `build()` resetting the per-mount entries of `S` and the document
-        listeners becoming one-shot so `refresh()` can rebuild in place
-     6. nothing here. A previous edit fitted the pane's height too and floored
-        the scale at PANE_MIN_SCALE so a level stayed readable; it made deep
-        levels overflow sideways, so the width-only fit was restored. GEO and
-        minScale / READABLE_SCALE below are leftovers from that attempt
-     7. reader-facing text translated to Chinese. The model's own kind /
-        relation / status names are untouched because they drive the colour
-        lookups; REL_LABELS / KIND_LABELS / STATUS_LABELS / OVERLAY_LABELS /
-        LEVEL_LABELS only change what is displayed, and `plural()` drops the
-        English plural for a Chinese measure word.
-   Layout, routing and interaction are upstream, byte for byte. */
-/* Architecture map viewer for model `architecture-map-model/2`.
-   Plain browser script: no modules, no network, no dependencies.
-   Reads the model from <script type="application/json" id="archmap-data"> and draws a
-   drill-down block map. One level shows the children of the focused block. Edges are
-   lifted to the visible level. Edges that leave the focus end at "outside" ghost blocks.
-   Kind, relation and status names come from the data; the lists below only pick default
-   styles, and every other value gets a generic fallback style. Features and journeys are
-   an Explore index beside the map: they light only the places they list, never draw a
-   block or a link. */
 (function () {
     "use strict";
     var SVG_NS = "http://www.w3.org/2000/svg";
@@ -786,6 +756,8 @@
             p.sameRow = up.layer === lo.layer;
             var chain = [up];
             for (var k = up.layer + 1; k < lo.layer; k++) {
+                // Waypoints carry no node, and nothing that reads Item.node ever
+                // reaches one; the assertion is the only place that has to know.
                 var d = { id: "~" + dn++, dummy: true, band: "dummy", w: GEO.dummyW, h: 0, layer: k, pos: 0, cx: 0, y: 0, up: [], down: [], pair: p, i: up.i + 0.5 };
                 layers[k].push(d);
                 chain.push(d);
@@ -1223,7 +1195,7 @@
             return;
         }
         sf.style.display = "flex";
-        var grid = $("sf-grid");
+        const grid = $("sf-grid");
         if (!grid)
             return;
         clear(grid);
@@ -1266,8 +1238,8 @@
         clear(g);
         if (!Lo)
             return;
-        g.setAttribute("width", Lo.width);
-        g.setAttribute("height", Lo.height);
+        g.setAttribute("width", String(Lo.width));
+        g.setAttribute("height", String(Lo.height));
         g.setAttribute("viewBox", "0 0 " + f(Lo.width) + " " + f(Lo.height));
         if (Lo.frame) {
             g.appendChild(svgEl("rect", { class: "frame", x: f(Lo.frame.x), y: f(Lo.frame.y), width: f(Lo.frame.w), height: f(Lo.frame.h), rx: 12 }));
@@ -1300,7 +1272,7 @@
                 lane.el = null;
                 if (S.hideRel.has(lane.kind))
                     return;
-                bu.vis += lane.edges.length;
+                bu.vis = (bu.vis || 0) + lane.edges.length;
                 var d = pathD(lane.pts), lg = svgEl("g", { class: "lane " + relClass(lane.kind) });
                 lg.appendChild(svgEl("path", { class: "hit", d: d }));
                 lg.appendChild(svgEl("path", { class: "line", d: d }));
@@ -1355,7 +1327,7 @@
             D.blocks.appendChild(lab);
         }
         // DOM (and Tab) order: focus children row by row, then outside ghosts.
-        var rank = { mid: 0, top: 1, bottom: 2 };
+        var rank = { mid: 0, top: 1, bottom: 2, dummy: 3 };
         Lo.items
             .slice()
             .sort(function (a, b) {
@@ -1452,7 +1424,8 @@
         var level = S.level;
         if (!level || !level.els)
             return;
-        level.els.forEach(function (b, id) {
+        const els = level.els;
+        els.forEach(function (b, id) {
             var on = !!S.selected && S.selected.id === id;
             b.classList.toggle("selected", on);
             if (on)
@@ -1666,22 +1639,25 @@
                 : (S.tab === "feature" ? "未记录任何特性" : "未记录任何流程") + "。它们由项目规格文件补充。"));
         }
         list.forEach(function (o) {
+            // The tab decides which of the two shapes this row is; the loop
+            // variable is the union because all three tabs share one list.
+            var asNode = o, asOverlay = o;
             var b;
             if (S.tab === "place") {
                 b = button("index-place", null, function () {
                     S.inspect = !!S.overlay;
-                    S.pendingFocus = o.id;
-                    navigate(o.parent, o);
+                    S.pendingFocus = asNode.id;
+                    navigate(asNode.parent, asNode);
                     setPanel(true);
                 });
-                b.dataset.id = o.id;
-                b.style.setProperty("--depth", o.chain.length - 1);
-                b.appendChild(el("span", "ov-name", o.title));
-                b.appendChild(el("span", "index-meta", o.kids.length ? plural(o.kids.length, "个组成部分") : o.sources[0] || o.id));
+                b.dataset.id = asNode.id;
+                b.style.setProperty("--depth", String(asNode.chain.length - 1));
+                b.appendChild(el("span", "ov-name", asNode.title));
+                b.appendChild(el("span", "index-meta", asNode.kids.length ? plural(asNode.kids.length, "个组成部分") : asNode.sources[0] || asNode.id));
             }
             else {
-                b = overlayItem(o);
-                D.ovItems.set(o.key, b);
+                b = overlayItem(asOverlay);
+                D.ovItems.set(asOverlay.key, b);
             }
             box.appendChild(b);
         });
@@ -2714,16 +2690,17 @@
             ul.appendChild(el("li", "r-empty", "无匹配结果。"));
         }
         S.results.forEach(function (n, i) {
+            var asNode = n;
             var li = el("li", "r-item" + (i === S.active ? " active" : ""));
             li.id = "sr-" + i;
             li.setAttribute("role", "option");
             li.setAttribute("aria-selected", String(i === S.active));
             var top = el("div", "r-top");
-            top.appendChild(el("span", "index-kind", n.key ? n.kind : "place"));
+            top.appendChild(el("span", "index-kind", "key" in n ? n.kind : "place"));
             top.appendChild(el("span", "r-title", n.title));
             top.appendChild(badge(n.status));
             li.appendChild(top);
-            li.appendChild(el("div", "r-id", n.parent ? n.id + "  ·  in " + n.parent.title : n.id));
+            li.appendChild(el("div", "r-id", asNode.parent ? asNode.id + "  ·  in " + asNode.parent.title : asNode.id));
             if (n.summary)
                 li.appendChild(el("div", "r-sum", n.summary));
             li.addEventListener("mousedown", function (ev) {
@@ -2744,7 +2721,7 @@
         if (!n)
             return;
         closeSearch();
-        if (n.key) {
+        if ("key" in n) {
             S.pendingFocus = "overlay";
             selectOverlay(n);
         }
@@ -2783,7 +2760,7 @@
     // -------------------------------------------------------------- diagnostics
     var LEVEL_RANK = { error: 0, warn: 1, warning: 1, info: 2 };
     function levelRank(l) {
-        return l in LEVEL_RANK ? LEVEL_RANK[l] : 3;
+        return LEVEL_RANK[l] ?? 3;
     }
     function levelCounts() {
         var m = new Map();
@@ -3107,7 +3084,7 @@
             if (!hostEl || !M)
                 return;
             var feat = id ? M.overlayByKey.get("feature:" + id) : null;
-            S.ovHover = feat;
+            S.ovHover = feat || null;
             highlight();
         },
     };
