@@ -50,17 +50,9 @@ $env:DEEPSEEK_MODEL   = "deepseek-flash"   # 可选，默认就是这个；也�
 python code_agent.py . --port 8768
 ```
 
-走 DeepSeek 官方接口（`https://api.deepseek.com`，OpenAI 兼容），所以只用 `openai` SDK，没换客户端。模型默认 `deepseek-flash`（1M 上下文，支持 tool calls），`deepseek-v4-pro` 更强但贵约 3 倍。设 `DEEPSEEK_BASE_URL` 可指向别的兼容端点。
-
-只构建图谱、不起服务：
-
-```powershell
-python code_agent.py . --graph
-```
-
 ## 界面
 
-**对话视图** —— 左侧是会话列表（存在浏览器本地，刷新后还在），中间是消息流。提问后可以先看着工具调用一行行出现，再读结论；结论和工具详情里出现的 `文件.py:120` 都是可点开的，弹窗里显示该位置的真实源码片段。
+**对话视图** —— 左侧是会话列表，中间是消息流。提问后可以先看着工具调用一行行出现，再读结论；结论和工具详情里出现的 `文件.py:120` 都是可点开的，弹窗里显示该位置的真实源码片段。
 
 **架构图** —— 一次只显示当前这一层的块和它们之间的关系；指向层外的边收束到标记为「层外」的 ghost 块上，所以不会出现穿堂而过的长线。点块下钻，`Esc` 返回上一层，`/` 聚焦搜索。右侧详情面板给出计数、来源、组成部分和出入向连接。整层缩放到窗格内，根层一屏放得下。
 
@@ -113,22 +105,6 @@ python code_agent.py . --graph
 6. **任意仓库** —— 本地路径或浅克隆地址都能构图，界面内可重新构图，不需要重启服务。
 7. **不静默丢** —— 解析失败的文件数、无法静态定位的调用点数都进统计并在界面上显示，覆盖率的缺口是可见的。
 
-## 代码结构
-
-| 文件 | 来源 | 作用 |
-| --- | --- | --- |
-| `code_agent.py` | 本项目 | 模型循环、工具契约、会话表、HTTP 服务、NDJSON 事件流、边界检查 |
-| `code_graph.py` | 本项目 | 增量解析、调用关系解析、缓存 |
-| `languages.py` | 本项目 | 各语言的 Tree-sitter 提取规则 |
-| `picture.py` | 本项目 | 把 CodeGraph 投影成 `architecture-map-model/2` |
-| `studio.html` / `studio.css` / `studio.js` | 本项目 | 工作台外壳：标题栏、会话列表、对话渲染、composer、主题、视图切换，以及两个视图之间的跳转 |
-| `viewer/` | 本项目 | 架构图 viewer 的 TypeScript 实现（`src/viewer.ts` → `viewer.js`） |
-| `vendor/limen/` | **第三方** | 上游 viewer 的 CSS/模板/许可证，外加原始 `viewer.js` 作为等价性参照 |
-| `notebook/` | 本项目 | 手工练习：从一次裸 Chat Completions 出发，逐步加上 `read_file` / `write_file` / `run_python`、图谱工具和 compact，用来把 agent 的机制拆开看。`homework1_agent.html` 是它导出的只读版本，不用装 Jupyter 也能看 |
-
-### 关于 `vendor/limen/`
-
-架构图 viewer 起自 [`overment/limen`](https://github.com/overment/limen) 的 `picture/viewer/` @ `62c8c0b`（MIT License，© Adam Gospodarczyk，许可证见 `vendor/limen/LICENSE`），现在是用 TypeScript 重写的实现，在 `viewer/`。上游的 `viewer.js` 留在 `vendor/limen/` 作为参照物，`tests/equivalence_probe.py` 把同一份模型同时喂给两边、逐元素比对，确认渲染结果零差异。`picture.py` 负责把 CodeGraph 转成 `architecture-map-model/2` 模型。
 
 ## 验证
 

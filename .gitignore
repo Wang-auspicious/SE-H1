@@ -10,3 +10,8 @@ auth.json
 reference.mp4
 node_modules/
 *.bak*
+
+# limen 上游及其 viewer 移植。本地可留，不入库。
+vendor/limen/
+viewer/
+tests/equivalence_probe.py
