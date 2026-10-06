@@ -38,7 +38,9 @@
 	// These maps only decide what a reader sees.
 	var REL_LABELS = { "depends-on": "依赖", hosts: "承载", calls: "调用", implements: "实现", generates: "生成", reads: "读取", writes: "写入", composes: "组合", contains: "包含", inherits: "继承" };
 	var KIND_LABELS = { module: "模块", file: "文件", class: "类", function: "函数" };
-	var STATUS_LABELS = { ready: "完整", partial: "部分", stub: "占位" };
+	// Three distinct things, three labels: the file was read whole, the parse
+	// kept only its valid part, or there was nothing to parse in it at all.
+	var STATUS_LABELS = { ready: "已解析", partial: "解析不完整", stub: "无需解析" };
 	var OVERLAY_LABELS = { feature: "特性", journey: "流程" };
 	var LEVEL_LABELS = { error: "错误", warn: "警告", info: "提示" };
 	function zh(map, value) {
@@ -1162,8 +1164,14 @@
 		// both fully visible and readable on one screen, and unreadable is worse
 		// than scrolled. The root level of a repository fits well inside this.
 		var vh = D.viewport.clientHeight || 0;
-		var scale = Math.min(1, (vw - 4) / Lo.width, vh ? (vh - 8) / Lo.height : 1);
-		if (scale < READABLE_SCALE) scale = READABLE_SCALE;
+		// The margins cover the sizer's ceil() rounding and the ghost band, which
+		// are not part of Lo.height: without them a fitted level still leaves a
+		// few pixels of scroll.
+		var scale = Math.min(1, (vw - 12) / Lo.width, vh ? (vh - 20) / Lo.height : 1);
+		// The shell can drop the floor for a whole-map preview, which is what you
+		// want when the point is to see the shape rather than read a label.
+		var floor = hostEl && hostEl.dataset.fit === "all" ? 0 : READABLE_SCALE;
+		if (scale < floor) scale = floor;
 		level.scale = scale;
 		D.canvas.style.width = Lo.width + "px";
 		D.canvas.style.height = Lo.height + "px";
@@ -2959,6 +2967,10 @@
 		// Re-render in place, e.g. after the shell rebuilt the graph.
 		refresh: function (template) {
 			if (hostEl) build(template);
+		},
+		// Re-run the fit after the shell changed the scale floor.
+		refit: function () {
+			if (hostEl) renderLevel();
 		},
 	};
 })();

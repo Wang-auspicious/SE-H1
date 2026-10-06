@@ -137,6 +137,29 @@ body[data-view="picture"] .titlebar {
   border-color: var(--rule-strong);
 }
 
+/* Map-view controls. The chat view has no map, so they stay out of the way. */
+.tbtn-ghost {
+  display: none;
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r5);
+  color: var(--text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+  transition: background var(--fast), border-color var(--fast), color var(--fast);
+}
+
+body[data-view="picture"] .tbtn-ghost {
+  display: block;
+}
+
+.tbtn-ghost:hover,
+.tbtn-ghost[aria-pressed="true"] {
+  background: var(--rule);
+  border-color: var(--rule-strong);
+  color: var(--text);
+}
+
 .titlebar .rebuild {
   padding: 4px 10px;
   border: 1px solid var(--rule);

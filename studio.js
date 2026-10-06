@@ -689,6 +689,25 @@
 
   $("source-close").addEventListener("click", () => $("source-dialog").close());
 
+  /* -------------------------------------------------- whole-map preview */
+
+  // Two ways to see the whole thing at once. 整图 drops the scale floor so a
+  // level that normally scrolls is shown entire; 全屏 hands the map the whole
+  // screen so there is more of it to draw. For a screenshot, both.
+  $("fit-button").addEventListener("click", () => {
+    const host = $("picture-host");
+    const on = host.dataset.fit !== "all";
+    host.dataset.fit = on ? "all" : "readable";
+    $("fit-button").setAttribute("aria-pressed", String(on));
+    PictureViewer.refit();
+  });
+
+  $("full-button").addEventListener("click", () => {
+    const pane = $("pane-picture");
+    if (document.fullscreenElement) document.exitFullscreen();
+    else pane.requestFullscreen?.();
+  });
+
   $("source-map").addEventListener("click", () => focusInMap($("source-title").dataset.file));
 
   /* ------------------------------------------------------------ status/theme */

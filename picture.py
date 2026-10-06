@@ -51,7 +51,7 @@ def picture_model(graph):
             parent = directories.get(str(directory.parent))
             item = dict(id=identity("directory", str(directory)), title=directory.name,
                         kind="module", parent=parent["id"] if parent else None,
-                        status="partial", summary=f"源码目录：{directory}",
+                        status="ready", summary=f"源码目录：{directory}",
                         bodyHtml="<p>按仓库的目录结构分组。</p>",
                         sources=[str(directory) + "/"], meta={"boundary": "directory"})
             directories[str(directory)] = item
@@ -67,7 +67,9 @@ def picture_model(graph):
                 f"data-source=\"{location}\" data-line=\"{int(line)}\">查看源码 · {int(line)}</button></p>")
         nodes.append(dict(id=ids[source["id"]], title=source["name"],
                           kind="module" if kind == "file" else kind, parent=parent,
-                          status="partial" if source["file"] in errors or source.get("language") == "other" else "ready",
+                          status=("partial" if source["file"] in errors
+                                  else "stub" if source.get("language") == "other"
+                                  else "ready"),
                           summary=summary, bodyHtml=body, sources=[source["file"]],
                           meta={"kind": kind, "file": source["file"], "line": line,
                                 "end": source.get("end", line), "graph_id": source["id"]}))
