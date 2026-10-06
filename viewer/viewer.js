@@ -495,6 +495,7 @@
     // Inside the focus → the focus child that contains `n`. The focus itself → null.
     // Outside → the ancestor of `n` just below the deepest common ancestor (a ghost).
     function rep(n, fchain, visibleIds) {
+        // prepare() gives every node a chain before the first render.
         var d = fchain.length, c = n.chain;
         if (visibleIds) {
             for (var at = c.length - 1; at >= d; at--) {
@@ -516,11 +517,14 @@
     function lift(focus) {
         var fchain = focus ? focus.chain : [];
         var visible = shownKids(focus);
-        var overview = S.overlay && S.step < 0 && !S.inspect ? S.overlay.key : "";
+        // Narrowed once. The overlay is read three times below, and threading the
+        // same null check through each read is how the original stayed readable.
+        var sel = S.overlay;
+        var overview = sel && S.step < 0 && !S.inspect ? sel.key : "";
         // An overview reveals the places the selected work names, even across
         // collapsed boundaries. They remain real places in this one map.
         if (overview) {
-            S.overlay.places.forEach(function (p) {
+            sel.places.forEach(function (p) {
                 if (p.node && shown(p.node) && (!focus || (p.node !== focus && within(p.node, focus))) && visible.indexOf(p.node) < 0)
                     visible.push(p.node);
             });

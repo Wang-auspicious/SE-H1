@@ -169,12 +169,18 @@
 
 	type Band = "top" | "mid" | "bottom";
 
-	/** Where edges attach on a block's top and bottom edges. */
+	/** One attachment point on a block border, once the spread has placed it. */
+	interface Port {
+		nx: number;
+		k: number;
+		key: string;
+		lane: Record<string, number>;
+	}
+
+	/** Where edges attach on a block: the top border and the bottom border. */
 	interface Ports {
-		up: number[];
-		down: number[];
-		upOwner: (Bundle | null)[];
-		downOwner: (Bundle | null)[];
+		top: Port[];
+		bot: Port[];
 	}
 
 	/** One kind of relation between two blocks, with its own lane. */
@@ -187,6 +193,8 @@
 		bx: number;
 		tx: number;
 		pts: Pt[];
+		/** Set by drawEdges(); null while the relation is filtered out. */
+		el?: SVGElement | null;
 	}
 
 	interface Pt {
@@ -210,6 +218,10 @@
 		n: number;
 		down: Pt[];
 		up: Pt[];
+		/** Set by drawEdges(); null while the bundle is filtered out. */
+		el?: SVGElement | null;
+		pill?: SVGElement | null;
+		vis?: number;
 	}
 
 	/** A block rendered outside the focus because an edge leaves the level. */
@@ -826,9 +838,10 @@
 	// Visible stand-in for node `n` while `fchain` (focus chain) is open.
 	// Inside the focus → the focus child that contains `n`. The focus itself → null.
 	// Outside → the ancestor of `n` just below the deepest common ancestor (a ghost).
-	function rep(n, fchain, visibleIds) {
+	function rep(n: VNode, fchain: VNode[], visibleIds: Set<string> | null): { node: VNode; ghost: boolean } | null {
+		// prepare() gives every node a chain before the first render.
 		var d = fchain.length,
-			c = n.chain;
+			c = n.chain!;
 		if (visibleIds) {
 			for (var at = c.length - 1; at >= d; at--) {
 				if (visibleIds.has(c[at].id)) return { node: c[at], ghost: false };
@@ -842,27 +855,30 @@
 		return { node: i < c.length ? c[i] : n, ghost: true };
 	}
 
-	function lift(focus) {
-		var fchain = focus ? focus.chain : [];
+	function lift(focus: VNode | null): Level {
+		var fchain = focus ? focus.chain! : [];
 		var visible = shownKids(focus);
-		var overview = S.overlay && S.step < 0 && !S.inspect ? S.overlay.key : "";
+		// Narrowed once. The overlay is read three times below, and threading the
+		// same null check through each read is how the original stayed readable.
+		var sel = S.overlay;
+		var overview = sel && S.step < 0 && !S.inspect ? sel.key : "";
 		// An overview reveals the places the selected work names, even across
 		// collapsed boundaries. They remain real places in this one map.
 		if (overview) {
-			S.overlay.places.forEach(function (p) {
+			sel!.places.forEach(function (p) {
 				if (p.node && shown(p.node) && (!focus || (p.node !== focus && within(p.node, focus))) && visible.indexOf(p.node) < 0) visible.push(p.node);
 			});
 			visible.sort(function (a, b) {
 				return a.index - b.index;
 			});
 		}
-		var visibleIds = new Set(
+		var visibleIds = new Set<string>(
 			visible.map(function (n) {
 				return n.id;
 			}),
 		);
-		var bundles = new Map(),
-			ghosts = new Map(),
+		var bundles = new Map<string, Bundle>(),
+			ghosts = new Map<string, Ghost>(),
 			own = 0;
 		M.edges.forEach(function (e) {
 			if (!shown(e.from) || !shown(e.to)) return;
@@ -876,13 +892,13 @@
 			var key = a.node.id + "\n" + b.node.id;
 			var bu = bundles.get(key);
 			if (!bu) {
-				bu = { key: key, from: a.node, to: b.node, edges: [], lanes: new Map() };
+				bu = { key: key, from: a.node, to: b.node, edges: [], lanes: new Map() } as Bundle;
 				bundles.set(key, bu);
 			}
 			bu.edges.push(e);
 			var lane = bu.lanes.get(e.kind);
 			if (!lane) {
-				lane = { kind: e.kind, edges: [], bundle: bu };
+				lane = { kind: e.kind, edges: [], bundle: bu } as Lane;
 				bu.lanes.set(e.kind, lane);
 			}
 			lane.edges.push(e);
@@ -903,7 +919,7 @@
 		});
 		return { focus: focus, overview: overview, visible: visible, visibleIds: visibleIds, ghosts: g, bundles: list, own: own };
 	}
-	function ghostOf(map, node) {
+	function ghostOf(map: Map<string, Ghost>, node: VNode): Ghost {
 		var g = map.get(node.id);
 		if (!g) {
 			g = { node: node, out: 0, inc: 0, band: "" };
@@ -917,7 +933,7 @@
 	// bottom ghosts. Long edges get dummy points, rows are ordered by barycenter sweeps,
 	// x positions come from order-preserving least squares (pool adjacent violators).
 
-	function layout(level, perRow) {
+	function layout(level: Level, perRow: number): Layout {
 		var W = Math.max(2, Math.min(6, perRow));
 		var items = [],
 			byId = new Map();
@@ -1225,7 +1241,7 @@
 		};
 	}
 
-	function crossings(layers) {
+	function crossings(layers: Item[][]): number {
 		var c = 0;
 		for (var L = 0; L + 1 < layers.length; L++) {
 			var segs = [];
@@ -1243,7 +1259,7 @@
 		return c;
 	}
 
-	function orderRows(layers) {
+	function orderRows(layers: Item[][]): void {
 		var n = layers.length;
 		function norm(it) {
 			return (it.pos + 0.5) / layers[it.layer].length;
@@ -1295,12 +1311,12 @@
 		});
 	}
 
-	function sepOf(a, b) {
+	function sepOf(a: Item, b: Item): number {
 		return a.dummy || b.dummy ? GEO.dummySep : GEO.gapX;
 	}
 
 	// Weighted isotonic regression: closest non-decreasing sequence to `s`.
-	function pav(s, w) {
+	function pav(s: number[], w: number[]): number[] {
 		var blocks = [];
 		for (var i = 0; i < s.length; i++) {
 			blocks.push({ v: s[i], wt: w[i], n: 1 });
@@ -1319,7 +1335,7 @@
 		return out;
 	}
 
-	function placeRow(row, side) {
+	function placeRow(row: Item[], side: string): void {
 		var n = row.length;
 		if (!n) return;
 		var s = [],
@@ -1362,7 +1378,7 @@
 		for (k = 0; k < n; k++) row[k].cx = y[k] + off[k];
 	}
 
-	function placeX(layers) {
+	function placeX(layers: Item[][]): void {
 		var widest = 0;
 		layers.forEach(function (row) {
 			var x = 0;
@@ -1392,7 +1408,7 @@
 	// ------------------------------------------------------------------ routing
 
 	// Spreads the ends that share one block border. Each port writes lane[port.key].
-	function assignPorts(it, ports) {
+	function assignPorts(it: Item, ports: Port[]): void {
 		if (!ports.length) return;
 		ports.sort(function (a, b) {
 			return a.nx - b.nx || a.k - b.k;
@@ -1415,7 +1431,7 @@
 	}
 
 	// Lanes run upper bottom → dummy chain → lower top.
-	function route(level) {
+	function route(level: Level): void {
 		var Lo = level.layout;
 		Lo.items.forEach(function (it) {
 			it.ports = { top: [], bot: [] };
@@ -1465,7 +1481,7 @@
 		});
 	}
 
-	function pathD(pts) {
+	function pathD(pts: Pt[]): string {
 		var n = pts.length,
 			last = pts[n - 1],
 			prev = pts[n - 2];
@@ -1483,7 +1499,7 @@
 		}
 		return d;
 	}
-	function headD(pts) {
+	function headD(pts: Pt[]): string {
 		var n = pts.length,
 			last = pts[n - 1],
 			prev = pts[n - 2];
@@ -1494,7 +1510,7 @@
 
 	// ------------------------------------------------------------------ drawing
 
-	function renderLevel() {
+	function renderLevel(): void {
 		hideTip();
 		S.hoverId = null;
 		S.kbdId = null;
@@ -1555,7 +1571,7 @@
 		renderStageFeatures(level);
 	}
 
-	function renderStageFeatures(level) {
+	function renderStageFeatures(level: Level): void {
 		var sf = $("stage-features");
 		if (!sf) return;
 		// Image 3: "点进来以后是没有底部的"
@@ -1601,7 +1617,7 @@
 		});
 	}
 
-	function drawEdges() {
+	function drawEdges(): void {
 		var level = S.level,
 			Lo = level.layout,
 			g = D.edges;
@@ -1685,7 +1701,7 @@
 		muteGhosts();
 	}
 
-	function drawBlocks() {
+	function drawBlocks(): void {
 		var level = S.level,
 			Lo = level.layout;
 		clear(D.blocks);
@@ -1713,7 +1729,7 @@
 		muteGhosts();
 	}
 
-	function blockEl(it) {
+	function blockEl(it: Item): HTMLElement {
 		var n = it.node,
 			ghost = it.band !== "mid";
 		var b = button("block " + kindClass(n.kind) + " " + statusClass(n.status) + (ghost ? " ghost" : ""));
@@ -1776,7 +1792,7 @@
 		return b;
 	}
 
-	function muteGhosts() {
+	function muteGhosts(): void {
 		var level = S.level;
 		if (!level || !level.els) return;
 		var live = new Set();
@@ -1792,7 +1808,7 @@
 		});
 	}
 
-	function updateSelection() {
+	function updateSelection(): void {
 		var level = S.level;
 		if (!level || !level.els) return;
 		level.els.forEach(function (b, id) {
@@ -1807,7 +1823,7 @@
 	// Hover, keyboard focus, or selection lights one block (or one bundle) and its
 	// neighbours; everything else dims. A feature or journey keeps only its explicit
 	// places lit, including while the reader moves over the graph.
-	function highlight() {
+	function highlight(): void {
 		var level = S.level;
 		if (!level || !level.els) return;
 		var on = new Set(),
@@ -1874,7 +1890,7 @@
 		overlayNote(ov, at);
 	}
 
-	function stepTag(b, text) {
+	function stepTag(b: HTMLElement, text: string): HTMLElement {
 		var tag = b.querySelector(".b-steps");
 		if (!text) {
 			if (tag) b.removeChild(tag);
@@ -1892,7 +1908,7 @@
 	// Where each listed place shows at this level: its own block, the block of a
 	// collapsed ancestor, the open block (or a block above it), or nowhere. Never a
 	// neighbour: overlays draw no links. `marks` maps a block id to 1-based list positions.
-	function overlayMarks(level, o) {
+	function overlayMarks(level: Level, o: Overlay): void {
 		var fchain = level.focus ? level.focus.chain : [];
 		var r = { marks: new Map(), carriers: new Map(), lit: 0, around: 0, off: 0, root: 0 };
 		o.places.forEach(function (p, i) {
@@ -1914,7 +1930,7 @@
 		return r;
 	}
 
-	function commonOverlayFocus(o) {
+	function commonOverlayFocus(o: Overlay): VNode | null {
 		if (
 			!o ||
 			!o.places.length ||
@@ -1932,7 +1948,7 @@
 		return chain.length ? chain[chain.length - 1] : null;
 	}
 
-	function overlayCount(o) {
+	function overlayCount(o: Overlay): number {
 		return o.kind === "journey"
 			? plural(o.places.length, "个步骤")
 			: plural(
@@ -1945,7 +1961,7 @@
 				);
 	}
 
-	function overlayNote(o, at) {
+	function overlayNote(o: Overlay, at: number): string {
 		var box = D.ovNote;
 		if (!box) return;
 		var text = "在左侧索引中选择一个特性或流程。点击位置可查看它在这里的归属。";
@@ -1966,7 +1982,7 @@
 		$("selection-bar").classList.toggle("has-selection", !!S.overlay);
 	}
 
-	function renderOverlays() {
+	function renderOverlays(): void {
 		var box = D.overlays,
 			tabs = D.explorerTabs;
 		clear(box);
@@ -2028,7 +2044,7 @@
 		updateOverlays();
 	}
 
-	function overlayItem(o) {
+	function overlayItem(o: Overlay): HTMLElement {
 		var b = button("ov-item ov-" + o.kind + " " + statusClass(o.status) + (o.places.length ? "" : " zero"), null, function () {
 			selectOverlay(S.overlay === o ? null : o);
 		});
@@ -2065,7 +2081,7 @@
 		return b;
 	}
 
-	function updateOverlays() {
+	function updateOverlays(): void {
 		D.ovItems.forEach(function (b, key) {
 			b.setAttribute("aria-pressed", String(!!S.overlay && S.overlay.key === key));
 		});
@@ -2079,7 +2095,7 @@
 		}
 	}
 
-	function selectOverlay(o) {
+	function selectOverlay(o: Overlay): void {
 		if (D.panelBody.contains(root.activeElement)) S.pendingFocus = "overlay";
 		S.overlay = o;
 		S.step = -1;
@@ -2100,7 +2116,7 @@
 		navigate(focus, o ? null : S.selected);
 	}
 
-	function dropOverlay() {
+	function dropOverlay(): void {
 		if (!S.overlay) return false;
 		S.overlay = null;
 		S.step = -1;
@@ -2110,13 +2126,13 @@
 		return true;
 	}
 
-	function goPlace(p, focusPanel) {
+	function goPlace(p: Place, focusPanel: boolean): void {
 		S.pendingFocus = focusPanel || S.inspect ? "overlay" : null;
 		if (p.node) navigate(p.node.parent, p.node);
 		else navigate(null, null);
 	}
 
-	function goStep(i, focusPanel) {
+	function goStep(i: number, focusPanel: boolean): void {
 		var o = S.overlay;
 		if (!o || i < 0 || i >= o.places.length) return;
 		S.step = i;
@@ -2125,14 +2141,14 @@
 		if (D.announcer) D.announcer.textContent = "步骤 " + (i + 1) + " / " + o.places.length + "：" +  + (o.places[i].node ? o.places[i].node.title : projectTitle());
 	}
 
-	function overlayOverview() {
+	function overlayOverview(): void {
 		S.pendingFocus = "overlay";
 		S.inspect = false;
 		S.step = -1;
 		navigate(commonOverlayFocus(S.overlay), null);
 	}
 
-	function renderOverlayPanel(box, o) {
+	function renderOverlayPanel(box: HTMLElement, o: Overlay): void {
 		var journey = o.kind === "journey";
 		var tags = el("div", "d-tags");
 		tags.appendChild(el("span", "tag ov-tag ov-" + o.kind, zh(OVERLAY_LABELS, o.kind)));
@@ -2227,7 +2243,7 @@
 	}
 
 	// One plain line on where a listed place shows at the current level.
-	function placeWhere(level, at, p, i) {
+	function placeWhere(level: Level, at: number, p: Place, i: number): HTMLElement {
 		if (!p.node) return "整个项目。不会高亮任何块。";
 		if (!level || !at) return "";
 		if (!shown(p.node)) return "已被图例隐藏。";
@@ -2244,7 +2260,7 @@
 
 	// ------------------------------------------------------------------ tooltip
 
-	function breakdown(edges) {
+	function breakdown(edges: VEdge[]): { kind: string; n: number }[] {
 		var by = new Map();
 		edges.forEach(function (e) {
 			by.set(e.kind, (by.get(e.kind) || 0) + 1);
@@ -2258,14 +2274,14 @@
 			})
 			.join(", ");
 	}
-	function visibleEdges(bu) {
+	function visibleEdges(bu: Bundle): VEdge[] {
 		var out = [];
 		bu.laneList.forEach(function (l) {
 			if (!S.hideRel.has(l.kind)) out = out.concat(l.edges);
 		});
 		return out;
 	}
-	function showTip(bu, ev) {
+	function showTip(bu: Bundle, ev: MouseEvent): void {
 		var tip = D.tip,
 			edges = visibleEdges(bu);
 		clear(tip);
@@ -2283,7 +2299,7 @@
 		tip.hidden = false;
 		moveTip(ev);
 	}
-	function moveTip(ev) {
+	function moveTip(ev: MouseEvent): void {
 		var tip = D.tip;
 		if (tip.hidden) return;
 		var w = tip.offsetWidth,
@@ -2295,13 +2311,13 @@
 		tip.style.left = x + "px";
 		tip.style.top = y + "px";
 	}
-	function hideTip() {
+	function hideTip(): void {
 		if (D.tip) D.tip.hidden = true;
 	}
 
 	// -------------------------------------------------------------- level head
 
-	function renderHead(level) {
+	function renderHead(level: Level): void {
 		var box = D.head,
 			f0 = level.focus;
 		clear(box);
@@ -2330,7 +2346,7 @@
 
 	// ------------------------------------------------------------------- legend
 
-	function renderLegend() {
+	function renderLegend(): void {
 		var box = D.legend,
 			level = S.level;
 		var active = root.activeElement,
@@ -2407,7 +2423,7 @@
 		}
 	}
 
-	function toggleRel(k) {
+	function toggleRel(k: string): void {
 		if (S.hideRel.has(k)) S.hideRel.delete(k);
 		else S.hideRel.add(k);
 		if (S.edgeSel && !visibleEdges(S.edgeSel).length) {
@@ -2419,7 +2435,7 @@
 		highlight();
 	}
 
-	function toggleKind(k) {
+	function toggleKind(k: string): void {
 		if (S.hideKind.has(k)) S.hideKind.delete(k);
 		else S.hideKind.add(k);
 		var focus = S.focus;
@@ -2434,7 +2450,7 @@
 
 	// --------------------------------------------------------------- navigation
 
-	function hashFor(focus, selected, overlay, step, inspect) {
+	function hashFor(focus: VNode | null, selected: string | null, overlay: Overlay | null, step: number, inspect: boolean): string {
 		var path = focus && (!selected || selected === focus) ? encodeURIComponent(focus.id) + "/" : selected ? encodeURIComponent(selected.id) : "";
 		var query = new URLSearchParams();
 		if (overlay) {
@@ -2444,7 +2460,7 @@
 		}
 		return "#" + path + (query.size ? "?" + query.toString() : "");
 	}
-	function parseHash() {
+	function parseHash(): void {
 		var hash = location.hash.replace(/^#/, ""),
 			cut = hash.indexOf("?");
 		var h = cut < 0 ? hash : hash.slice(0, cut);
@@ -2488,7 +2504,7 @@
 		result.selected = n;
 		return result;
 	}
-	function navigate(focus, selected) {
+	function navigate(focus: VNode | null, selected: VNode | null): void {
 		S.edgeSel = null;
 		var h = hashFor(focus, selected, S.overlay, S.step, S.inspect);
 		if ((location.hash || "#") === h) {
@@ -2497,7 +2513,7 @@
 		}
 		location.hash = h;
 	}
-	function onHash() {
+	function onHash(): void {
 		var r = parseHash();
 		if (r.overlay || r.selected) setPanel(true);
 		S.overlay = r.overlay;
@@ -2513,14 +2529,14 @@
 		apply(r.focus, r.selected, r.unknown);
 	}
 
-	function centerOf(level, node) {
+	function centerOf(level: Level, node: VNode): { x: number; y: number } | null {
 		if (!level || !level.layout || !node) return null;
 		var it = level.layout.byId.get(node.id);
 		if (!it) return null;
 		return { x: it.cx * level.scale, y: (it.y + it.h / 2) * level.scale };
 	}
 
-	function apply(focus, selected, unknown) {
+	function apply(focus: VNode | null, selected: VNode | null, unknown: string): void {
 		var unhid = false;
 		[focus, selected].forEach(function (n) {
 			if (n)
@@ -2570,7 +2586,7 @@
 		S.pendingFocus = null;
 	}
 
-	function revealSelected(takeFocus) {
+	function revealSelected(takeFocus: boolean): void {
 		var level = S.level;
 		if (!level || !level.els) return;
 		var b = S.selected ? level.els.get(S.selected.id) : null;
@@ -2587,7 +2603,7 @@
 		}
 	}
 
-	function animateLevel(dir, origin) {
+	function animateLevel(dir: number, origin: { x: number; y: number } | null): void {
 		if (reduced() || !D.sizer.animate) return;
 		D.sizer.style.transformOrigin = origin ? f(origin.x) + "px " + f(origin.y) + "px" : "50% 30%";
 		D.sizer.animate(
@@ -2600,14 +2616,14 @@
 	}
 
 	// Place inspection keeps the selected feature or journey visible as context.
-	function activate(n, ghost) {
+	function activate(n: VNode, ghost: boolean): void {
 		S.inspect = !!S.overlay;
 		if (!ghost && shownKids(n).length) navigate(n, n);
 		else navigate(ghost ? n.parent : S.focus, n);
 		setPanel(true);
 	}
 
-	function up() {
+	function up(): void {
 		if (S.edgeSel) {
 			S.edgeSel = null;
 			renderPanel();
@@ -2626,7 +2642,7 @@
 		else if (S.selected) navigate(null, null);
 	}
 
-	function selectBundle(bu) {
+	function selectBundle(bu: Bundle): void {
 		S.edgeSel = bu;
 		hideTip();
 		renderPanel();
@@ -2635,7 +2651,7 @@
 		setPanel(true);
 	}
 
-	function renderCrumbs() {
+	function renderCrumbs(): void {
 		var box = D.crumbs;
 		clear(box);
 		var trail = [null].concat(S.focus ? S.focus.chain : []);
@@ -2663,7 +2679,7 @@
 
 	// -------------------------------------------------------------------- panel
 
-	function renderPanel() {
+	function renderPanel(): void {
 		var box = D.panelBody,
 			active = root.activeElement,
 			keep = active && box.contains(active) ? active.dataset.key : "",
@@ -2689,7 +2705,7 @@
 		} else D.panel.scrollTop = 0;
 	}
 
-	function renderProjectPanel(box) {
+	function renderProjectPanel(box: HTMLElement): void {
 		var p = M.project,
 			tags = el("div", "d-tags");
 		tags.appendChild(el("span", "tag", "项目"));
@@ -2735,7 +2751,7 @@
 		if (M.generatedAt) box.appendChild(el("p", "d-foot", "生成时间 " + M.generatedAt));
 	}
 
-	function renderOverlayContext(box) {
+	function renderOverlayContext(box: HTMLElement): void {
 		var o = S.overlay,
 			context = el("div", "overlay-context ov-" + o.kind);
 		context.appendChild(el("span", "index-kind", o.kind));
@@ -2749,7 +2765,7 @@
 		box.appendChild(context);
 	}
 
-	function renderMemberships(box, id) {
+	function renderMemberships(box: HTMLElement, id: string): void {
 		var memberships = M.memberships.get(id) || [];
 		var s = section(box, "此处对应的指定工作"),
 			list = el("ul", "d-parts memberships");
@@ -2780,7 +2796,7 @@
 	// Sources ride the metadata row instead of taking a section of their own:
 	// both answer "where did this come from", and one wrapped row is shorter
 	// than two stacked blocks.
-	function metaList(box, meta, sources) {
+	function metaList(box: HTMLElement, meta: Record<string, unknown>, sources?: string[]): void {
 		var keys = Object.keys(meta).filter(function (k) {
 			var v = meta[k];
 			return v != null && typeof v !== "object";
@@ -2797,7 +2813,7 @@
 		section(box, srcs.length ? "来源与元数据" : "元数据").appendChild(dl);
 	}
 
-	function renderNodePanel(box, n) {
+	function renderNodePanel(box: HTMLElement, n: VNode): void {
 		var tags = el("div", "d-tags");
 		tags.appendChild(kindTag(n.kind));
 		tags.appendChild(badge(n.status));
@@ -2841,7 +2857,7 @@
 	}
 
 	// Edges that cross the border of `n`'s subtree.
-	function connections(n) {
+	function connections(n: VNode): { out: VEdge[]; inc: VEdge[]; inside: number } {
 		var out = [],
 			inc = [],
 			inside = 0;
@@ -2866,7 +2882,7 @@
 		return { out: out, inc: inc, inside: inside };
 	}
 
-	function connSection(box, title, list, dirOut, n) {
+	function connSection(box: HTMLElement, title: string, list: VEdge[], dirOut: boolean, n: VNode): void {
 		var s = section(box, title + " (" + list.length + ")");
 		if (!list.length) {
 			s.appendChild(el("p", "d-empty", "无。"));
@@ -2880,7 +2896,7 @@
 		s.appendChild(ul);
 	}
 
-	function connItem(e, dirOut, n) {
+	function connItem(e: VEdge, dirOut: boolean, n: VNode): HTMLElement {
 		var other = dirOut ? e.to : e.from,
 			part = dirOut ? e.from : e.to;
 		var li = el("li", "conn" + (S.hideRel.has(e.kind) ? " off" : ""));
@@ -2907,7 +2923,7 @@
 		return li;
 	}
 
-	function edgeBody(box, e) {
+	function edgeBody(box: HTMLElement, e: VEdge): void {
 		var tags = el("div", "d-tags");
 		if (e.status) tags.appendChild(badge(e.status));
 		box.appendChild(tags);
@@ -2918,7 +2934,7 @@
 		if (e.source) box.appendChild(codeLine("d-foot", e.source));
 	}
 
-	function renderBundlePanel(box, bu) {
+	function renderBundlePanel(box: HTMLElement, bu: Bundle): void {
 		var tags = el("div", "d-tags");
 		tags.appendChild(el("span", "tag", "连接"));
 		box.appendChild(tags);
@@ -2961,14 +2977,14 @@
 		if (edges.length > LIMIT.list) box.appendChild(el("p", "more", edges.length - LIMIT.list + " 项未显示"));
 	}
 
-	function setExplorer(open) {
+	function setExplorer(open: boolean): void {
 		D.main.classList.toggle("explorer-closed", !open);
 		if (D.explorerToggle) D.explorerToggle.setAttribute("aria-expanded", String(open));
 		if (open && window.innerWidth <= 760) setPanel(false);
 		scheduleRelayout();
 	}
 
-	function setPanel(open) {
+	function setPanel(open: boolean): void {
 		D.main.classList.toggle("panel-closed", !open);
 		if (D.panelToggle) D.panelToggle.setAttribute("aria-expanded", String(open));
 		var btn = $("panel-toggle-btn");
@@ -2985,7 +3001,7 @@
 
 	// ------------------------------------------------------------------- search
 
-	function searchNodes(q) {
+	function searchNodes(q: string): SearchResult[] {
 		q = q.trim().toLowerCase();
 		if (!q) return [];
 		var terms = q.split(/\s+/),
@@ -3019,7 +3035,7 @@
 		});
 	}
 
-	function renderResults() {
+	function renderResults(): void {
 		var ul = D.results,
 			input = D.search;
 		clear(ul);
@@ -3057,7 +3073,7 @@
 		else input.removeAttribute("aria-activedescendant");
 	}
 
-	function pickResult(i) {
+	function pickResult(i: number): void {
 		var n = S.results[i];
 		if (!n) return;
 		closeSearch();
@@ -3072,7 +3088,7 @@
 		}
 	}
 
-	function closeSearch() {
+	function closeSearch(): void {
 		D.search.value = "";
 		S.results = [];
 		S.active = -1;
@@ -3080,7 +3096,7 @@
 		D.search.blur();
 	}
 
-	function onSearchKey(ev) {
+	function onSearchKey(ev: KeyboardEvent): void {
 		if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
 			if (!S.results.length) return;
 			ev.preventDefault();
@@ -3099,10 +3115,10 @@
 	// -------------------------------------------------------------- diagnostics
 
 	var LEVEL_RANK = { error: 0, warn: 1, warning: 1, info: 2 };
-	function levelRank(l) {
+	function levelRank(l: string): number {
 		return l in LEVEL_RANK ? LEVEL_RANK[l] : 3;
 	}
-	function levelCounts() {
+	function levelCounts(): Record<string, number> {
 		var m = new Map();
 		M.diagnostics.forEach(function (d) {
 			m.set(d.level, (m.get(d.level) || 0) + 1);
@@ -3111,12 +3127,12 @@
 			return levelRank(a[0]) - levelRank(b[0]) || (a[0] < b[0] ? -1 : 1);
 		});
 	}
-	function levelClass(l) {
+	function levelClass(l: string): string {
 		var r = levelRank(l);
 		return r === 0 ? "lv-error" : r === 1 ? "lv-warn" : "lv-info";
 	}
 
-	function renderDiagButton() {
+	function renderDiagButton(): void {
 		var b = D.diagToggle;
 		if (!b) return;
 		var counts = levelCounts();
@@ -3139,7 +3155,7 @@
 		);
 	}
 
-	function buildDrawer() {
+	function buildDrawer(): void {
 		var box = D.drawer;
 		clear(box);
 		var head = el("div", "dr-head");
@@ -3226,7 +3242,7 @@
 			});
 	}
 
-	function setDrawer(open) {
+	function setDrawer(open: boolean): void {
 		if (open && !S.drawerBuilt) {
 			buildDrawer();
 			S.drawerBuilt = true;
@@ -3243,7 +3259,7 @@
 
 	// --------------------------------------------------------------------- init
 
-	function onKey(ev) {
+	function onKey(ev: KeyboardEvent): void {
 		// The shell owns the keyboard while another view is showing.
 		if (!hostEl || !hostEl.offsetParent) return;
 		var t = ev.target,
@@ -3267,7 +3283,7 @@
 		}
 	}
 
-	function scheduleRelayout() {
+	function scheduleRelayout(): void {
 		clearTimeout(S.relayoutTimer);
 		S.relayoutTimer = setTimeout(function () {
 			var w = D.viewport.clientWidth;
@@ -3279,13 +3295,13 @@
 		}, 120);
 	}
 
-	function fail(message) {
+	function fail(message: string): void {
 		clear(D.head);
 		D.head.appendChild(el("h1", "lh-title", "架构图"));
 		D.head.appendChild(el("p", "notice", message));
 	}
 
-	function init() {
+	function init(): void {
 		D = {
 			main: $("main"),
 			crumbs: $("crumbs"),
@@ -3393,7 +3409,7 @@
 
 	// Mounted into a shadow root by the studio shell: the markup arrives as an
 	// inert <template>, so the viewer owns when it builds and when it reads data.
-	function build(template) {
+	function build(template: Element): void {
 		root.replaceChildren(template.content.cloneNode(true));
 		// `S` outlives the DOM it describes, and `apply()` decides whether to
 		// repaint by comparing against it. A rebuild must therefore forget the
