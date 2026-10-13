@@ -28,27 +28,27 @@ flowchart LR
   G --> Q
 ```
 
-`code_agent.py` 负责模型循环、工具契约、会话表、HTTP 服务和事件流；`code_graph.py` 负责增量解析、关系解析和缓存；`languages.py` 提供语言提取规则；`picture.py` 是 CodeGraph 与架构图 viewer 之间唯一的适配层；`studio.*` 是外壳；`circular_view.html` 是圆形图；`vendor/limen/` 是第三方架构图 viewer。服务从模块文件位置解析所有静态资源，因此不依赖启动时的工作目录。
+`code_agent.py` 负责模型循环、工具契约、会话表、HTTP 服务和事件流；`code_graph.py` 负责增量解析、关系解析和缓存；`languages.py` 提供语言提取规则；`picture.py` 是 CodeGraph 与架构图 viewer 之间唯一的适配层；`studio.*` 是外壳；`viewer/` 是架构图 viewer（TypeScript 实现）。服务从模块文件位置解析所有静态资源，因此不依赖启动时的工作目录。
 
 ## 架构图：shadow root 嵌入
 
-架构图不是外壳写的，是上游代码，集成方式由它的内部结构决定。
+架构图 viewer 是独立的 TypeScript 子项目，外壳不碰它的渲染逻辑，集成方式由它的内部结构决定。
 
-上游 viewer 原本独占整个文档：样式表里有 `:root`、`*`、`html, body`，脚本用 `document.getElementById` 和 `document.activeElement` 取元素。要让它和对话界面共存，可以把它的选择器逐个加前缀，也可以把它挂进 shadow root。
+viewer 最初按独占整个文档来写：样式表里有 `:root`、`*`、`html, body`，脚本用 `document.getElementById` 和 `document.activeElement` 取元素。要让它和对话界面共存，可以把它的选择器逐个加前缀，也可以把它挂进 shadow root。
 
 选后者，因为 shadow DOM 让全局重置、`html/body` 选择器、z-index 层级和 SVG 片段引用全部自动作用域化。代价被压到 8 处改动：CSS 3 处（`:root` → `:host` 两处，`html, body` 与 `body` 合并进一条 `:host`），JS 5 处（`root` 变量 + `$()` 经由它查询、`activeElement` 8 处改为 `root.activeElement`、`document.title` 加独立运行守卫、`onKey` 加可见性守卫、结尾 `init()` 换成 `mount()`）。
 
 还有一条容易被忽略的级联规则：**外层文档的规则压过 shadow 内部的 `:host` 规则**。所以外壳绝不能给 `#picture-host` 设 `display` —— 一旦设了，viewer 的 `:host { display: grid }` 就被顶掉，Stage 失去高度约束，viewport 会撑到几千像素。外壳只负责给宿主一个确定尺寸的父元素，其余全交给 `:host`。
 
-同理，主题也走这条规则：viewer 原本靠 `prefers-color-scheme`，看不到外壳的手动开关。外壳在 `#picture-host` 上重新声明那套 token 就能覆盖它，不需要改动 vendored 文件。
+同理，主题也走这条规则：viewer 原本靠 `prefers-color-scheme`，看不到外壳的手动开关。外壳在 `#picture-host` 上重新声明那套 token 就能覆盖它，不需要改动 viewer 文件。
 
-`onKey` 守卫是必需的，不是保险：上游的 `/`、`Escape`、`Backspace` 是无条件处理的，不守卫就会在用户于对话视图打字时抢占键盘。守卫用 `host.offsetParent` 判断宿主是否可见。
+`onKey` 守卫是必需的，不是保险：viewer 的 `/`、`Escape`、`Backspace` 是无条件处理的，不守卫就会在用户于对话视图打字时抢占键盘。守卫用 `host.offsetParent` 判断宿主是否可见。
 
 `init()` 在 `refresh()` 时会再跑一遍，所以文档级监听和 `ResizeObserver` 必须幂等：keydown 重复注册会让一次 `Esc` 下钻两级。
 
 ### 适配窗格：高度也要参与缩放
 
-上游的布局只按宽度缩放，因为它原本独占一个窗口，高度不是约束。塞进窗格后高度成了稀缺的那一维，于是把高度也纳入缩放，整层一屏可读；低于下限就滚动，这比把字缩到看不清更诚实。下限取 0.65。
+viewer 的布局只按宽度缩放，因为它原本独占一个窗口，高度不是约束。塞进窗格后高度成了稀缺的那一维，于是把高度也纳入缩放，整层一屏可读；低于下限就滚动，这比把字缩到看不清更诚实。下限取 0.65。
 
 第一版把侧栏用 `display: none` 藏掉，结果 viewport 宽度变成 0：`.main` 是三轨 grid，grid item 被移出文档流后，后面的 item 会各往前挪一条轨道，`.stage` 落进了那条 0 宽的轨道。改成显式重定义两轨；viewer 自带的 `explorer-closed` 规则同样不可用，因为它把 explorer 设成 `display:none` 却仍保留 0 宽的第一轨。
 
@@ -56,7 +56,7 @@ flowchart LR
 
 ### 中文界面
 
-上游的 kind / relation / status 名字同时是**数据**和**显示文本**：它们要穿过 `M.relClass` / `M.kindClass` / `M.statusClass` 这些查表来决定配色。所以不能在适配器层把名字改成中文——那会连带丢掉语义色。
+viewer 的 kind / relation / status 名字同时是**数据**和**显示文本**：它们要穿过 `M.relClass` / `M.kindClass` / `M.statusClass` 这些查表来决定配色。所以不能在适配器层把名字改成中文——那会连带丢掉语义色。
 
 做法是分开：模型里保留原名，viewer 里加一层 `REL_LABELS` / `KIND_LABELS` / `STATUS_LABELS` / `OVERLAY_LABELS` / `LEVEL_LABELS`，只在渲染文本时查。`plural()` 也一样，中文没有复数，量词直接写进单位里。少数由适配器自己生成的文本（元数据行的标签、节点摘要里的类型名）在 `picture.py` 里翻译，因为它们不经过 viewer 的查表。
 
@@ -72,7 +72,7 @@ flowchart LR
 
 **图 → 对话。** 适配器写进详情面板的「查看源码」按钮，外壳用事件委托接住（按钮在 shadow 里，靠 `composedPath` 找），打开同一个弹窗。弹窗除了源码片段，还列出本次对话里提到这个位置的原话，以及一个「在架构图中查看」按钮——它查位置索引拿到 id，写进 URL hash，viewer 自己的 `onHash` 就完成跳转。
 
-**外壳不改 viewer 的渲染逻辑**：标记是外壳给块加类，跳转是驱动 viewer 已有的 hash 导航。vendored 代码里没有一行为了这个功能而存在。
+**外壳不改 viewer 的渲染逻辑**：标记是外壳给块加类，跳转是驱动 viewer 已有的 hash 导航。viewer 代码里没有一行为了这个功能而存在。
 
 ### 为什么删掉圆形图
 
@@ -118,7 +118,7 @@ HTTP 服务是 `ThreadingHTTPServer`，`daemon_threads = True`。这不是可选
 
 ## 静态资源与边界
 
-静态资源走**精确白名单**：`studio.css`、`studio.js`、`vendor/limen/viewer.css`、`vendor/limen/viewer.js`。没有目录兜底 —— 不继承 `SimpleHTTPRequestHandler` 的文件服务行为，因为那会把整个工作目录发布出去，包括 `.env`、`auth.json` 和私钥，而且完全绕过 `excluded()` 那套判定。未匹配的路径一律 404。
+静态资源走**精确白名单**：`studio.css`、`studio.js`、`viewer/viewer.css`、`viewer/viewer.js`。没有目录兜底 —— 不继承 `SimpleHTTPRequestHandler` 的文件服务行为，因为那会把整个工作目录发布出去，包括 `.env`、`auth.json` 和私钥，而且完全绕过 `excluded()` 那套判定。未匹配的路径一律 404。
 
 `GET /api/source` 只接受图谱中登记过的文件名，返回从指定行开始的最多 120 行。路径会 `resolve()` 后再次检查仓库边界；`.env`、`auth.json`、`credentials.json`、`*.pem`/`*.key`/`*.p12`/`*.pfx` 和指向仓库外的符号链接都拒绝读取。这些拒绝路径有测试覆盖。
 
@@ -140,7 +140,7 @@ HTTP 服务是 `ThreadingHTTPServer`，`daemon_threads = True`。这不是可选
 | 至少一种工具 | 构图、关系查询、读文件、写文件、执行代码 |
 | 记忆与上下文 | 会话表 + `messages` 列表 + 图谱邻域查询 |
 | 错误处理与重试 | 工具错误作为观察回流，步数和超时双重停止，无 key 时降级为本地审查 |
-| 可维护性 | Agent、图谱、语言规则、适配层、外壳分层；vendored 代码与自研代码分目录并带许可证，改动逐条记录在文件头 |
+| 可维护性 | Agent、图谱、语言规则、适配层、外壳分层；viewer 独立成 TypeScript 子项目，`strict` 模式类型检查 |
 | 代码库审查 | `/api/chat` 流式返回结论、工具轨迹和可点开的源码证据，并按证据在结构图上定位 |
 
 ## 验证
@@ -151,7 +151,7 @@ python -m py_compile code_agent.py code_graph.py languages.py picture.py
 python code_agent.py . --port 8768
 ```
 
-测试不需要模型 key，也不需要网络。图谱正确性用行为断言保证：下钻后 ghost 块出现、`Esc` 返回上一层、在对话视图打字时 `/` 和 `Backspace` 不被图谱抢走；vendored viewer 的样式表里不允许出现 `html`/`body`/`:root` 选择器，脚本里不允许出现 `document.getElementById` 或 `document.activeElement`；每个文件都能在位置索引里查到 id；界面文本是中文；页面不引用任何远程资源。
+测试不需要模型 key，也不需要网络。图谱正确性用行为断言保证：下钻后 ghost 块出现、`Esc` 返回上一层、在对话视图打字时 `/` 和 `Backspace` 不被图谱抢走；viewer 的样式表里不允许出现 `html`/`body`/`:root` 选择器，脚本里不允许出现 `document.getElementById` 或 `document.activeElement`；每个文件都能在位置索引里查到 id；界面文本是中文；页面不引用任何远程资源。
 
 ## 已知边界
 

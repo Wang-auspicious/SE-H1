@@ -23,10 +23,8 @@ BASE = Path(__file__).parent
 ASSETS = {
     "studio.css": "text/css; charset=utf-8",
     "studio.js": "application/javascript; charset=utf-8",
-    "vendor/limen/viewer.css": "text/css; charset=utf-8",
-    "vendor/limen/viewer.js": "application/javascript; charset=utf-8",
-    # The viewer's TypeScript build output. Kept beside the upstream JavaScript
-    # so the equivalence test can load both and diff them.
+    "viewer/viewer.css": "text/css; charset=utf-8",
+    # The viewer's TypeScript build output (viewer/src/viewer.ts).
     "viewer/viewer.js": "application/javascript; charset=utf-8",
 }
 

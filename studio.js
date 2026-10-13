@@ -307,8 +307,8 @@
     }
   }
 
-  // Shell-owned integration styling for the vendored viewer. Kept out of
-  // vendor/limen/viewer.css so upstream rules and ours stay distinguishable.
+  // Shell-owned integration styling for the viewer. Kept out of
+  // viewer/viewer.css so map rules and shell rules stay distinguishable.
   const PICTURE_SKIN = `
     .explorer, #explorer-toggle, .top { display: none !important; }
     .main {
@@ -435,7 +435,7 @@
     #sizer { overflow: visible !important; margin: 0 auto; }
 
     /* Block surface only. Type and padding belong to the card's own scale,
-       which the vendored viewer derives from --card-h; pinning them here in
+       which the viewer derives from --card-h; pinning them here in
        px would win the cascade and undo that. */
     .block {
       border-radius: 9px;
@@ -815,7 +815,7 @@
   });
 
   // The adapter writes "view source" buttons into the viewer's detail panel;
-  // the vendored viewer knows nothing about /api/source, so the shell delegates.
+  // the viewer knows nothing about /api/source, so the shell delegates.
   $("picture-host").addEventListener(
     "click",
     (event) => {

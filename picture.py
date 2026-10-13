@@ -1,6 +1,6 @@
-"""Project the CodeGraph into the architecture-map model the vendored viewer draws.
+"""Project the CodeGraph into the architecture-map model the viewer draws.
 
-The viewer is upstream code (see vendor/limen/LICENSE). This module is the adapter:
+The viewer lives in viewer/ (TypeScript). This module is the adapter:
 it is the only place that knows about both sides. It emits an inert <template> so
 the studio shell can mount the viewer into a shadow root instead of a whole page.
 """
@@ -13,14 +13,14 @@ from collections import defaultdict
 from pathlib import Path, PurePosixPath
 
 BASE = Path(__file__).parent
-VENDOR = BASE / "vendor" / "limen"
+VIEWER = BASE / "viewer"
 
 # The viewer keeps its own vocabulary in the model and translates labels itself;
 # these names only appear inside the summary text this adapter writes.
 KIND_NAMES = {"file": "文件", "class": "类", "function": "函数", "module": "模块"}
 
 # The viewer prints project metadata as label/value rows straight from the model,
-# so the labels are translated here rather than in the vendored code.
+# so the labels are translated here rather than in the viewer code.
 STAT_NAMES = {
     "files": "文件", "parsed_files": "已解析文件", "functions": "函数", "nodes": "节点",
     "edges": "关系", "call_sites": "调用点", "linked_calls": "已定位调用",
@@ -144,10 +144,7 @@ def viewer_revision():
     """Hash of the viewer this adapter targets, so a viewer change is visible."""
     paths = [
         Path(__file__),
-        *(VENDOR / name for name in ("template.html", "viewer.css")),
-        # The viewer itself is the TypeScript build. Hashing the upstream
-        # copy here would leave the stamp unchanged when our port changes.
-        BASE / "viewer" / "viewer.js",
+        *(VIEWER / name for name in ("template.html", "viewer.css", "viewer.js")),
     ]
     return hashlib.sha256(b"".join(path.read_bytes() for path in paths)).hexdigest()
 
@@ -214,14 +211,14 @@ def place_index(model):
 
 def picture_inner(graph):
     """The viewer's markup plus its model, with no wrapper element."""
-    template = (VENDOR / "template.html").read_text("utf-8")
+    template = (VIEWER / "template.html").read_text("utf-8")
     body = re.search(r"<body>(.*)</body>", template, re.S).group(1)
     body = re.sub(r"<!-- ARCHMAP:(CSS|DATA|JS) -->", "", body).strip()
     model = picture_model(graph)
     data = json.dumps(model, ensure_ascii=False).replace("<", "\\u003c")
     index = json.dumps(place_index(model), ensure_ascii=False).replace("<", "\\u003c")
     return (
-        '<link rel="stylesheet" href="vendor/limen/viewer.css">\n'
+        '<link rel="stylesheet" href="viewer/viewer.css">\n'
         f'<script type="application/json" id="archmap-data">{data}</script>\n'
         f'<script type="application/json" id="file-places">{index}</script>\n'
         f"{body}\n"

@@ -184,8 +184,8 @@ class StudioPageTests(ServerTestCase):
             for name, kind in (
                 ("studio.css", "text/css"),
                 ("studio.js", "javascript"),
-                ("vendor/limen/viewer.css", "text/css"),
-                ("vendor/limen/viewer.js", "javascript"),
+                ("viewer/viewer.css", "text/css"),
+                ("viewer/viewer.js", "javascript"),
             ):
                 status, content_type, body = self.get(port, f"/{name}")
                 self.assertEqual(status, 200, name)
@@ -198,7 +198,7 @@ class StudioPageTests(ServerTestCase):
             port = self.serve(directory)
             # No directory fallback: an unrouted path must 404 rather than be
             # read off disk, which is what keeps credentials off the wire.
-            for name in (".env", "code_agent.py", "vendor/limen/LICENSE", "../code_agent.py"):
+            for name in (".env", "code_agent.py", "viewer/src/viewer.ts", "../code_agent.py"):
                 status, _, _ = self.get(port, f"/{name}")
                 self.assertEqual(status, 404, name)
 
@@ -222,11 +222,11 @@ class StudioPageTests(ServerTestCase):
 
 
 class ViewerScopeTests(unittest.TestCase):
-    """The vendored viewer is mounted in a shadow root, so its stylesheet must
+    """The viewer is mounted in a shadow root, so its stylesheet must
     not rely on selectors that only exist in a whole document."""
 
     def selectors(self, name):
-        css = re.sub(r"/\*.*?\*/", "", (ROOT / "vendor" / "limen" / name).read_text("utf-8"), flags=re.S)
+        css = re.sub(r"/\*.*?\*/", "", (ROOT / "viewer" / name).read_text("utf-8"), flags=re.S)
         preludes = re.findall(r"(?:^|[{};])\s*([^{}@;]+?)\s*\{", css)
         return [part.strip() for prelude in preludes for part in prelude.split(",")], css
 
@@ -237,7 +237,7 @@ class ViewerScopeTests(unittest.TestCase):
             self.assertNotIn(dead, selectors)
 
     def test_viewer_js_reads_through_the_shadow_root(self):
-        source = (ROOT / "vendor" / "limen" / "viewer.js").read_text("utf-8")
+        source = (ROOT / "viewer" / "viewer.js").read_text("utf-8")
         js = re.sub(r"/\*.*?\*/", "", source, flags=re.S)  # the header explains the edits
         self.assertIn("root.getElementById(id)", js)
         self.assertIn('attachShadow({ mode: "open" })', js)
@@ -250,10 +250,6 @@ class ViewerScopeTests(unittest.TestCase):
         # against the old level, decides nothing changed, and skips the repaint
         self.assertIn("S.level = null;", js)
 
-    def test_the_license_travels_with_the_vendored_code(self):
-        self.assertTrue((ROOT / "vendor" / "limen" / "LICENSE").is_file())
-        license_text = (ROOT / "vendor" / "limen" / "LICENSE").read_text("utf-8")
-        self.assertIn("MIT", license_text)
 
 
 class PictureAdapterTests(unittest.TestCase):
@@ -298,7 +294,7 @@ class PictureAdapterTests(unittest.TestCase):
         fragment = picture_fragment({"name": "sample", "stats": {}, "nodes": [], "edges": [], "errors": []})
         self.assertIn('id="picture-markup"', fragment)
         self.assertIn('id="archmap-data"', fragment)
-        self.assertIn("vendor/limen/viewer.css", fragment)
+        self.assertIn("viewer/viewer.css", fragment)
         self.assertNotIn("__GRAPH_DATA__", fragment)
         # A model containing "</script>" must not be able to close the tag.
         self.assertNotIn("</script><", fragment.replace("</script>\n", ""))
